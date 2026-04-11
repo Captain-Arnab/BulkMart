@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class LoginController extends GetxController {
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+
+  RxBool passwordVisible = false.obs;
+  RxBool isLoading = false.obs;
+  bool isLoginSuccess = false;
+  String userId = "USR001";
+  String userName = "Arnab Som";
+  String userEmail = "arnab@urbanroots.com";
+  String userMobile = "+91 97385 50132";
+
+  Future<void> userLogin(String email, String password) async {
+    if (email.isEmpty || password.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please enter email and password',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.7),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    isLoading(true);
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    isLoginSuccess = true;
+    isLoading(false);
+  }
+
+  Future<bool> checkLoginStatus() async {
+    return false;
+  }
+
+  Future<void> logout() async {
+    userId = "";
+    userName = "";
+    userEmail = "";
+    userMobile = "";
+    isLoginSuccess = false;
+    clearData();
+  }
+
+  void clearData() {
+    emailController.clear();
+    passwordController.clear();
+    passwordVisible.value = false;
+  }
+
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.onClose();
+  }
+}

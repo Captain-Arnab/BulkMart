@@ -1,0 +1,91 @@
+name: urban_roots
+description: "Urban Roots App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Navigation
+  google_fonts: 6.0.0
+  get: ^4.6.6
+  carousel_slider: ^5.0.0
+  smooth_page_indicator: ^1.1.0
+  cupertino_icons: ^1.0.2
+
+  # SVG & Images
+  svg_flutter: ^0.0.1
+
+  # State Management
+  flutter_bloc: ^8.1.5
+
+  # Utilities
+  fluttertoast: ^8.2.4
+  intl: ^0.19.0
+
+  # Rating
+  flutter_rating_stars: ^1.1.0
+
+  # HTML rendering
+  flutter_html: ^3.0.0-beta.2
+
+  # Animations
+  flutter_animate: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  image_path: "assets/logo_new.png"
+  android: true
+  ios: true
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo_new.png
+    - assets/logo.png
+    - assets/background.jpg
+    - assets/background.png
+    - assets/pista_image.png
+    - assets/black_dates.png
+    - assets/spices.png
+    - assets/millet.png
+    - assets/seeds.png
+    - assets/herbs.png
+    - assets/cereals.png
+    - assets/profile.jpg
+    - assets/loader.gif
+    - assets/profile_banner.jpg
+    - assets/slider1.png
+    - assets/slider2.png
+    - assets/slider3.png
+    - assets/slider4.png
+    - assets/slider5.png
+    - assets/poster1.jpg
+    - assets/poster2.jpg
+    - assets/logonufasal.png
+    - assets/haradilogo.png
+    - assets/icon-1.svg
+    - assets/icon-2.svg
+    - assets/icon-3.svg
+    - assets/icon-4.svg
+    - assets/icon-5.svg
+    - assets/sample.png
+    - assets/pista_cover.jpg
+    - assets/spices_cover.jpg
+    - assets/herbs_cover.jpg
+    - assets/dates_cover.jpg
+    - assets/seeds_cover.jpg
+    - assets/millets_cover.jpg
+    - assets/cereals_cover.jpg
+    - assets/nuts_cover.jpg
