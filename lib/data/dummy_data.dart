@@ -6,6 +6,60 @@ class DummyData {
   static const String demoUserEmail = 'arnab@urbanroots.com';
   static const String demoUserPhone = '+91 97385 50132';
   static const String demoUserId = 'USR001';
+  static const String demoPassword = 'demo123';
+  static const String demoOtp = '123456';
+
+  /// Demo login — email: demo@urbanroots.com | phone: 9876543210 | password & OTP: demo123 / 123456
+  static const String demoLoginEmail = 'demo@urbanroots.com';
+  static const String demoLoginPhone = '9876543210';
+
+  static double walletBalance = 2450.00;
+
+  static final List<Map<String, dynamic>> walletTransactions = [
+    {'id': 'WTX001', 'title': 'Wallet Top-up', 'amount': 1000.00, 'type': 'credit', 'date': '2026-05-18', 'method': 'PhonePe UPI'},
+    {'id': 'WTX002', 'title': 'Order #1001', 'amount': 1847.00, 'type': 'debit', 'date': '2026-04-05', 'method': 'Wallet'},
+    {'id': 'WTX003', 'title': 'Cashback — Monthly Box', 'amount': 150.00, 'type': 'credit', 'date': '2026-04-01', 'method': 'Promo'},
+    {'id': 'WTX004', 'title': 'Subscription — Family Plan', 'amount': 2499.00, 'type': 'debit', 'date': '2026-03-28', 'method': 'PhonePe'},
+    {'id': 'WTX005', 'title': 'Referral Bonus', 'amount': 200.00, 'type': 'credit', 'date': '2026-03-15', 'method': 'Urban Roots'},
+  ];
+
+  static final List<Map<String, dynamic>> subscriptionPlans = [
+    {
+      'id': 'sub_weekly',
+      'name': 'Weekly Fresh Box',
+      'price': 499,
+      'duration': 'Weekly',
+      'description': 'Curated organic veggies & staples delivered every week.',
+      'features': ['5–7 seasonal items', 'Free delivery', 'Skip anytime'],
+      'popular': false,
+    },
+    {
+      'id': 'sub_monthly',
+      'name': 'Monthly Premium',
+      'price': 1499,
+      'duration': 'Monthly',
+      'description': 'Best value — nuts, spices, millets & more every month.',
+      'features': ['12+ premium products', '10% extra wallet cashback', 'Priority support'],
+      'popular': true,
+    },
+    {
+      'id': 'sub_family',
+      'name': 'Family Plan',
+      'price': 2499,
+      'duration': 'Monthly',
+      'description': 'Large family pack with bulk savings on staples.',
+      'features': ['20+ items per delivery', '15% member discount', 'Dedicated account manager'],
+      'popular': false,
+    },
+  ];
+
+  static Map<String, dynamic>? activeSubscription = {
+    'planId': 'sub_monthly',
+    'planName': 'Monthly Premium',
+    'price': 1499,
+    'renewalDate': '2026-06-15',
+    'status': 'Active',
+  };
 
   static final List<Map<String, String>> categories = [
     {'id': '1', 'name': 'Nuts & Dry Fruits', 'image': 'assets/nuts_cover.jpg'},
@@ -168,9 +222,10 @@ class DummyData {
   ];
 
   static final List<Map<String, dynamic>> samplePayments = [
-    {"id": "pay_UR001A2026Q2", "amount": 184700, "currency": "INR", "status": "captured", "method": "UPI", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1001", "created_at": 1743868200},
-    {"id": "pay_UR002B2026Q1", "amount": 124800, "currency": "INR", "status": "captured", "method": "Card", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1002", "created_at": 1743177000},
-    {"id": "pay_UR003C2026Q1", "amount": 92600, "currency": "INR", "status": "captured", "method": "Net Banking", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1003", "created_at": 1742054400},
+    {"id": "PP20260518001", "amount": 184700, "currency": "INR", "status": "SUCCESS", "method": "PhonePe UPI", "gateway": "PhonePe", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1001", "created_at": 1743868200},
+    {"id": "PP20260428002", "amount": 124800, "currency": "INR", "status": "SUCCESS", "method": "PhonePe Wallet", "gateway": "PhonePe", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1002", "created_at": 1743177000},
+    {"id": "PP20260315003", "amount": 92600, "currency": "INR", "status": "SUCCESS", "method": "PhonePe Card", "gateway": "PhonePe", "email": demoUserEmail, "contact": demoUserPhone, "description": "Payment for Order #1003", "created_at": 1742054400},
+    {"id": "PP20260328004", "amount": 249900, "currency": "INR", "status": "SUCCESS", "method": "PhonePe UPI", "gateway": "PhonePe", "email": demoUserEmail, "contact": demoUserPhone, "description": "Family Plan Subscription", "created_at": 1743177000},
   ];
 
   static Map<String, dynamic> get userProfile => {

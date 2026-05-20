@@ -5,6 +5,8 @@ import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
+import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
+import 'package:urban_roots/features/wallet/presentation/WalletScreen.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/features/userProfile/domain/UserProfileController.dart';
 
@@ -101,6 +103,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(children: [
+                    _profileMenuItem(Icons.account_balance_wallet_outlined, 'My Wallet', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                    }),
+                    const SizedBox(height: 10),
+                    _profileMenuItem(Icons.subscriptions_outlined, 'Subscriptions', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionScreen()));
+                    }),
+                    const SizedBox(height: 10),
                     _profileMenuItem(Icons.shopping_bag_outlined, 'Order History', () {
                       BlocProvider.of<DashboardBloc>(context).add(NavigateToOrderScreenEvent());
                     }),

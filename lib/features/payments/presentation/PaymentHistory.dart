@@ -88,6 +88,14 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                               decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(4)),
                               child: Text('Success', style: GoogleFonts.rubik(fontSize: 9, fontWeight: FontWeight.w500, color: Colors.green.shade700)),
                             ),
+                            if ((payment['gateway'] ?? '') == 'PhonePe') ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: const Color(0xFF5F259F).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                child: Text('PhonePe', style: GoogleFonts.rubik(fontSize: 9, fontWeight: FontWeight.w600, color: const Color(0xFF5F259F))),
+                              ),
+                            ],
                             const SizedBox(width: 8),
                             Text(method, style: GoogleFonts.rubik(fontSize: 11, color: Colors.grey.shade500)),
                           ]),

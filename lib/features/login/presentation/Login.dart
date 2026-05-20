@@ -2,11 +2,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/Utils/Loader.dart';
+import 'package:urban_roots/data/demo_auth.dart';
 import 'package:urban_roots/Utils/Strings.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/OtpLogin.dart';
+import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
 import 'package:urban_roots/features/registration/presentation/Registration.dart';
 
 class Login extends StatelessWidget {
@@ -123,28 +123,46 @@ class Login extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 3,
                         ),
-                        onPressed: () async {
-                          if (loginController.emailController.text.isEmpty || loginController.passwordController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill mandatory fields")));
-                          } else {
-                            Loader().showLoader(context);
-                            await loginController.userLogin(loginController.emailController.value.text, loginController.passwordController.value.text);
-                            if (loginController.isLoginSuccess) {
-                              loginController.clearData();
-                              Navigator.pop(context);
-                              Future.delayed(const Duration(milliseconds: 200), () {
-                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Dashboard()));
-                              });
-                            }
+                        onPressed: () {
+                          final email = loginController.emailController.text.trim();
+                          final password = loginController.passwordController.text;
+
+                          if (email.isEmpty || password.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please fill email and password')),
+                            );
+                            return;
                           }
+                          if (!DemoAuth.isValidEmail(email)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Invalid email address')),
+                            );
+                            return;
+                          }
+                          if (!DemoAuth.isValidPassword(password)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Invalid password')),
+                            );
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => OtpVerificationPage(
+                                loginMethod: LoginMethod.email,
+                                identifier: email,
+                              ),
+                            ),
+                          );
                         },
-                        child: Text("Login", style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                        child: Text('Continue', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Center(
                       child: GestureDetector(
-                        onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => OTPVerificationScreen())),
+                        onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const OTPVerificationScreen())),
                         child: Text(
                           'Login with phone number',
                           style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF019934)),

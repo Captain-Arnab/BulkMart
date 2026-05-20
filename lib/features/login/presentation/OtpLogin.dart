@@ -1,94 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/data/demo_auth.dart';
+import 'package:urban_roots/features/login/data/LoginController.dart';
+import 'package:urban_roots/features/login/presentation/Login.dart';
+import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
+  const OTPVerificationScreen({super.key});
+
   @override
-  _OTPVerificationScreenState createState() => _OTPVerificationScreenState();
+  State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController otpController = TextEditingController();
-  String buttonTxt = "Send OTP";
-  bool enableOTP = false;
+  final TextEditingController _phoneController = TextEditingController();
+  final LoginController _loginController =
+      Get.isRegistered<LoginController>() ? Get.find<LoginController>() : Get.put(LoginController());
 
   @override
   Widget build(BuildContext context) {
-    var screenSize = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: const Color(0xFF019934),
       body: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 60),
-            Image.asset("assets/logo.png", width: 160, height: 160, fit: BoxFit.contain),
+            Image.asset('assets/logo.png', width: 160, height: 160, fit: BoxFit.contain),
             const SizedBox(height: 10),
-            Text('Phone Verification', style: GoogleFonts.rubik(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(
+              'Phone Login',
+              style: GoogleFonts.rubik(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
             const SizedBox(height: 4),
-            Text('We\'ll send you a one-time code', style: GoogleFonts.rubik(fontSize: 14, color: Colors.white70)),
+            Text(
+              'Sign in with mobile number & password',
+              style: GoogleFonts.rubik(fontSize: 14, color: Colors.white70),
+            ),
             const SizedBox(height: 20),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 10))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phone Number', style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700)),
+                    Text(
+                      'Phone Number',
+                      style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                    ),
                     const SizedBox(height: 8),
                     TextFormField(
-                      controller: phoneController,
+                      controller: _phoneController,
                       style: GoogleFonts.poppins(fontSize: 14),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       maxLength: 10,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        prefixIcon: Icon(Icons.phone_outlined, color: Colors.green.shade400, size: 20),
+                      decoration: _fieldDecoration(
+                        hint: 'Enter mobile number',
+                        prefixIcon: Icons.phone_outlined,
                         prefixText: '+91 ',
-                        prefixStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
-                        hintText: 'Enter mobile number',
-                        hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade400),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF019934), width: 1.5)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
-                    if (enableOTP) ...[
-                      const SizedBox(height: 18),
-                      Text('Enter OTP', style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: otpController,
-                        maxLength: 6,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        style: GoogleFonts.poppins(fontSize: 18, letterSpacing: 8),
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          counterText: '',
-                          hintText: '------',
-                          hintStyle: GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade300, letterSpacing: 8),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF019934), width: 1.5)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Password',
+                      style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                    ),
+                    const SizedBox(height: 8),
+                    Obx(
+                      () => TextFormField(
+                        controller: _loginController.passwordController,
+                        obscureText: !_loginController.passwordVisible.value,
+                        decoration: _fieldDecoration(
+                          hint: 'Enter your password',
+                          prefixIcon: Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _loginController.passwordVisible.value ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.grey.shade500,
+                              size: 20,
+                            ),
+                            onPressed: () => _loginController.passwordVisible.value = !_loginController.passwordVisible.value,
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -99,25 +109,24 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 3,
                         ),
-                        onPressed: () {
-                          if (buttonTxt.toLowerCase() == "send otp") {
-                            if (phoneController.text.isNotEmpty && phoneController.text.length == 10) {
-                              setState(() { buttonTxt = "Verify & Login"; enableOTP = true; });
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter valid mobile number")));
-                            }
-                          } else {
-                            if (otpController.text.isNotEmpty && otpController.text.length == 6) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(duration: Duration(milliseconds: 500), content: Text("User Login Successful!!")));
-                              Future.delayed(const Duration(milliseconds: 300), () {
-                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Dashboard()));
-                              });
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter valid OTP")));
-                            }
-                          }
-                        },
-                        child: Text(buttonTxt, style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                        onPressed: _continueToOtp,
+                        child: Text(
+                          'Continue',
+                          style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => Login()),
+                        ),
+                        child: Text(
+                          'Login with email',
+                          style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF019934)),
+                        ),
                       ),
                     ),
                   ],
@@ -128,6 +137,67 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _continueToOtp() {
+    final phone = _phoneController.text.trim();
+    final password = _loginController.passwordController.text;
+
+    if (phone.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
+      );
+      return;
+    }
+    if (!DemoAuth.isValidPhone(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid mobile number')),
+      );
+      return;
+    }
+    if (!DemoAuth.isValidPassword(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid password')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationPage(
+          loginMethod: LoginMethod.phone,
+          identifier: phone,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration({
+    required String hint,
+    required IconData prefixIcon,
+    String? prefixText,
+  }) {
+    return InputDecoration(
+      counterText: '',
+      prefixIcon: Icon(prefixIcon, color: Colors.green.shade400, size: 20),
+      prefixText: prefixText,
+      prefixStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+      hintText: hint,
+      hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade400),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF019934), width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 }

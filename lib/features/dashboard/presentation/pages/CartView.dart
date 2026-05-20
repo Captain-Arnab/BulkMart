@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/data/dummy_data.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/features/payments/presentation/PhonePePaymentScreen.dart';
 
 class CartPage extends StatefulWidget {
   @override
@@ -43,16 +43,23 @@ class _CartPageState extends State<CartPage> {
   }
 
   void checkout() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Order placed successfully!'),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      backgroundColor: const Color(0xFF019934),
-    ));
-    setState(() { cartItems.clear(); totalValue = 0.0; });
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const Dashboard()));
-    });
+    if (cartItems.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PhonePePaymentScreen(
+          amount: totalValue,
+          title: 'Urban Roots Order',
+          subtitle: '${cartItems.length} item(s) — Secure checkout',
+          onSuccess: () {
+            setState(() {
+              cartItems.clear();
+              totalValue = 0.0;
+            });
+          },
+        ),
+      ),
+    );
   }
 
   void deleteCartItem(int index) {
