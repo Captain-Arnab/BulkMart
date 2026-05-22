@@ -4,19 +4,38 @@ class DemoAuth {
   static const String demoOtp = '123456';
 
   static const String demoEmail = 'demo@urbanroots.com';
+  static const String demoVendorEmail = 'vendor@urbanroots.com';
   static const String demoPhone = '9876543210';
+  /// Vendor demo mobile (same password & OTP as customer).
+  static const String demoVendorPhone = '9123456780';
 
   static bool isValidPassword(String password) => password == demoPassword;
 
   static bool isValidOtp(String otp) => otp == demoOtp;
 
-  static bool isValidEmail(String email) =>
-      email.trim().toLowerCase() == demoEmail;
+  static bool isValidEmail(String email) {
+    final normalized = email.trim().toLowerCase();
+    return normalized == demoEmail || normalized == demoVendorEmail;
+  }
+
+  static bool isVendorEmail(String email) =>
+      email.trim().toLowerCase() == demoVendorEmail;
 
   static bool isValidPhone(String phone) {
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    return digits == demoPhone || digits.endsWith(demoPhone);
+    final digits = _normalizePhone(phone);
+    return digits == demoPhone ||
+        digits == demoVendorPhone ||
+        digits.endsWith(demoPhone) ||
+        digits.endsWith(demoVendorPhone);
   }
+
+  static bool isVendorPhone(String phone) {
+    final digits = _normalizePhone(phone);
+    return digits == demoVendorPhone || digits.endsWith(demoVendorPhone);
+  }
+
+  static String _normalizePhone(String phone) =>
+      phone.replaceAll(RegExp(r'\D'), '');
 
   static String maskIdentifier(String identifier, {required bool isPhone}) {
     if (isPhone) {

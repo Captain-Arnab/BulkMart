@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
+import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
+import 'package:urban_roots/core/auth/auth_role.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,9 +32,33 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _logoController.forward();
     Future.delayed(const Duration(milliseconds: 400), () => _fadeController.forward());
 
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Login()));
-    });
+    Timer(const Duration(seconds: 3), _routeFromSession);
+  }
+
+  Future<void> _routeFromSession() async {
+    if (!mounted) return;
+    final loggedIn = await AuthSession.instance.isLoggedIn();
+    if (!mounted) return;
+
+    if (!loggedIn) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => Login()),
+      );
+      return;
+    }
+
+    final role = await AuthSession.instance.getRole();
+    if (!mounted) return;
+
+    final destination = role == AuthRole.vendor
+        ? const VendorShell()
+        : const Dashboard();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => destination),
+    );
   }
 
   @override

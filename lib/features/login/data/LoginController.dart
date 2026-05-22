@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urban_roots/core/auth/auth_role.dart';
 
 class LoginController extends GetxController {
   TextEditingController emailController = TextEditingController();
@@ -7,6 +8,7 @@ class LoginController extends GetxController {
 
   RxBool passwordVisible = false.obs;
   RxBool isLoading = false.obs;
+  Rx<AuthRole> selectedRole = AuthRole.user.obs;
   bool isLoginSuccess = false;
   String userId = "USR001";
   String userName = "Arnab Som";

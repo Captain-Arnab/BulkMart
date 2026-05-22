@@ -7,6 +7,7 @@ import 'package:urban_roots/Utils/Strings.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/OtpLogin.dart';
 import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
+import 'package:urban_roots/features/login/presentation/widgets/role_selector.dart';
 import 'package:urban_roots/features/registration/presentation/Registration.dart';
 
 class Login extends StatelessWidget {
@@ -87,6 +88,8 @@ class Login extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 18),
+                    RoleSelector(controller: loginController),
+                    const SizedBox(height: 18),
                     Text('Password', style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700)),
                     const SizedBox(height: 8),
                     Obx(() => TextFormField(
@@ -152,6 +155,7 @@ class Login extends StatelessWidget {
                               builder: (_) => OtpVerificationPage(
                                 loginMethod: LoginMethod.email,
                                 identifier: email,
+                                selectedRole: loginController.selectedRole.value,
                               ),
                             ),
                           );

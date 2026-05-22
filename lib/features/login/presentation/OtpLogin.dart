@@ -6,6 +6,7 @@ import 'package:urban_roots/data/demo_auth.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
 import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
+import 'package:urban_roots/features/login/presentation/widgets/role_selector.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   const OTPVerificationScreen({super.key});
@@ -38,6 +39,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               'Sign in with mobile number & password',
               style: GoogleFonts.rubik(fontSize: 14, color: Colors.white70),
             ),
+            const SizedBox(height: 4),
+            // Text(
+            //   'Customer: ${DemoAuth.demoPhone} · Vendor: ${DemoAuth.demoVendorPhone}',
+            //   style: GoogleFonts.rubik(fontSize: 11, color: Colors.white60),
+            //   textAlign: TextAlign.center,
+            // ),
             const SizedBox(height: 20),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -74,6 +81,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         prefixText: '+91 ',
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    RoleSelector(controller: _loginController),
                     const SizedBox(height: 18),
                     Text(
                       'Password',
@@ -169,6 +178,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         builder: (_) => OtpVerificationPage(
           loginMethod: LoginMethod.phone,
           identifier: phone,
+          selectedRole: _loginController.selectedRole.value,
         ),
       ),
     );

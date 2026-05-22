@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/auth/auth_role.dart';
+import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/data/demo_auth.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/data/repositories/auth_repository.dart';
 
 enum LoginMethod { email, phone }
 
 class OtpVerificationPage extends StatefulWidget {
   final LoginMethod loginMethod;
   final String identifier;
+  final AuthRole? selectedRole;
 
   const OtpVerificationPage({
     super.key,
     required this.loginMethod,
     required this.identifier,
+    this.selectedRole,
   });
 
   @override
@@ -43,6 +48,18 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     });
   }
 
+  AuthRole? _resolveRole() {
+    if (widget.loginMethod == LoginMethod.email &&
+        DemoAuth.isVendorEmail(widget.identifier)) {
+      return AuthRole.vendor;
+    }
+    if (widget.loginMethod == LoginMethod.phone &&
+        DemoAuth.isVendorPhone(widget.identifier)) {
+      return AuthRole.vendor;
+    }
+    return widget.selectedRole;
+  }
+
   Future<void> _verifyOtp() async {
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,20 +78,44 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
 
     setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(milliseconds: 600),
-        content: Text('Login successful!'),
-        backgroundColor: Color(0xFF019934),
-      ),
-    );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const Dashboard()),
-    );
+    try {
+      final authRepo = MockAuthRepository();
+      final inferredRole = _resolveRole();
+
+      final response = await authRepo.login(
+        identifier: widget.identifier,
+        selectedRole: inferredRole,
+      );
+
+      await AuthSession.instance.save(
+        token: response.token,
+        role: response.role,
+        vendorId: response.vendorId,
+        displayName: response.name,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(milliseconds: 600),
+          content: Text('Login successful!'),
+          backgroundColor: Color(0xFF019934),
+        ),
+      );
+      navigateAfterLogin(context, response.role);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: $e'),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
+    }
   }
 
   @override
