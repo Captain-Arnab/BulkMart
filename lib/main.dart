@@ -1,9 +1,14 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/features/splash/Splashscreen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await PushNotificationService.instance.initialize();
   runApp(const MyApp());
 }
 

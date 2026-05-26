@@ -5,6 +5,7 @@ import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/data/demo_auth.dart';
+import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
 import 'package:urban_roots/data/repositories/auth_repository.dart';
 
 enum LoginMethod { email, phone }
@@ -94,6 +95,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         vendorId: response.vendorId,
         displayName: response.name,
       );
+
+      await syncDeviceTokenAfterAuth(role: response.role);
 
       if (!mounted) return;
 

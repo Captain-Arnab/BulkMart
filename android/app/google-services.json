@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "898872613682",
+    "project_id": "urban-roots-ee10d",
+    "storage_bucket": "urban-roots-ee10d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:898872613682:android:86e9570c8fe0122fe2552b",
+        "android_client_info": {
+          "package_name": "com.urbanroots.delivery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDLo1OU4qyH5P7mEieJ_Qa1KPCr5Kepus"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

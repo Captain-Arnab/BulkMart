@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/vendor_mock_data.dart';
@@ -46,6 +47,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       ),
     );
     if (confirmed == true && mounted) {
+      await PushNotificationService.instance.unregisterFromBackend();
       await AuthSession.instance.clear();
       if (!mounted) return;
       navigateToLogin(context);

@@ -6,6 +6,7 @@ import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
+import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
 import 'package:urban_roots/features/wallet/presentation/WalletScreen.dart';
 import 'package:get/get.dart';
@@ -129,6 +130,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     _profileMenuItem(Icons.info_outline, 'About', () {}),
                     const SizedBox(height: 20),
                     _profileMenuItem(Icons.logout, 'Logout', () async {
+                      await PushNotificationService.instance.unregisterFromBackend();
                       await AuthSession.instance.clear();
                       if (!context.mounted) return;
                       navigateToLogin(context);
