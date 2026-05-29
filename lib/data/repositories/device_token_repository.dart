@@ -6,10 +6,11 @@ import 'package:urban_roots/Utils/APIClass.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/config/api_config.dart';
+import 'package:urban_roots/core/config/firebase_config.dart';
 import 'package:urban_roots/data/models/device_token_register_result.dart';
 import 'package:urban_roots/data/network/vendor_api_service.dart';
 
-/// Sends FCM device tokens to Urban Roots backend.
+/// Registers FCM tokens with Urban Roots Device Token API (JWT auth, role: user | vendor).
 class DeviceTokenRepository {
   DeviceTokenRepository({Dio? dio})
       : _dio = dio ??
@@ -35,13 +36,12 @@ class DeviceTokenRepository {
     if (!ApiConfig.isApiConfigured) {
       if (kDebugMode) {
         debugPrint(
-          '[DeviceToken] API_BASE_URL not set — token ready for backend: '
-          '${deviceToken.substring(0, deviceToken.length.clamp(0, 24))}... role=${role.apiValue}',
+          '[DeviceToken] ${ApiConfig.environmentLabel} URL not set — '
+          'FCM token ready (role=${role.apiValue}). '
+          'Set STAGING_API_BASE_URL or PRODUCTION_API_BASE_URL when backend shares URL.',
         );
       }
-      return DeviceTokenRegisterResult.skipped(
-        'API base URL not configured (set --dart-define=API_BASE_URL=...)',
-      );
+      return DeviceTokenRegisterResult.skipped('API URL not configured');
     }
 
     try {
@@ -49,13 +49,10 @@ class DeviceTokenRepository {
         APIClass.registerDeviceToken,
         data: {
           'device_token': deviceToken,
-          'platform': Platform.isAndroid
-              ? 'android'
-              : Platform.isIOS
-                  ? 'ios'
-                  : 'unknown',
+          'platform': _platform,
           'role': role.apiValue,
-          'package_name': _androidPackageName,
+          'package_name': FirebaseConfig.androidPackageName,
+          'firebase_project_id': FirebaseConfig.projectId,
         },
       );
 
@@ -87,6 +84,9 @@ class DeviceTokenRepository {
     }
   }
 
-  /// Android applicationId (same binary for customer + vendor flows).
-  static const String _androidPackageName = 'com.urbanroots.delivery';
+  String get _platform => Platform.isAndroid
+      ? 'android'
+      : Platform.isIOS
+          ? 'ios'
+          : 'unknown';
 }

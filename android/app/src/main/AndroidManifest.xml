@@ -7,6 +7,11 @@
         android:name="${applicationName}"
         android:icon="@drawable/launch_background"
         android:extractNativeLibs="false">
+
+        <!-- FCM default notification channel (Android 8+) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="urban_roots_default" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

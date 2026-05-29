@@ -1,92 +1,122 @@
 # Urban Roots Mobile — Backend Integration Status
 
 **Last updated:** May 2026  
-**App:** Single Flutter binary (`user_app`) — Customer + Vendor via login role (not separate APKs).
+**App:** Single Flutter binary — Customer + Vendor via login role (`user` | `vendor`).
 
 ---
 
-## 1. Android package names
+## Backend confirmed
 
-| Role | Separate Android app? | Package name (`applicationId`) |
-|------|---------------------|--------------------------------|
-| **User (Customer)** | No — same APK | `com.urbanroots.delivery` |
-| **Vendor** | No — same APK | `com.urbanroots.delivery` |
-
-- Firebase `google-services.json` package: **`com.urbanroots.delivery`** (aligned).
-- Firebase project ID: **`urban-roots-ee10d`**
-- Distinguish user vs vendor in APIs using JWT + `role` field (`user` | `vendor`), not package name.
-
-**iOS bundle ID:** Update in Xcode / `ios/Runner.xcodeproj` when iOS Firebase app is added (`GoogleService-Info.plist` not in repo yet).
+| Item | Value |
+|------|--------|
+| Firebase Project ID | `urban-roots-ee10d` |
+| Android package | `com.urbanroots.delivery` |
+| `google-services.json` | Present & aligned |
+| Device Token API | **Live on backend** — supports `user` / `vendor` |
+| FCM targeting | By role + stored device tokens |
+| Production API URL | **Pending** — backend will share after live-server verification |
 
 ---
 
-## 2. Firebase SDK integration
+## 1. Package names (production)
+
+| Role | Separate APK? | Package |
+|------|---------------|---------|
+| User (Customer) | No | `com.urbanroots.delivery` |
+| Vendor | No | `com.urbanroots.delivery` |
+
+Use JWT `role` field (`user` | `vendor`) for API and notification targeting.
+
+---
+
+## 2. Firebase SDK (mobile)
 
 | Item | Status |
 |------|--------|
-| `firebase_core` + `firebase_messaging` (Flutter) | **Done** |
-| Google Services Gradle plugin | **Done** |
-| `google-services.json` (Android) | **Present** — `com.urbanroots.delivery` |
-| `Firebase.initializeApp()` in `main.dart` | **Done** |
-| FCM permission request (Android 13+ / iOS) | **Done** |
-| Foreground / background / tap handlers | **Done** (basic logging; deep-link TBD) |
-| iOS `GoogleService-Info.plist` | **Pending** — add from Firebase Console |
+| `firebase_core` + `firebase_messaging` | Done |
+| Google Services Gradle plugin | Done |
+| `google-services.json` | Done |
+| FCM init + permissions | Done |
+| Token fetch + refresh → Device Token API | Done |
+| Role-aware notification routing | Done |
+| Foreground / background / tap / cold start | Done |
+| iOS `GoogleService-Info.plist` | Pending |
 
 ---
 
-## 3. Firebase device token → API
+## 3. Device Token API (client ↔ backend)
 
-| Item | Status |
-|------|--------|
-| Fetch FCM token after Firebase init | **Done** |
-| Register token after login (user + vendor) | **Done** |
-| Re-register on app resume (splash, existing session) | **Done** |
-| Re-register on FCM token refresh | **Done** |
-| Unregister on logout | **Done** (`DELETE` stub) |
+**Auth:** `Authorization: Bearer <jwt>` (required)
 
-### Expected backend contract
-
-**Register (authenticated)**
+**Register**
 
 ```
-POST {API_BASE_URL}/api/device-token
-Authorization: Bearer <jwt>
-Content-Type: application/json
+POST {baseUrl}/api/device-token
 
 {
   "device_token": "<fcm_token>",
   "platform": "android" | "ios",
   "role": "user" | "vendor",
-  "package_name": "com.urbanroots.delivery"
+  "package_name": "com.urbanroots.delivery",
+  "firebase_project_id": "urban-roots-ee10d"
 }
 ```
 
 **Unregister (logout)**
 
 ```
-DELETE {API_BASE_URL}/api/device-token
-Authorization: Bearer <jwt>
-Content-Type: application/json
-
-{
-  "device_token": "<fcm_token>"
-}
+DELETE {baseUrl}/api/device-token
+{ "device_token": "<fcm_token>" }
 ```
 
-### Mobile configuration
-
-Set API base URL at build/run time:
-
-```bash
-flutter run --dart-define=API_BASE_URL=https://your-api.urbanroots.com
-```
-
-Until `API_BASE_URL` is set, the app **obtains FCM tokens** but **skips HTTP registration** (debug log only). Backend can implement endpoints and share the production URL.
+**When called from app:** after login, session restore, FCM token refresh; unregister on logout.
 
 ---
 
-## Reply template for backend developer
+## 4. FCM notification payload (expected from backend)
 
-> 1. **Package names (Android):** We ship one app: `com.urbanroots.delivery` for both customer and vendor. Role is sent as `user` or `vendor` in the device-token payload and login JWT.  
-> 2. **Firebase SDK:** Integrated on Android (`firebase_core`, `firebase_messaging`, Gradle plugin, `google-services.json` for `urban-roots-ee10d`). iOS plist still pending.  
-> 3. **Device token API:** Client calls `POST /api/device-token` after login and on token refresh; `DELETE /api/device-token` on logout. Please confirm the contract above or share your final paths/body so we can point `API_BASE_URL` to staging/production.
+```json
+{
+  "notification": {
+    "title": "Order Update",
+    "body": "Your order #12345 is shipped"
+  },
+  "data": {
+    "type": "order_status",
+    "role": "user",
+    "order_id": "12345",
+    "status": "shipped",
+    "click_action": "ORDER_DETAIL"
+  }
+}
+```
+
+App ignores notifications when `data.role` does not match the logged-in session role.
+
+---
+
+## 5. API URL configuration
+
+When backend shares URLs:
+
+```bash
+# Staging
+flutter run --dart-define=STAGING_API_BASE_URL=https://staging-api.urbanroots.com
+
+# Production (after verification)
+flutter run --dart-define=PRODUCTION_API_BASE_URL=https://api.urbanroots.com
+```
+
+Legacy flag still works: `--dart-define=API_BASE_URL=...`
+
+Until a URL is set, FCM tokens are generated locally; HTTP registration is skipped.
+
+---
+
+## Pending
+
+- Production / staging API URL from backend
+- iOS Firebase config
+- Payment gateway live integration
+- Delivery Boy app (separate package TBD)
+- Notification deep-links to order screens (when order APIs are live)

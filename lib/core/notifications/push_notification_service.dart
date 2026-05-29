@@ -5,6 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/core/config/firebase_config.dart';
+import 'package:urban_roots/core/notifications/fcm_notification_router.dart';
 import 'package:urban_roots/data/models/device_token_register_result.dart';
 import 'package:urban_roots/data/repositories/device_token_repository.dart';
 
@@ -12,12 +14,13 @@ import 'package:urban_roots/data/repositories/device_token_repository.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  if (kDebugMode) {
-    debugPrint('FCM background: ${message.messageId}');
-  }
+  await FcmNotificationRouter.instance.handleMessage(
+    message,
+    source: 'background',
+  );
 }
 
-/// FCM setup: permissions, token fetch, refresh, and backend registration.
+/// FCM setup: permissions, token fetch, refresh, backend registration, role-aware routing.
 class PushNotificationService {
   PushNotificationService._();
   static final PushNotificationService instance = PushNotificationService._();
@@ -36,21 +39,32 @@ class PushNotificationService {
     await _requestPermission();
 
     FirebaseMessaging.onMessage.listen((message) {
-      if (kDebugMode) {
-        debugPrint('FCM foreground: ${message.notification?.title}');
-      }
+      FcmNotificationRouter.instance.handleMessage(message, source: 'foreground');
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      if (kDebugMode) {
-        debugPrint('FCM opened from notification: ${message.messageId}');
-      }
+      FcmNotificationRouter.instance.handleMessage(message, source: 'opened_app');
     });
+
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      await FcmNotificationRouter.instance.handleMessage(
+        initialMessage,
+        source: 'terminated_launch',
+      );
+    }
 
     _messaging.onTokenRefresh.listen((newToken) async {
       _cachedToken = newToken;
       await registerTokenWithBackendIfLoggedIn(fcmToken: newToken);
     });
+
+    if (kDebugMode) {
+      debugPrint(
+        '[FCM] Initialized | project=${FirebaseConfig.projectId} '
+        'package=${FirebaseConfig.androidPackageName}',
+      );
+    }
 
     _initialized = true;
   }
@@ -72,12 +86,12 @@ class PushNotificationService {
       _cachedToken ??= await _messaging.getToken();
       return _cachedToken;
     } catch (e) {
-      if (kDebugMode) debugPrint('FCM getToken failed: $e');
+      if (kDebugMode) debugPrint('[FCM] getToken failed: $e');
       return null;
     }
   }
 
-  /// Registers FCM token with backend when user is logged in.
+  /// Registers FCM token with backend Device Token API (JWT + role: user | vendor).
   Future<DeviceTokenRegisterResult> registerTokenWithBackendIfLoggedIn({
     String? fcmToken,
     AuthRole? role,
@@ -97,10 +111,25 @@ class PushNotificationService {
       return DeviceTokenRegisterResult.failed('User role unknown');
     }
 
-    return _deviceTokenRepository.registerDeviceToken(
+    var result = await _deviceTokenRepository.registerDeviceToken(
       deviceToken: token,
       role: resolvedRole,
     );
+
+    // One retry on transient failure when API is configured.
+    if (!result.success && !result.skipped) {
+      await Future.delayed(const Duration(seconds: 2));
+      result = await _deviceTokenRepository.registerDeviceToken(
+        deviceToken: token,
+        role: resolvedRole,
+      );
+    }
+
+    if (kDebugMode) {
+      debugPrint('[FCM] Device token sync: ${result.message} role=${resolvedRole.apiValue}');
+    }
+
+    return result;
   }
 
   Future<void> unregisterFromBackend() async {

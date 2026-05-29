@@ -38,6 +38,8 @@ Flutter mobile app for **grocery shopping**: browse products, manage a cart, che
 
 Backend integration is expected via **REST APIs**; push, maps, and payments can be added as the app is wired to live services.
 
+**Firebase (Android):** Project `urban-roots-ee10d`, package `com.urbanroots.delivery`. FCM + Device Token API client ready (`user` / `vendor` roles). Set API URL when backend shares staging/production URL — see `docs/BACKEND_INTEGRATION_STATUS.md`.
+
 ---
 
 ## Repository notes
