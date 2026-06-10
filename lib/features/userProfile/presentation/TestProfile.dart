@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/data/dummy_data.dart';
+import 'package:urban_roots/features/auth/presentation/change_password_screen.dart';
+import 'package:urban_roots/features/notifications/presentation/notifications_screen.dart';
+import 'package:urban_roots/features/referral/presentation/referral_screen.dart';
+import 'package:urban_roots/features/support/presentation/support_screen.dart';
+import 'package:urban_roots/features/userProfile/presentation/edit_profile_screen.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
-import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
@@ -24,7 +27,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    userProfileFuture = userProfileController.fetchUserData(DummyData.demoUserId);
+    userProfileFuture = userProfileController.fetchUserData();
   }
 
   Widget _profileMenuItem(IconData icon, String title, VoidCallback onTap, {Color? iconColor}) {
@@ -125,13 +128,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       BlocProvider.of<DashboardBloc>(context).add(NavigateToAddressScreenEvent());
                     }),
                     const SizedBox(height: 10),
-                    _profileMenuItem(Icons.help_outline, 'Help & Support', () {}),
+                    _profileMenuItem(Icons.edit_outlined, 'Edit Profile', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+                    }),
                     const SizedBox(height: 10),
-                    _profileMenuItem(Icons.info_outline, 'About', () {}),
+                    _profileMenuItem(Icons.lock_outline, 'Change Password', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
+                    }),
+                    const SizedBox(height: 10),
+                    _profileMenuItem(Icons.notifications_outlined, 'Notifications', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                    }),
+                    const SizedBox(height: 10),
+                    _profileMenuItem(Icons.card_giftcard_outlined, 'Referral & Rewards', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()));
+                    }),
+                    const SizedBox(height: 10),
+                    _profileMenuItem(Icons.help_outline, 'Help & Support', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()));
+                    }),
                     const SizedBox(height: 20),
                     _profileMenuItem(Icons.logout, 'Logout', () async {
                       await PushNotificationService.instance.unregisterFromBackend();
-                      await AuthSession.instance.clear();
+                      await userProfileController.logout();
                       if (!context.mounted) return;
                       navigateToLogin(context);
                     }, iconColor: Colors.red),

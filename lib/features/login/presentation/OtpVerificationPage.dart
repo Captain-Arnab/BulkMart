@@ -6,7 +6,11 @@ import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/data/demo_auth.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
-import 'package:urban_roots/data/repositories/auth_repository.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/models/login_response.dart';
+import 'package:urban_roots/data/network/api_parsers.dart';
+import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/data/network/urban_roots_api.dart';
 
 enum LoginMethod { email, phone }
 
@@ -63,59 +67,58 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   Future<void> _verifyOtp() async {
     if (_otpController.text.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the 6-digit OTP')),
-      );
-      return;
-    }
-    if (!DemoAuth.isValidOtp(_otpController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Invalid OTP. Please try again.'),
-          backgroundColor: Colors.red.shade400,
-        ),
-      );
+      await SweetAlert.warning(context, message: 'Please enter the 6-digit OTP');
       return;
     }
 
     setState(() => _isVerifying = true);
 
     try {
-      final authRepo = MockAuthRepository();
-      final inferredRole = _resolveRole();
+      final inferredRole = _resolveRole() ?? AuthRole.user;
 
-      final response = await authRepo.login(
-        identifier: widget.identifier,
-        selectedRole: inferredRole,
+      final result = await UrbanRootsApi.instance.auth.otpLogin(
+        phone: widget.identifier.replaceAll(RegExp(r'\D'), ''),
+        otp: _otpController.text,
+      );
+
+      if (result is ApiFailure<Map<String, dynamic>>) {
+        if (!mounted) return;
+        await SweetAlert.error(context, message: result.message);
+        return;
+      }
+
+      final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+      final token = extractAuthToken(data);
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
+        await SweetAlert.error(
+          context,
+          message: 'Login succeeded but no auth token was returned. Please try again.',
+        );
+        return;
+      }
+
+      final response = LoginResponse(
+        token: token,
+        role: inferredRole,
+        userId: extractUserId(data),
       );
 
       await AuthSession.instance.save(
         token: response.token,
         role: response.role,
-        vendorId: response.vendorId,
+        userId: response.userId,
         displayName: response.name,
       );
 
+      // Best-effort FCM sync — failure must not block login or clear the session.
       await syncDeviceTokenAfterAuth(role: response.role);
 
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 600),
-          content: Text('Login successful!'),
-          backgroundColor: Color(0xFF019934),
-        ),
-      );
       navigateAfterLogin(context, response.role);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: $e'),
-          backgroundColor: Colors.red.shade400,
-        ),
-      );
+      await SweetAlert.error(context, message: 'Login failed: $e');
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
@@ -211,12 +214,18 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                               style: GoogleFonts.rubik(fontSize: 13, color: Colors.grey.shade500),
                             )
                           : TextButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 setState(() => _resendSeconds = 30);
                                 _startResendTimer();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('OTP resent successfully')),
+                                final result = await UrbanRootsApi.instance.auth.sendLoginOtp(
+                                  phone: widget.identifier.replaceAll(RegExp(r'\D'), ''),
                                 );
+                                if (!mounted) return;
+                                if (result is ApiFailure<Map<String, dynamic>>) {
+                                  await SweetAlert.error(context, message: result.message);
+                                } else {
+                                  await SweetAlert.success(context, message: 'OTP resent successfully');
+                                }
                               },
                               child: Text(
                                 'Resend OTP',

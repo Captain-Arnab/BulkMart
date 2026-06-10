@@ -2,11 +2,16 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/data/demo_auth.dart';
 import 'package:urban_roots/Utils/Strings.dart';
+import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/core/navigation/auth_navigation.dart';
+import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
+import 'package:urban_roots/data/models/login_response.dart';
+import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/repositories/auth_repository.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/OtpLogin.dart';
-import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
 import 'package:urban_roots/features/login/presentation/widgets/role_selector.dart';
 import 'package:urban_roots/features/registration/presentation/Registration.dart';
 
@@ -126,39 +131,42 @@ class Login extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 3,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           final email = loginController.emailController.text.trim();
                           final password = loginController.passwordController.text;
 
                           if (email.isEmpty || password.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please fill email and password')),
-                            );
-                            return;
-                          }
-                          if (!DemoAuth.isValidEmail(email)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Invalid email address')),
-                            );
-                            return;
-                          }
-                          if (!DemoAuth.isValidPassword(password)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Invalid password')),
-                            );
+                            await SweetAlert.warning(context, message: 'Please fill email and password');
                             return;
                           }
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => OtpVerificationPage(
-                                loginMethod: LoginMethod.email,
-                                identifier: email,
-                                selectedRole: loginController.selectedRole.value,
-                              ),
-                            ),
+                          loginController.isLoading(true);
+                          final authRepo = LiveAuthRepository();
+                          final result = await authRepo.login(
+                            identifier: email,
+                            password: password,
+                            selectedRole: loginController.selectedRole.value,
                           );
+                          loginController.isLoading(false);
+
+                          if (result is ApiFailure<LoginResponse>) {
+                            if (!context.mounted) return;
+                            await SweetAlert.error(context, message: result.message);
+                            return;
+                          }
+
+                          final response =
+                              (result as ApiSuccess<LoginResponse>).data;
+                          await AuthSession.instance.save(
+                            token: response.token,
+                            role: response.role,
+                            vendorId: response.vendorId,
+                            userId: response.userId,
+                            displayName: response.name,
+                          );
+                          await syncDeviceTokenAfterAuth(role: response.role);
+                          if (!context.mounted) return;
+                          navigateAfterLogin(context, response.role);
                         },
                         child: Text('Continue', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),

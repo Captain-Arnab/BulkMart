@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/payments/presentation/PhonePePaymentScreen.dart';
@@ -160,9 +161,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 'status': 'Active',
               };
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Subscribed to ${plan['name']} via PhonePe!'), backgroundColor: const Color(0xFF019934)),
-            );
+            SweetAlert.success(context, message: 'Subscribed to ${plan['name']} via PhonePe!');
           },
         ),
       ),

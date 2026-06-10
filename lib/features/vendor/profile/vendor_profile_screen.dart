@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
@@ -123,9 +124,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit profile form — wire when API is ready')),
-              );
+              SweetAlert.info(context, message: 'Edit profile form — wire when API is ready');
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF019934),

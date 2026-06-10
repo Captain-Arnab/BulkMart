@@ -50,8 +50,8 @@ class DashboardScreenState extends State<Dashboard> {
               GlobalVariable.dashboardBlocContext = context;
               if (state is HomeInit) return ProductScreenNew();
               else if (state is HomeProducts) return ProductPage(category: 0, minPrice: 0, maxPrice: 10000);
-              else if (state is HomeWishList) return WishListPage();
-              else if (state is HomeCart) return CartPage();
+              else if (state is HomeWishList) return const WishListPage();
+              else if (state is HomeCart) return const CartPage();
               else if (state is HomeProfile) return UserProfileScreen();
               else if (state is ProductDetailsState) return ProductDetailsPage(productVal: state.productId);
               else if (state is PaymentScreenState) return PaymentHistoryScreen();

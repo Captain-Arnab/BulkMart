@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/shimmer_widgets.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/vendor_mock_data.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_products_navigator.dart';
@@ -59,12 +60,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
     if (confirmed == true && mounted) {
       final ok = await _viewModel.deleteProduct(product.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ok ? 'Product deleted' : 'Failed to delete product'),
-          backgroundColor: ok ? const Color(0xFF019934) : Colors.red.shade400,
-        ),
-      );
+      if (ok) {
+        await SweetAlert.success(context, message: 'Product deleted');
+      } else {
+        await SweetAlert.error(context, message: 'Failed to delete product');
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/vendor_mock_data.dart';
@@ -72,13 +73,11 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(existing == null ? 'Category added (mock)' : 'Category updated (mock)'),
-                    backgroundColor: const Color(0xFF019934),
-                  ),
+                await SweetAlert.success(
+                  context,
+                  message: existing == null ? 'Category added (mock)' : 'Category updated (mock)',
                 );
               },
               child: const Text('Save'),
@@ -126,9 +125,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
         ),
       );
       if (confirmed == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Category deleted (mock)')),
-        );
+        await SweetAlert.success(context, message: 'Category deleted (mock)');
       }
     }
   }

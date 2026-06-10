@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
@@ -50,12 +51,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         'imageUrl': DummyData.getProductImage(widget.productVal),
       });
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${_data?['name']} added to cart'),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      backgroundColor: const Color(0xFF019934),
-    ));
+    SweetAlert.success(context, message: '${_data?['name']} added to cart');
   }
 
   @override

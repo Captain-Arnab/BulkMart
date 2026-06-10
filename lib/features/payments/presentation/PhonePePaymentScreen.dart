@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/payments/domain/PhonePeService.dart';
@@ -162,9 +163,7 @@ class _PhonePePaymentScreenState extends State<PhonePePaymentScreen> {
     setState(() => _isProcessing = false);
 
     if (!result.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment failed. Please try again.')),
-      );
+      await SweetAlert.error(context, message: 'Payment failed. Please try again.');
       return;
     }
 

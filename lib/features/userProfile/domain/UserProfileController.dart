@@ -1,27 +1,47 @@
 import 'package:get/get.dart';
-import 'package:urban_roots/data/dummy_data.dart';
+import 'package:urban_roots/core/auth/auth_session.dart';
+import 'package:urban_roots/data/network/api_parsers.dart';
+import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/data/network/urban_roots_api.dart';
 
 class UserProfileController extends GetxController {
-  String userName = DummyData.demoUserId;
+  final _api = UrbanRootsApi.instance;
 
-  Future<void> saveAddresses(List<String> addresses) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+  Future<Map<String, dynamic>> fetchUserData([String? custId]) async {
+    final result = await _api.profile.getProfile();
+    if (result is ApiSuccess<Map<String, dynamic>>) {
+      return parseProfile(result.data);
+    }
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      throw Exception(result.message);
+    }
+    return {};
   }
 
-  Future<List<String>> loadAddresses() async {
-    return ['123, MG Road, Bangalore - 560001'];
+  Future<ApiResult<Map<String, dynamic>>> updateProfile({
+    required String custFname,
+    required String custLname,
+    required String custEmail,
+    required String custMobile,
+    required String address,
+    required String city,
+    required String state,
+  }) async {
+    final custId = await AuthSession.instance.getUserId() ?? '';
+    return _api.profile.updateProfile(
+      custId: custId,
+      custFname: custFname,
+      custLname: custLname,
+      custEmail: custEmail,
+      custMobile: custMobile,
+      address: address,
+      city: city,
+      state: state,
+    );
   }
 
-  Future<void> saveDeliveryInstructions(String instructions) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-  }
-
-  Future<String> loadDeliveryInstructions() async {
-    return 'Leave at the door if no one is available.';
-  }
-
-  Future<Map<String, dynamic>> fetchUserData(String custId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return DummyData.userProfile;
+  Future<void> logout() async {
+    await _api.auth.logout();
+    await AuthSession.instance.clear();
   }
 }

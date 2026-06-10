@@ -1,72 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/data/dummy_data.dart';
-import 'package:urban_roots/features/payments/presentation/PhonePePaymentScreen.dart';
+import 'package:urban_roots/core/ui/api_view_state.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/features/cart/domain/cart_controller.dart';
+import 'package:urban_roots/features/checkout/presentation/checkout_screen.dart';
 
 class CartPage extends StatefulWidget {
+  const CartPage({super.key});
+
   @override
-  _CartPageState createState() => _CartPageState();
+  State<CartPage> createState() => _CartPageState();
 }
 
 class _CartPageState extends State<CartPage> {
-  List<Map<String, dynamic>> cartItems = [];
-  bool isLoading = true;
-  double totalValue = 0.0;
+  final _cart = Get.put(CartController());
 
   @override
   void initState() {
     super.initState();
-    _loadCartItems();
+    _cart.loadCart();
   }
 
-  void _loadCartItems() {
-    setState(() {
-      cartItems = List<Map<String, dynamic>>.from(DummyData.cartItems.map((item) => Map<String, dynamic>.from(item)));
-      updateTotalValue();
-      isLoading = false;
-    });
-  }
-
-  void updateTotalValue() {
-    double total = 0.0;
-    for (var item in cartItems) {
-      total += item['quantity'] * double.parse(item['price']);
-    }
-    setState(() => totalValue = total);
-  }
-
-  void updateQuantity(int index, int newQuantity) {
-    setState(() {
-      cartItems[index]['quantity'] = newQuantity;
-      updateTotalValue();
-    });
-  }
-
-  void checkout() {
-    if (cartItems.isEmpty) return;
-    Navigator.push(
+  Future<void> _confirmClear() async {
+    await SweetAlert.confirm(
       context,
-      MaterialPageRoute(
-        builder: (_) => PhonePePaymentScreen(
-          amount: totalValue,
-          title: 'Urban Roots Order',
-          subtitle: '${cartItems.length} item(s) — Secure checkout',
-          onSuccess: () {
-            setState(() {
-              cartItems.clear();
-              totalValue = 0.0;
-            });
-          },
-        ),
-      ),
+      title: 'Clear Cart?',
+      message: 'Remove all items from your cart?',
+      confirmText: 'Clear',
+      onConfirm: () async {
+        final success = await _cart.clearCart();
+        if (!success && mounted) {
+          await SweetAlert.error(context, message: _cart.errorMessage.value);
+        }
+      },
     );
-  }
-
-  void deleteCartItem(int index) {
-    setState(() {
-      cartItems.removeAt(index);
-      updateTotalValue();
-    });
   }
 
   @override
@@ -77,136 +46,118 @@ class _CartPageState extends State<CartPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text('My Cart', style: GoogleFonts.rubik(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black87)),
-        centerTitle: false,
         actions: [
-          if (cartItems.isNotEmpty)
-            TextButton(
-              onPressed: () => setState(() { cartItems.clear(); totalValue = 0.0; }),
-              child: Text('Clear All', style: GoogleFonts.rubik(fontSize: 13, color: Colors.red.shade400)),
-            ),
+          Obx(() => _cart.items.isNotEmpty
+              ? TextButton(onPressed: _confirmClear, child: Text('Clear All', style: GoogleFonts.rubik(fontSize: 13, color: Colors.red.shade400)))
+              : const SizedBox.shrink()),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF019934)))
-          : cartItems.isEmpty
-              ? Center(
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    Text('Your cart is empty', style: GoogleFonts.rubik(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.grey.shade500)),
-                    const SizedBox(height: 8),
-                    Text('Browse products and add items', style: GoogleFonts.rubik(fontSize: 13, color: Colors.grey.shade400)),
+      body: Obx(() {
+        if (_cart.isLoading.value) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF019934)));
+        }
+        if (_cart.errorMessage.value.isNotEmpty && _cart.items.isEmpty) {
+          return ApiStateView(status: ApiViewStatus.error, errorMessage: _cart.errorMessage.value, onRetry: _cart.loadCart, child: const SizedBox());
+        }
+        if (_cart.items.isEmpty) {
+          return ApiStateView(status: ApiViewStatus.empty, emptyMessage: 'Your cart is empty', child: const SizedBox());
+        }
+        final total = _cart.finalAmount.value > 0 ? _cart.finalAmount.value : _cart.totalValue;
+        return Column(
+          children: [
+            if (_cart.appliedCoupon.value.isNotEmpty)
+              ListTile(
+                title: Text('Coupon: ${_cart.appliedCoupon.value}'),
+                trailing: TextButton(onPressed: _cart.removeCoupon, child: const Text('Remove')),
+              ),
+            ListTile(
+              title: const Text('Apply Coupon'),
+              trailing: const Icon(Icons.local_offer_outlined),
+              onTap: () => _showCouponDialog(context),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _cart.items.length,
+                itemBuilder: (context, index) {
+                  final item = _cart.items[index];
+                  final cartItemId = item['cart_item_id']?.toString() ?? '';
+                  final qty = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
+                  final price = double.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                  return Dismissible(
+                    key: Key(cartItemId.isNotEmpty ? cartItemId : '$index'),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (_) => _cart.removeItem(cartItemId),
+                    background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+                    child: Card(
+                      child: ListTile(
+                        title: Text(item['name']?.toString() ?? item['product_name']?.toString() ?? ''),
+                        subtitle: Text('₹${price.toStringAsFixed(0)} × $qty'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(icon: const Icon(Icons.remove), onPressed: qty > 1 ? () => _cart.updateQuantity(cartItemId, qty - 1) : null),
+                            Text('$qty'),
+                            IconButton(icon: const Icon(Icons.add), onPressed: () => _cart.updateQuantity(cartItemId, qty + 1)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('Total'),
+                    Text('₹${total.toStringAsFixed(0)}', style: GoogleFonts.rubik(fontSize: 22, fontWeight: FontWeight.w700)),
                   ]),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                      child: Text('${cartItems.length} item${cartItems.length > 1 ? 's' : ''} in cart', style: GoogleFonts.rubik(fontSize: 13, color: Colors.grey.shade500)),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutScreen(amount: total))),
+                      child: const Text('Proceed to Checkout'),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        itemCount: cartItems.length,
-                        itemBuilder: (context, index) {
-                          final item = cartItems[index];
-                          final itemTotal = item['quantity'] * int.parse(item['price']);
-                          final imageUrl = item['imageUrl'] ?? DummyData.getProductImage(item['product_id']);
-                          return Dismissible(
-                            key: Key(item['product_id']),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(16)),
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 24),
-                              child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
-                            ),
-                            onDismissed: (_) => deleteCartItem(index),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2))],
-                              ),
-                              child: Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.asset(imageUrl, width: 70, height: 70, fit: BoxFit.cover),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(item['name'], style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 4),
-                                      Text('\u20B9${item['price']} each', style: GoogleFonts.rubik(fontSize: 12, color: Colors.grey.shade500)),
-                                    ]),
-                                  ),
-                                  Column(
-                                    children: [
-                                      Text('\u20B9$itemTotal', style: GoogleFonts.rubik(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF019934))),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
-                                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                          InkWell(
-                                            onTap: () { if (item['quantity'] > 1) updateQuantity(index, item['quantity'] - 1); },
-                                            child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.remove, size: 16, color: Colors.grey.shade700)),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                                            child: Text('${item['quantity']}', style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w600)),
-                                          ),
-                                          InkWell(
-                                            onTap: () => updateQuantity(index, item['quantity'] + 1),
-                                            child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.add, size: 16, color: const Color(0xFF019934))),
-                                          ),
-                                        ]),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, -4))],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                            Text('Total', style: GoogleFonts.rubik(fontSize: 16, color: Colors.grey.shade600)),
-                            Text('\u20B9${totalValue.toStringAsFixed(0)}', style: GoogleFonts.rubik(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black87)),
-                          ]),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF019934),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                elevation: 2,
-                              ),
-                              onPressed: checkout,
-                              child: Text('Checkout', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Future<void> _showCouponDialog(BuildContext context) async {
+    final code = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Apply Coupon'),
+        content: TextField(controller: code, decoration: const InputDecoration(hintText: 'Coupon code')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final result = await _cart.applyCoupon(code.text);
+              if (!mounted) return;
+              if (result is ApiFailure<Map<String, dynamic>>) {
+                showApiSnackBar(context, result.message, isError: true);
+              } else {
+                showApiSnackBar(context, 'Coupon applied');
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
     );
   }
 }

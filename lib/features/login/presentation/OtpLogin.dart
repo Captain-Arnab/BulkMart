@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/data/demo_auth.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/data/network/urban_roots_api.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
 import 'package:urban_roots/features/login/presentation/OtpVerificationPage.dart';
@@ -149,29 +151,25 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     );
   }
 
-  void _continueToOtp() {
+  Future<void> _continueToOtp() async {
     final phone = _phoneController.text.trim();
-    final password = _loginController.passwordController.text;
 
     if (phone.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
-      );
-      return;
-    }
-    if (!DemoAuth.isValidPhone(phone)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid mobile number')),
-      );
-      return;
-    }
-    if (!DemoAuth.isValidPassword(password)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid password')),
-      );
+      await SweetAlert.warning(context, message: 'Please enter a valid 10-digit mobile number');
       return;
     }
 
+    _loginController.isLoading(true);
+    final result = await UrbanRootsApi.instance.auth.sendLoginOtp(phone: phone);
+    _loginController.isLoading(false);
+
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      if (!mounted) return;
+      await SweetAlert.error(context, message: result.message);
+      return;
+    }
+
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -17,13 +17,6 @@ class LoginController extends GetxController {
 
   Future<void> userLogin(String email, String password) async {
     if (email.isEmpty || password.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter email and password',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.7),
-        colorText: Colors.white,
-      );
       return;
     }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/vendor_mock_data.dart';
@@ -85,21 +86,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_category == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
+      await SweetAlert.warning(context, message: 'Please select a category');
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(widget.productId == null ? 'Product saved (mock)' : 'Product updated (mock)'),
-        backgroundColor: const Color(0xFF019934),
-      ),
+    await SweetAlert.success(
+      context,
+      message: widget.productId == null ? 'Product saved (mock)' : 'Product updated (mock)',
+      onConfirm: () => Navigator.pop(context),
     );
-    Navigator.pop(context);
   }
 
   @override

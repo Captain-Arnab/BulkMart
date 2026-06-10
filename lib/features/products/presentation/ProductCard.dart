@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/dummy_data.dart';
 
 class ProductCard extends StatefulWidget {
@@ -47,14 +48,7 @@ class _ProductCardState extends State<ProductCard> {
         'imageUrl': _assetImage,
       });
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.name} added to cart'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    SweetAlert.success(context, message: '${widget.name} added to cart');
   }
 
   void toggleWishlist() {

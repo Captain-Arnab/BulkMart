@@ -5,12 +5,14 @@ class LoginResponse {
     required this.token,
     required this.role,
     this.vendorId,
+    this.userId,
     this.name,
   });
 
   final String token;
   final AuthRole role;
   final String? vendorId;
+  final String? userId;
   final String? name;
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {

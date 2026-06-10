@@ -1,46 +1,57 @@
 /// API base URL configuration.
 ///
-/// Priority: production → staging → legacy `API_BASE_URL`.
-/// Backend will share production URL after live-server verification.
-///
-/// ```bash
-/// # Staging (when shared)
-/// flutter run --dart-define=STAGING_API_BASE_URL=https://staging-api.example.com
-///
-/// # Production (when verified)
-/// flutter run --dart-define=PRODUCTION_API_BASE_URL=https://api.example.com
-/// ```
+/// User API  : {root}/api/user
+/// Vendor API: {root}/api/vendor
 class ApiConfig {
   ApiConfig._();
 
-  static const String productionBaseUrl = String.fromEnvironment(
+  static const String apiKey = 'URBANROOTS_API_2026';
+
+  static const String defaultSiteRoot = 'https://urbunroots.com';
+
+  static const String productionSiteRoot = String.fromEnvironment(
     'PRODUCTION_API_BASE_URL',
     defaultValue: '',
   );
 
-  static const String stagingBaseUrl = String.fromEnvironment(
+  static const String stagingSiteRoot = String.fromEnvironment(
     'STAGING_API_BASE_URL',
     defaultValue: '',
   );
 
-  /// Legacy single-URL flag (still supported).
-  static const String legacyBaseUrl = String.fromEnvironment(
+  static const String legacySiteRoot = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
 
-  static String get baseUrl {
-    if (productionBaseUrl.isNotEmpty) return productionBaseUrl;
-    if (stagingBaseUrl.isNotEmpty) return stagingBaseUrl;
-    return legacyBaseUrl;
+  static String get siteRoot {
+    if (productionSiteRoot.isNotEmpty) return _stripApiSuffix(productionSiteRoot);
+    if (stagingSiteRoot.isNotEmpty) return _stripApiSuffix(stagingSiteRoot);
+    if (legacySiteRoot.isNotEmpty) return _stripApiSuffix(legacySiteRoot);
+    return defaultSiteRoot;
   }
 
-  static bool get isApiConfigured => baseUrl.isNotEmpty;
+  static String get userBaseUrl => '$siteRoot/api/user';
+
+  static String get vendorBaseUrl => '$siteRoot/api/vendor';
+
+  /// Legacy alias — returns site root.
+  static String get baseUrl => siteRoot;
+
+  static bool get isApiConfigured => siteRoot.isNotEmpty;
 
   static String get environmentLabel {
-    if (productionBaseUrl.isNotEmpty) return 'production';
-    if (stagingBaseUrl.isNotEmpty) return 'staging';
-    if (legacyBaseUrl.isNotEmpty) return 'custom';
-    return 'unset';
+    if (productionSiteRoot.isNotEmpty) return 'production';
+    if (stagingSiteRoot.isNotEmpty) return 'staging';
+    if (legacySiteRoot.isNotEmpty) return 'custom';
+    return 'default';
+  }
+
+  static String _stripApiSuffix(String url) {
+    var root = url;
+    if (root.endsWith('/')) root = root.substring(0, root.length - 1);
+    if (root.endsWith('/api/user')) return root.substring(0, root.length - 9);
+    if (root.endsWith('/api/vendor')) return root.substring(0, root.length - 11);
+    return root;
   }
 }

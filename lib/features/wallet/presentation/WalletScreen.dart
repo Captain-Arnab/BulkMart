@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/features/payments/presentation/PhonePePaymentScreen.dart';
 import 'package:urban_roots/features/wallet/domain/WalletController.dart';
 
@@ -143,7 +145,19 @@ class WalletScreen extends StatelessWidget {
     );
   }
 
-  void _topUp(BuildContext context, WalletController wallet) {
+  Future<void> _topUp(BuildContext context, WalletController wallet) async {
+    final result = await wallet.initiateTopUp(500);
+    if (result is ApiFailure) {
+      if (context.mounted) {
+        await SweetAlert.error(context, message: (result as ApiFailure).message);
+      }
+      return;
+    }
+    final data = (result as ApiSuccess).data;
+    final redirect = data['data']?['redirect_url']?.toString();
+    if (redirect != null && context.mounted) {
+      await SweetAlert.info(context, message: 'Complete payment at: $redirect');
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -152,11 +166,12 @@ class WalletScreen extends StatelessWidget {
           title: 'Wallet Top-up',
           subtitle: 'Add ₹500 to Urban Roots Wallet',
           showSuccessScreen: false,
-          onSuccess: () {
-            wallet.addTopUp(500);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('₹500 added to wallet via PhonePe'), backgroundColor: Color(0xFF019934)),
-            );
+          onSuccess: () async {
+            await wallet.loadBalance();
+            await wallet.loadTransactions();
+            if (context.mounted) {
+              await SweetAlert.success(context, message: 'Wallet updated');
+            }
           },
         ),
       ),
