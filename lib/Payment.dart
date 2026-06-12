@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/features/dashboard/dashboard.dart';
 
 class PaymentScreen extends StatelessWidget {
   final String? transactionId;

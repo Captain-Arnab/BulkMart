@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
@@ -81,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF01B93E), Color(0xFF019934), Color(0xFF01752A)],
+            colors: [AppColors.primaryLight, AppColors.primary, AppColors.primaryDark],
           ),
         ),
         child: Center(

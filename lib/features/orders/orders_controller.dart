@@ -2,10 +2,10 @@ import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
-import 'package:urban_roots/features/orders/domain/order_payment_utils.dart';
-import 'package:urban_roots/features/orders/models/order_model.dart';
-import 'package:urban_roots/features/userProfile/domain/UserProfileController.dart';
-import 'package:urban_roots/features/userProfile/domain/address_controller.dart';
+import 'package:urban_roots/features/orders/order_payment_utils.dart';
+import 'package:urban_roots/features/orders/order_model.dart';
+import 'package:urban_roots/features/userProfile/user_profile_controller.dart';
+import 'package:urban_roots/features/userProfile/address_controller.dart';
 import 'package:urban_roots/features/userProfile/model/Address.dart';
 
 class OrderPaymentResult {

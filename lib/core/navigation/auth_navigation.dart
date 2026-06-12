@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:urban_roots/Utils/Strings.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/Dashboard.dart';
+import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 

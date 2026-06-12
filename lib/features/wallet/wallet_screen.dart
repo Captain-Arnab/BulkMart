@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/Utils/Loader.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/network/api_result.dart';
-import 'package:urban_roots/features/wallet/domain/WalletController.dart';
-import 'package:urban_roots/features/wallet/presentation/wallet_payment_webview.dart';
+import 'package:urban_roots/features/wallet/wallet_controller.dart';
+import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});

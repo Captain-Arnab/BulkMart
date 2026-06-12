@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
@@ -58,7 +59,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         title: Text('Profile', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
@@ -72,7 +73,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   Widget _buildBody() {
     final state = _vm.state;
     if (state is UiLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF019934)));
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
     if (state is UiError<VendorProfile>) {
       return Center(

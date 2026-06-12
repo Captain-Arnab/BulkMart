@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
 import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';

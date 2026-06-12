@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/userProfile/domain/address_controller.dart';
+import 'package:urban_roots/features/userProfile/address_controller.dart';
 import 'package:urban_roots/features/userProfile/presentation/widgets/AddressFormWidget.dart';
 
 class AddressListWidget extends StatelessWidget {

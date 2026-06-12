@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
+import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/shimmer_widgets.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/vendor_mock_data.dart';
@@ -33,24 +35,34 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.scaffold,
       appBar: AppBar(
-        title: Text('Dashboard', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+        title: const Text('Dashboard'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF019934),
+        color: AppColors.primary,
         onRefresh: () => _vm.load(),
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           children: [
+            Text(
+              'Overview',
+              style: GoogleFonts.rubik(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
             _PeriodChips(
               selected: _vm.selectedPeriod,
               onSelected: (p) => _vm.load(period: p),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _buildStats(),
           ],
         ),
@@ -65,9 +77,9 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.35,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 1.2,
         children: const [
           ShimmerStatCard(),
           ShimmerStatCard(),
@@ -78,12 +90,19 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     }
     if (state is UiError<VendorDashboardStats>) {
       return Center(
-        child: Column(
-          children: [
-            Text(state.message, style: GoogleFonts.rubik(color: Colors.grey.shade700)),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: () => _vm.load(), child: const Text('Retry')),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Text(
+                state.message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.rubik(color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: () => _vm.load(), child: const Text('Retry')),
+            ],
+          ),
         ),
       );
     }
@@ -93,14 +112,30 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.35,
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 14,
+      childAspectRatio: 1.2,
       children: [
-        _StatCard(label: 'Total Products', value: '${stats.totalProducts}', icon: Icons.inventory_2_outlined),
-        _StatCard(label: 'Total Orders', value: '${stats.totalOrders}', icon: Icons.receipt_long_outlined),
-        _StatCard(label: 'Pending Orders', value: '${stats.pendingOrders}', icon: Icons.pending_actions_outlined),
-        _StatCard(label: 'Total Revenue', value: currency.format(stats.totalRevenue), icon: Icons.payments_outlined),
+        VendorStatCard(
+          label: 'Total Products',
+          value: '${stats.totalProducts}',
+          icon: Icons.inventory_2_outlined,
+        ),
+        VendorStatCard(
+          label: 'Total Orders',
+          value: '${stats.totalOrders}',
+          icon: Icons.receipt_long_outlined,
+        ),
+        VendorStatCard(
+          label: 'Pending Orders',
+          value: '${stats.pendingOrders}',
+          icon: Icons.pending_actions_outlined,
+        ),
+        VendorStatCard(
+          label: 'Total Revenue',
+          value: currency.format(stats.totalRevenue),
+          icon: Icons.payments_outlined,
+        ),
       ],
     );
   }
@@ -119,51 +154,44 @@ class _PeriodChips extends StatelessWidget {
       ('week', 'This Week'),
       ('month', 'This Month'),
     ];
-    return Row(
-      children: options.map((o) {
-        final isSelected = selected == o.$1;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: o.$1 != 'month' ? 8 : 0),
-            child: FilterChip(
-              label: Text(o.$2, style: GoogleFonts.rubik(fontSize: 12)),
-              selected: isSelected,
-              onSelected: (_) => onSelected(o.$1),
-              selectedColor: const Color(0xFF019934).withValues(alpha: 0.15),
-              checkmarkColor: const Color(0xFF019934),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMint,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: options.map((o) {
+          final isSelected = selected == o.$1;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: o.$1 != 'month' ? 6 : 0),
+              child: Material(
+                color: isSelected ? Colors.white : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                elevation: isSelected ? 1 : 0,
+                shadowColor: Colors.black.withValues(alpha: 0.08),
+                child: InkWell(
+                  onTap: () => onSelected(o.$1),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(
+                      o.$2,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.rubik(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? AppColors.primary : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value, required this.icon});
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: const Color(0xFF019934), size: 22),
-            const Spacer(),
-            Text(label, style: GoogleFonts.rubik(fontSize: 12, color: Colors.grey.shade600)),
-            const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.rubik(fontSize: 20, fontWeight: FontWeight.w700)),
-          ],
-        ),
+          );
+        }).toList(),
       ),
     );
   }

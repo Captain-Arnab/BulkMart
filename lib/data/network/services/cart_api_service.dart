@@ -52,14 +52,8 @@ class CartApiService {
         extraHeaders: cartPlatformHeader,
       );
 
-  /// Unauthenticated — guard in UI layer.
-  Future<ApiResult<Map<String, dynamic>>> clearCart({
-    required String userId,
-  }) =>
-      _client.get(
+  Future<ApiResult<Map<String, dynamic>>> clearCart() => _client.get(
         APIClass.cartClear,
-        token: TokenMode.none,
-        queryParameters: {'user_id': userId},
         extraHeaders: cartPlatformHeader,
       );
 

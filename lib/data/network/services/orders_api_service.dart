@@ -1,7 +1,7 @@
 import 'package:urban_roots/Utils/APIClass.dart';
 import 'package:urban_roots/data/network/api_client.dart';
 import 'package:urban_roots/data/network/api_result.dart';
-import 'package:urban_roots/features/orders/domain/order_payment_utils.dart';
+import 'package:urban_roots/features/orders/order_payment_utils.dart';
 
 class OrdersApiService {
   OrdersApiService({ApiClient? client}) : _client = client ?? ApiClient.user;
@@ -80,6 +80,7 @@ class OrdersApiService {
     String? productId,
     int quantity = 1,
     String? orderId,
+    String paymentMethod = 'cod',
   }) =>
       _client.post(
         APIClass.codOrder,
@@ -99,7 +100,7 @@ class OrdersApiService {
           productId: productId,
           quantity: quantity,
           orderId: orderId,
-          paymentMethod: 'cod',
+          paymentMethod: paymentMethod,
         ),
       );
 

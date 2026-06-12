@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 
 class TabBarWidget extends StatelessWidget {
   final String name;
@@ -24,19 +25,46 @@ class TabBarWidget extends StatelessWidget {
       length: 4,
       child: Column(
         children: [
-          TabBar(
-            labelColor: const Color(0xFF019934),
-            unselectedLabelColor: Colors.grey.shade600,
-            indicatorColor: const Color(0xFF019934),
-            isScrollable: true,
-            labelStyle: GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w600),
-            tabs: const [
-              Tab(text: 'Description'),
-              Tab(text: 'Health Benefits'),
-              Tab(text: 'Selling Points'),
-              Tab(text: 'Nutrition'),
-            ],
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMint,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: TabBar(
+              labelColor: AppColors.primary,
+              unselectedLabelColor: Colors.grey.shade600,
+              indicator: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(4),
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelStyle: GoogleFonts.rubik(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: GoogleFonts.rubik(fontSize: 12),
+              tabs: const [
+                Tab(text: 'Description'),
+                Tab(text: 'Health Benefits'),
+                Tab(text: 'Selling Points'),
+                Tab(text: 'Nutrition'),
+              ],
+            ),
           ),
+          const SizedBox(height: 12),
           Expanded(
             child: TabBarView(
               children: [
@@ -49,7 +77,9 @@ class TabBarWidget extends StatelessWidget {
                       : healthBenefits,
                 ),
                 _buildScrollableHtmlTabContent(
-                  sellingPoints.isEmpty ? 'No selling points provided.' : sellingPoints,
+                  sellingPoints.isEmpty
+                      ? 'No selling points provided.'
+                      : sellingPoints,
                 ),
                 _buildScrollableHtmlTabContent(
                   nutritionalInfo.isEmpty
@@ -65,19 +95,27 @@ class TabBarWidget extends StatelessWidget {
   }
 
   Widget _buildScrollableHtmlTabContent(String content) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-      child: Html(
-        data: content,
-        style: {
-          'body': Style(
-            fontSize: FontSize(14),
-            fontWeight: FontWeight.w400,
-            color: Colors.black87,
-            margin: Margins.zero,
-            padding: HtmlPaddings.zero,
-          ),
-        },
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Html(
+          data: content,
+          style: {
+            'body': Style(
+              fontSize: FontSize(14),
+              fontWeight: FontWeight.w400,
+              color: Colors.black87,
+              lineHeight: const LineHeight(1.6),
+              margin: Margins.zero,
+              padding: HtmlPaddings.zero,
+            ),
+          },
+        ),
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
+import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/shimmer_widgets.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
@@ -71,17 +73,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text('Products', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
+      backgroundColor: AppColors.scaffold,
+      appBar: ModernAppBar(
+        title: 'Products',
         actions: [
           IconButton(
             tooltip: 'Categories',
             icon: const Icon(Icons.category_outlined),
-            onPressed: () => vendorProductsPush(context, VendorRoutes.categoryList),
+            onPressed: () =>
+                vendorProductsPush(context, VendorRoutes.categoryList),
           ),
         ],
       ),
@@ -110,7 +110,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF019934),
+        backgroundColor: AppColors.primary,
+        elevation: 4,
         onPressed: () => vendorProductsPush(context, VendorRoutes.addEditProduct, arguments: null),
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text('Add Product', style: GoogleFonts.rubik(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -172,7 +173,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     return RefreshIndicator(
-      color: const Color(0xFF019934),
+      color: AppColors.primary,
       onRefresh: _viewModel.loadProducts,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 88),
@@ -215,14 +216,20 @@ class _ProductListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            decoration: AppDecorations.softCard(radius: 20),
+            padding: const EdgeInsets.all(12),
+            child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: Image.asset(
                 product.imageAsset,
                 width: 72,
@@ -257,8 +264,10 @@ class _ProductListTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ],
+            ),
+          ),
         ),
       ),
     );

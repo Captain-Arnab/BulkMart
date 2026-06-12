@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/features/payments/domain/PhonePeService.dart';
+import 'package:urban_roots/features/payments/phone_pe_service.dart';
 import 'package:urban_roots/Payment.dart';
 
 class PhonePePaymentScreen extends StatefulWidget {

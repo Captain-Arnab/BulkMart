@@ -9,6 +9,7 @@ class Product {
   final String imageUrl;
   final String packingType;
   final String gst;
+  final Map<String, dynamic> rawJson;
 
   Product({
     required this.id,
@@ -19,9 +20,11 @@ class Product {
     required this.imageUrl,
     required this.packingType,
     required this.gst,
-  });
+    Map<String, dynamic>? rawJson,
+  }) : rawJson = rawJson ?? const {};
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    final map = Map<String, dynamic>.from(json);
     return Product(
       id: json['pd_id']?.toString() ??
           json['product_id']?.toString() ??
@@ -40,6 +43,7 @@ class Product {
       imageUrl: pickImageUrl(json),
       packingType: json['packing_type']?.toString() ?? '',
       gst: json['gst']?.toString() ?? '0',
+      rawJson: map,
     );
   }
 

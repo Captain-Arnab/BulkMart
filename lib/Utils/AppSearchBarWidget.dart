@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/features/home/domain/delivery_location_controller.dart';
-import 'package:urban_roots/features/notifications/domain/notifications_controller.dart';
+import 'package:urban_roots/features/home/delivery_location_controller.dart';
+import 'package:urban_roots/features/notifications/notifications_controller.dart';
 import 'package:urban_roots/features/notifications/presentation/notifications_screen.dart';
 
 class AppSearchBarWidget extends StatefulWidget implements PreferredSizeWidget {

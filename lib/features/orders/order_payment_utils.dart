@@ -1,4 +1,4 @@
-import 'package:urban_roots/features/orders/models/order_model.dart';
+import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/userProfile/model/Address.dart';
 
 String? extractPaymentUrl(Map<String, dynamic> data) {

@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/orders/domain/orders_controller.dart';
-import 'package:urban_roots/features/orders/models/order_model.dart';
-import 'package:urban_roots/features/wallet/presentation/wallet_payment_webview.dart';
+import 'package:urban_roots/features/orders/orders_controller.dart';
+import 'package:urban_roots/features/orders/order_model.dart';
+import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({

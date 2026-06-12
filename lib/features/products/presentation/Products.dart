@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/Utils/AppBarWidget.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/banner.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
@@ -83,8 +81,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 height: 30,
                 child: InkWell(
                   onTap: () {
-                    BlocProvider.of<DashboardBloc>(context)
-                        .add(DashboardUpdateEvent(index: 1, category: 0));
+                    DashboardController.findOrPut().goToTab(1);
                   },
                   child: Text(
                     "See All",

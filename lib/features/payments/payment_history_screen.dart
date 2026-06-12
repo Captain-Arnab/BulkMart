@@ -1,25 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
-import 'package:urban_roots/features/payments/domain/payment_history_controller.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
+import 'package:urban_roots/features/payments/payment_history_controller.dart';
 
-class PaymentHistoryScreen extends StatelessWidget {
+class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
 
+  @override
+  State<PaymentHistoryScreen> createState() => _PaymentHistoryScreenState();
+}
+
+class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
+  late final PaymentHistoryController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PaymentHistoryController.findOrPut();
+    _controller.loadPayments();
+  }
+
   IconData _methodIcon(String method) {
-    switch (method.toLowerCase()) {
-      case 'upi':
-        return Icons.account_balance;
-      case 'card':
-        return Icons.credit_card;
-      default:
-        return Icons.language;
+    final value = method.toLowerCase();
+    if (value.contains('wallet')) return Icons.account_balance_wallet_outlined;
+    if (value.contains('cod') || value.contains('cash')) {
+      return Icons.payments_outlined;
     }
+    if (value.contains('upi') || value.contains('phonepe')) {
+      return Icons.account_balance;
+    }
+    if (value.contains('card')) return Icons.credit_card;
+    return Icons.language;
   }
 
   String _formatAmount(Map<String, dynamic> payment) {
@@ -45,19 +60,50 @@ class PaymentHistoryScreen extends StatelessWidget {
     return '';
   }
 
+  ({String label, Color bg, Color fg}) _statusStyle(String status) {
+    final value = status.toLowerCase();
+    if (value.contains('cancel')) {
+      return (
+        label: 'Cancelled',
+        bg: Colors.red.shade50,
+        fg: Colors.red.shade700,
+      );
+    }
+    if (value.contains('fail') ||
+        value.contains('declined') ||
+        value.contains('refund')) {
+      return (
+        label: 'Failed',
+        bg: Colors.red.shade50,
+        fg: Colors.red.shade700,
+      );
+    }
+    if (value.contains('pending') ||
+        value.contains('unpaid') ||
+        value.contains('initiated')) {
+      return (
+        label: 'Pending',
+        bg: Colors.orange.shade50,
+        fg: Colors.orange.shade800,
+      );
+    }
+    return (
+      label: 'Completed',
+      bg: Colors.green.shade50,
+      fg: Colors.green.shade700,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = PaymentHistoryController.findOrPut();
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF8),
+      backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => BlocProvider.of<DashboardBloc>(context)
-              .add(DashboardUpdateEvent(index: 4, category: 0)),
+          onPressed: () => DashboardController.findOrPut().backToProfile(),
         ),
         title: Text(
           'Payment History',
@@ -70,21 +116,21 @@ class PaymentHistoryScreen extends StatelessWidget {
         centerTitle: false,
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
+        if (_controller.isLoading.value && _controller.payments.isEmpty) {
           return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF019934)),
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
-        if (controller.errorMessage.value.isNotEmpty &&
-            controller.payments.isEmpty) {
+        if (_controller.errorMessage.value.isNotEmpty &&
+            _controller.payments.isEmpty) {
           return ApiStateView(
             status: ApiViewStatus.error,
-            errorMessage: controller.errorMessage.value,
-            onRetry: controller.loadPayments,
+            errorMessage: _controller.errorMessage.value,
+            onRetry: _controller.loadPayments,
             child: const SizedBox(),
           );
         }
-        if (controller.payments.isEmpty) {
+        if (_controller.payments.isEmpty) {
           return ApiStateView(
             status: ApiViewStatus.empty,
             emptyMessage: 'No payments yet',
@@ -93,21 +139,23 @@ class PaymentHistoryScreen extends StatelessWidget {
         }
 
         return RefreshIndicator(
-          color: const Color(0xFF019934),
-          onRefresh: controller.loadPayments,
+          color: AppColors.primary,
+          onRefresh: _controller.loadPayments,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.payments.length,
+            itemCount: _controller.payments.length,
             itemBuilder: (context, index) {
-              final payment = controller.payments[index];
+              final payment = _controller.payments[index];
               final formattedDate = _formatDate(payment);
               final amount = _formatAmount(payment);
               final method = payment['method']?.toString() ?? 'N/A';
+              final gateway = payment['gateway']?.toString() ?? '';
               final status =
-                  payment['status']?.toString().toLowerCase() ?? 'success';
-              final isSuccess = status.contains('success') ||
-                  status.contains('complete') ||
-                  status.contains('paid');
+                  payment['status']?.toString().toLowerCase() ?? 'pending';
+              final statusStyle = _statusStyle(status);
+              final isNegative = status.contains('cancel') ||
+                  status.contains('fail') ||
+                  status.contains('refund');
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -128,12 +176,12 @@ class PaymentHistoryScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF019934).withValues(alpha: 0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         _methodIcon(method),
-                        color: const Color(0xFF019934),
+                        color: AppColors.primary,
                         size: 24,
                       ),
                     ),
@@ -160,8 +208,11 @@ class PaymentHistoryScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 2),
-                          Row(
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -169,46 +220,43 @@ class PaymentHistoryScreen extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isSuccess
-                                      ? Colors.green.shade50
-                                      : Colors.orange.shade50,
+                                  color: statusStyle.bg,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  isSuccess ? 'Success' : status,
+                                  statusStyle.label,
                                   style: GoogleFonts.rubik(
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w500,
-                                    color: isSuccess
-                                        ? Colors.green.shade700
-                                        : Colors.orange.shade800,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusStyle.fg,
                                   ),
                                 ),
                               ),
-                              if ((payment['gateway'] ?? '').toString() ==
-                                  'PhonePe') ...[
-                                const SizedBox(width: 6),
+                              if (gateway.isNotEmpty &&
+                                  gateway.toLowerCase() != method.toLowerCase())
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF5F259F)
-                                        .withValues(alpha: 0.12),
+                                    color: gateway.toLowerCase() == 'phonepe'
+                                        ? const Color(0xFF5F259F)
+                                            .withValues(alpha: 0.12)
+                                        : AppColors.surfaceMint,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'PhonePe',
+                                    gateway,
                                     style: GoogleFonts.rubik(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF5F259F),
+                                      color: gateway.toLowerCase() == 'phonepe'
+                                          ? const Color(0xFF5F259F)
+                                          : AppColors.primaryDark,
                                     ),
                                   ),
                                 ),
-                              ],
-                              const SizedBox(width: 8),
                               Text(
                                 method,
                                 style: GoogleFonts.rubik(
@@ -222,11 +270,13 @@ class PaymentHistoryScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '\u20B9$amount',
+                      '₹$amount',
                       style: GoogleFonts.rubik(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF019934),
+                        color: isNegative
+                            ? Colors.grey.shade600
+                            : AppColors.primary,
                       ),
                     ),
                   ],

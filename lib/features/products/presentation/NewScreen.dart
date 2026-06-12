@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/Utils/AppSearchBarWidget.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
+import 'package:urban_roots/core/ui/app_ui_kit.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/products_slider.dart';
-import 'package:urban_roots/features/home/domain/delivery_location_controller.dart';
-import 'package:urban_roots/features/notifications/domain/notifications_controller.dart';
+import 'package:urban_roots/features/home/delivery_location_controller.dart';
+import 'package:urban_roots/features/notifications/notifications_controller.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/products/presentation/ProductCard.dart';
@@ -52,10 +52,10 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF8),
+      backgroundColor: AppColors.scaffold,
       appBar: const AppSearchBarWidget(),
       body: RefreshIndicator(
-        color: const Color(0xFF019934),
+        color: AppColors.primary,
         onRefresh: _refreshHome,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -69,51 +69,17 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
                   child: const SizedBox(height: 170, child: SliderPage()),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  'Shop by Category',
-                  style: GoogleFonts.rubik(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: SectionHeader(title: 'Shop by Category'),
               ),
               const ProductSliderPage(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Popular Products',
-                      style: GoogleFonts.rubik(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => BlocProvider.of<DashboardBloc>(context)
-                          .add(DashboardUpdateEvent(index: 1, category: 0)),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF019934).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'See All',
-                          style: GoogleFonts.rubik(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF019934),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: SectionHeader(
+                  title: 'Popular Products',
+                  action: 'See All',
+                  onActionTap: () => DashboardController.findOrPut().goToTab(1),
                 ),
               ),
               Obx(() {
@@ -121,7 +87,7 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
                   return const SizedBox(
                     height: 220,
                     child: Center(
-                      child: CircularProgressIndicator(color: Color(0xFF019934)),
+                      child: CircularProgressIndicator(color: AppColors.primary),
                     ),
                   );
                 }

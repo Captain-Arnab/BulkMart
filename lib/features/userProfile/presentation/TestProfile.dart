@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/features/auth/presentation/change_password_screen.dart';
 import 'package:urban_roots/features/notifications/presentation/notifications_screen.dart';
 import 'package:urban_roots/features/referral/presentation/referral_screen.dart';
 import 'package:urban_roots/features/support/presentation/support_screen.dart';
 import 'package:urban_roots/features/userProfile/presentation/edit_profile_screen.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
-import 'package:urban_roots/features/wallet/presentation/WalletScreen.dart';
+import 'package:urban_roots/features/wallet/wallet_screen.dart';
 import 'package:get/get.dart';
-import 'package:urban_roots/features/userProfile/domain/UserProfileController.dart';
+import 'package:urban_roots/features/userProfile/user_profile_controller.dart';
 
 class UserProfileScreen extends StatefulWidget {
   @override
@@ -125,15 +123,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     }),
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.shopping_bag_outlined, 'Order History', () {
-                      BlocProvider.of<DashboardBloc>(context).add(NavigateToOrderScreenEvent());
+                      DashboardController.findOrPut().openOrderHistory();
                     }),
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.payment_outlined, 'Payment History', () {
-                      BlocProvider.of<DashboardBloc>(context).add(NavigateToPaymentScreenEvent());
+                      DashboardController.findOrPut().openPaymentHistory();
                     }),
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.location_on_outlined, 'My Addresses', () {
-                      BlocProvider.of<DashboardBloc>(context).add(NavigateToAddressScreenEvent());
+                      DashboardController.findOrPut().openAddresses();
                     }),
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.edit_outlined, 'Edit Profile', () {

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
+import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/cart/domain/cart_controller.dart';
-import 'package:urban_roots/features/wishlist/domain/wishlist_controller.dart';
+import 'package:urban_roots/features/cart/cart_controller.dart';
+import 'package:urban_roots/features/wishlist/wishlist_controller.dart';
 
 class ProductCard extends StatefulWidget {
   final int id;
@@ -61,9 +62,7 @@ class _ProductCardState extends State<ProductCard> {
     if (_isCartLoading || !_canAddToCart) return;
     setState(() => _isCartLoading = true);
 
-    final cart = Get.isRegistered<CartController>()
-        ? Get.find<CartController>()
-        : Get.put(CartController());
+    final cart = CartController.findOrPut();
     final success = await cart.addProduct(_productId);
 
     if (!mounted) return;
@@ -112,13 +111,8 @@ class _ProductCardState extends State<ProductCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
+      decoration: AppDecorations.softCard(radius: 20),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -131,33 +125,23 @@ class _ProductCardState extends State<ProductCard> {
                 children: [
                   Container(
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F9F5),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                      child: NetworkOrAssetImage(
-                        url: _displayImageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
+                    color: AppColors.cardTint,
+                    child: NetworkOrAssetImage(
+                      url: _displayImageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
                     ),
                   ),
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    top: 8,
+                    right: 8,
                     child: GestureDetector(
                       onTap: _isWishlistLoading ? null : toggleWishlist,
                       behavior: HitTestBehavior.opaque,
                       child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                        ),
+                        padding: const EdgeInsets.all(6),
+                        decoration: AppDecorations.glassCircle(),
                         child: _isWishlistLoading
                             ? const SizedBox(
                                 width: 16,
@@ -165,21 +149,37 @@ class _ProductCardState extends State<ProductCard> {
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
                             : Icon(
-                                isFavorite ? Icons.favorite : Icons.favorite_border,
+                                isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
                                 size: 16,
-                                color: isFavorite ? Colors.red : Colors.grey,
+                                color: isFavorite ? Colors.red : Colors.grey.shade600,
                               ),
                       ),
                     ),
                   ),
-                  if (int.tryParse(widget.stock) != null && int.parse(widget.stock) < 30)
+                  if (int.tryParse(widget.stock) != null &&
+                      int.parse(widget.stock) < 30)
                     Positioned(
-                      top: 6,
-                      left: 6,
+                      top: 8,
+                      left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.orange.shade600, borderRadius: BorderRadius.circular(6)),
-                        child: Text('Low Stock', style: GoogleFonts.rubik(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w500)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade600,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Low Stock',
+                          style: GoogleFonts.rubik(
+                            fontSize: 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -189,7 +189,7 @@ class _ProductCardState extends State<ProductCard> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -203,10 +203,21 @@ class _ProductCardState extends State<ProductCard> {
                           widget.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.rubik(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87, height: 1.2),
+                          style: GoogleFonts.rubik(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                            height: 1.25,
+                          ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(widget.grams, style: GoogleFonts.rubik(fontSize: 10, color: Colors.grey.shade500)),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.grams,
+                          style: GoogleFonts.rubik(
+                            fontSize: 10,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -214,23 +225,41 @@ class _ProductCardState extends State<ProductCard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('\u20B9${widget.price}', style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF019934))),
-                      GestureDetector(
-                        onTap: _isCartLoading || !_canAddToCart ? null : addToCart,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: _canAddToCart ? const Color(0xFF019934) : Colors.grey.shade400,
-                            borderRadius: BorderRadius.circular(8),
+                      Text(
+                        '\u20B9${widget.price}',
+                        style: GoogleFonts.rubik(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Material(
+                        color: _canAddToCart
+                            ? AppColors.primary
+                            : Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(12),
+                        elevation: 2,
+                        shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                        child: InkWell(
+                          onTap: _isCartLoading || !_canAddToCart ? null : addToCart,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: _isCartLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.add_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
                           ),
-                          child: _isCartLoading
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.add, size: 16, color: Colors.white),
                         ),
                       ),
                     ],

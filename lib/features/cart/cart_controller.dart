@@ -5,20 +5,34 @@ import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
 
 class CartController extends GetxController {
-  final _api = UrbanRootsApi.instance;
+  CartController({UrbanRootsApi? api}) : _api = api ?? UrbanRootsApi.instance;
+
+  final UrbanRootsApi _api;
 
   final RxList<Map<String, dynamic>> items = <Map<String, dynamic>>[].obs;
   final RxMap<String, dynamic> summary = <String, dynamic>{}.obs;
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
+  final RxString updatingItemId = ''.obs;
 
   final RxString appliedCoupon = ''.obs;
   final RxDouble discount = 0.0.obs;
   final RxDouble finalAmount = 0.0.obs;
 
+  static CartController findOrPut() {
+    if (Get.isRegistered<CartController>()) {
+      return Get.find<CartController>();
+    }
+    return Get.put(CartController());
+  }
+
   double get totalValue {
-    if (summary['total'] != null) {
-      return double.tryParse(summary['total'].toString()) ?? 0;
+    final summaryTotal = summary['total'] ??
+        summary['grand_total'] ??
+        summary['subtotal'] ??
+        summary['amount'];
+    if (summaryTotal != null) {
+      return double.tryParse(summaryTotal.toString()) ?? 0;
     }
     var total = 0.0;
     for (final item in items) {
@@ -29,10 +43,28 @@ class CartController extends GetxController {
     return total;
   }
 
-  Future<bool> addProduct(String productId, {int quantity = 1}) async {
+  Future<bool> addProduct(
+    String productId, {
+    int quantity = 1,
+    String? deliveryType,
+    String? deliveryDate,
+    String? weeklyDays,
+    String? subscriptionStartDate,
+  }) async {
+    final id = productId.trim();
+    if (id.isEmpty) {
+      errorMessage.value = 'Invalid product';
+      return false;
+    }
+
+    errorMessage.value = '';
     final result = await _api.cart.addToCart(
-      productId: productId,
+      productId: id,
       quantity: quantity,
+      deliveryType: deliveryType,
+      deliveryDate: deliveryDate,
+      weeklyDays: weeklyDays,
+      subscriptionStartDate: subscriptionStartDate,
     );
     if (result is ApiFailure<Map<String, dynamic>>) {
       errorMessage.value = result.message;
@@ -50,56 +82,90 @@ class CartController extends GetxController {
     if (result is ApiFailure<Map<String, dynamic>>) {
       errorMessage.value = result.message;
       items.clear();
+      summary.clear();
       return;
     }
     final data = (result as ApiSuccess<Map<String, dynamic>>).data;
     final parsed = _parseCartItems(data);
-    await _enrichMissingImages(parsed);
+    await _enrichFromCatalog(parsed);
     items.assignAll(parsed);
-    final summarySource = data['summary'] is Map
-        ? data['summary']
-        : (data['data'] is Map ? (data['data'] as Map)['summary'] : null);
-    if (summarySource is Map) {
-      summary.assignAll(Map<String, dynamic>.from(summarySource));
-    }
+    _applySummary(data);
     finalAmount.value = totalValue - discount.value;
   }
 
+  void _applySummary(Map<String, dynamic> envelope) {
+    Map<String, dynamic>? summarySource;
+    if (envelope['summary'] is Map) {
+      summarySource = Map<String, dynamic>.from(envelope['summary'] as Map);
+    } else if (envelope['data'] is Map) {
+      final inner = Map<String, dynamic>.from(envelope['data'] as Map);
+      if (inner['summary'] is Map) {
+        summarySource = Map<String, dynamic>.from(inner['summary'] as Map);
+      }
+    }
+
+    if (summarySource != null) {
+      summary.assignAll(summarySource);
+    } else {
+      summary.clear();
+    }
+  }
+
   List<Map<String, dynamic>> _parseCartItems(Map<String, dynamic> envelope) {
-    List<Map<String, dynamic>> rawItems;
+    final rawItems = _extractCartItemList(envelope);
+    return rawItems.map(_normalizeCartItem).toList();
+  }
+
+  List<Map<String, dynamic>> _extractCartItemList(Map<String, dynamic> envelope) {
+    for (final key in ['cart_items', 'items', 'cart', 'products']) {
+      final value = envelope[key];
+      if (value is List) {
+        return value
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+
     final inner = envelope['data'];
     if (inner is List) {
-      rawItems = inner
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    } else if (inner is Map) {
-      rawItems = [];
-      for (final key in ['items', 'cart', 'products']) {
-        final value = inner[key];
-        if (value is List) {
-          rawItems = value
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
-          break;
-        }
-      }
-    } else {
-      rawItems = extractList(envelope)
+      return inner
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
     }
+    if (inner is Map) {
+      final map = Map<String, dynamic>.from(inner);
+      for (final key in ['cart_items', 'items', 'cart', 'products']) {
+        final value = map[key];
+        if (value is List) {
+          return value
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      }
+    }
 
-    return rawItems.map(_normalizeCartItem).toList();
+    return extractList(envelope)
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Map<String, dynamic> _normalizeCartItem(Map<String, dynamic> item) {
     final normalized = Map<String, dynamic>.from(item);
-    if (normalized['cart_item_id'] == null && normalized['id'] != null) {
-      normalized['cart_item_id'] = normalized['id'];
-    }
+
+    normalized['cart_item_id'] ??= normalized['cart_id'] ?? normalized['id'];
+    normalized['product_id'] ??= normalized['pd_id'] ?? normalized['productId'];
+    normalized['name'] ??= normalized['product_name'] ?? normalized['item_name'];
+    normalized['quantity'] ??= normalized['qty'] ?? 1;
+    normalized['price'] ??= normalized['product_price'] ??
+        normalized['unit_price'] ??
+        normalized['item_price'] ??
+        normalized['rate'] ??
+        '0';
+
     final imageUrl = pickImageUrl(normalized);
     if (imageUrl.isNotEmpty) {
       normalized['imageUrl'] = imageUrl;
@@ -107,24 +173,38 @@ class CartController extends GetxController {
     return normalized;
   }
 
-  Future<void> _enrichMissingImages(List<Map<String, dynamic>> items) async {
+  Future<void> _enrichFromCatalog(List<Map<String, dynamic>> cartItems) async {
     final futures = <Future<void>>[];
-    for (final item in items) {
-      if (pickImageUrl(item).isNotEmpty) continue;
+    for (final item in cartItems) {
       final productId = item['product_id']?.toString() ??
           item['pd_id']?.toString() ??
           '';
       if (productId.isEmpty) continue;
       futures.add(() async {
         final result = await _api.catalog.productDetail(productId: productId);
-        if (result is ApiSuccess<Map<String, dynamic>>) {
-          final data = result.data['data'];
-          if (data is Map) {
-            final imageUrl = pickImageUrl(Map<String, dynamic>.from(data));
-            if (imageUrl.isNotEmpty) {
-              item['imageUrl'] = imageUrl;
-            }
-          }
+        if (result is! ApiSuccess<Map<String, dynamic>>) return;
+        final data =
+            result.data['data'] ?? result.data['product'] ?? result.data;
+        if (data is! Map) return;
+
+        final product = Map<String, dynamic>.from(data);
+        final imageUrl = pickImageUrl(product);
+        if (imageUrl.isNotEmpty) {
+          item['imageUrl'] = imageUrl;
+        }
+
+        final productName = product['name']?.toString() ??
+            product['product_name']?.toString() ??
+            product['pd_name']?.toString();
+        if (productName != null && productName.trim().isNotEmpty) {
+          item['name'] = productName.trim();
+        }
+
+        final grams = product['grams']?.toString() ??
+            product['product_grams']?.toString() ??
+            product['weight']?.toString();
+        if (grams != null && grams.trim().isNotEmpty) {
+          item['product_grams'] = grams.trim();
         }
       }());
     }
@@ -134,10 +214,20 @@ class CartController extends GetxController {
   }
 
   Future<bool> updateQuantity(String cartItemId, int quantity) async {
+    if (cartItemId.isEmpty) {
+      errorMessage.value = 'Invalid cart item';
+      return false;
+    }
+    if (quantity < 1) {
+      return removeItem(cartItemId);
+    }
+
+    updatingItemId.value = cartItemId;
     final result = await _api.cart.updateCartItem(
       cartItemId: cartItemId,
       quantity: quantity,
     );
+    updatingItemId.value = '';
     if (result is ApiFailure) {
       errorMessage.value = (result as ApiFailure).message;
       return false;
@@ -147,7 +237,14 @@ class CartController extends GetxController {
   }
 
   Future<bool> removeItem(String cartItemId) async {
+    if (cartItemId.isEmpty) {
+      errorMessage.value = 'Invalid cart item';
+      return false;
+    }
+
+    updatingItemId.value = cartItemId;
     final result = await _api.cart.removeCartItem(cartItemId: cartItemId);
+    updatingItemId.value = '';
     if (result is ApiFailure) {
       errorMessage.value = (result as ApiFailure).message;
       return false;
@@ -163,26 +260,11 @@ class CartController extends GetxController {
     errorMessage.value = '';
 
     try {
-      // Backend /cart/clear.php returns success but does not actually empty the cart.
-      // Remove each line item via /cart/remove.php instead.
-      final ids = items
-          .map((item) =>
-              item['cart_item_id']?.toString() ?? item['id']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toList();
-
-      if (ids.isEmpty) {
-        errorMessage.value = 'Could not identify cart items to remove';
+      final result = await _api.cart.clearCart();
+      if (result is ApiFailure<Map<String, dynamic>>) {
+        errorMessage.value = result.message;
+        await loadCart();
         return false;
-      }
-
-      for (final cartItemId in ids) {
-        final result = await _api.cart.removeCartItem(cartItemId: cartItemId);
-        if (result is ApiFailure<Map<String, dynamic>>) {
-          errorMessage.value = result.message;
-          await loadCart();
-          return false;
-        }
       }
 
       appliedCoupon.value = '';
@@ -206,7 +288,8 @@ class CartController extends GetxController {
       appliedCoupon.value = d['coupon_code']?.toString() ?? code;
       discount.value = double.tryParse(d['discount']?.toString() ?? '0') ?? 0;
       finalAmount.value =
-          double.tryParse(d['final_amount']?.toString() ?? '') ?? (totalValue - discount.value);
+          double.tryParse(d['final_amount']?.toString() ?? '') ??
+              (totalValue - discount.value);
     }
     return result;
   }

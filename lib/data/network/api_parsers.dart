@@ -1,6 +1,6 @@
 import 'package:urban_roots/core/ui/network_image_widget.dart';
-import 'package:urban_roots/features/orders/domain/order_payment_utils.dart';
-import 'package:urban_roots/features/orders/models/order_model.dart';
+import 'package:urban_roots/features/orders/order_payment_utils.dart';
+import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/utils/catalog_filters.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
@@ -9,9 +9,40 @@ import 'package:urban_roots/features/userProfile/model/Address.dart';
 List<dynamic> extractList(dynamic data, {String key = 'data'}) {
   if (data is List) return data;
   if (data is Map) {
-    final value = data[key];
+    final map = Map<String, dynamic>.from(data);
+    final value = map[key];
     if (value is List) return value;
     if (value is Map) return [value];
+
+    for (final altKey in [
+      'transactions',
+      'payments',
+      'history',
+      'list',
+      'items',
+      'records',
+    ]) {
+      if (altKey == key) continue;
+      final alt = map[altKey];
+      if (alt is List) return alt;
+    }
+
+    final inner = map['data'];
+    if (inner is List) return inner;
+    if (inner is Map) {
+      final nested = Map<String, dynamic>.from(inner);
+      for (final nestedKey in [
+        key,
+        'transactions',
+        'payments',
+        'list',
+        'items',
+        'data',
+      ]) {
+        final nestedValue = nested[nestedKey];
+        if (nestedValue is List) return nestedValue;
+      }
+    }
   }
   return [];
 }
@@ -673,6 +704,35 @@ List<Address> parseAddresses(dynamic raw) {
   }).toList();
 }
 
+int parseTimestampSeconds(dynamic created) {
+  if (created is num) {
+    final ts = created.toInt();
+    return ts > 9999999999 ? ts ~/ 1000 : ts;
+  }
+  if (created is String && created.isNotEmpty) {
+    final parsed = DateTime.tryParse(created);
+    if (parsed != null) {
+      return parsed.millisecondsSinceEpoch ~/ 1000;
+    }
+  }
+  return 0;
+}
+
+String _resolveWalletPaymentStatus(Map<String, dynamic> tx) {
+  final raw = (tx['status'] ?? tx['payment_status'] ?? tx['txn_status'])
+      ?.toString()
+      .toLowerCase()
+      .trim();
+  if (raw != null && raw.isNotEmpty) return raw;
+
+  final type = tx['type']?.toString().toLowerCase() ?? '';
+  if (type.contains('fail')) return 'failed';
+  if (type.contains('cancel')) return 'cancelled';
+  if (type.contains('pending')) return 'pending';
+  if (type == 'credit' || type == 'debit') return 'success';
+  return 'success';
+}
+
 List<Map<String, dynamic>> parseWalletTransactions(dynamic raw) {
   return extractList(raw).whereType<Map>().map((txRaw) {
     final tx = Map<String, dynamic>.from(txRaw);
@@ -681,34 +741,150 @@ List<Map<String, dynamic>> parseWalletTransactions(dynamic raw) {
         ? amountRaw.toDouble()
         : double.tryParse(amountRaw.toString()) ?? 0;
 
-    final created = tx['created_at'] ?? tx['date'] ?? tx['txn_date'];
-    int createdAtSeconds = 0;
-    if (created is num) {
-      final ts = created.toInt();
-      createdAtSeconds = ts > 9999999999 ? ts ~/ 1000 : ts;
-    } else if (created is String && created.isNotEmpty) {
-      final parsed = DateTime.tryParse(created);
-      if (parsed != null) {
-        createdAtSeconds = parsed.millisecondsSinceEpoch ~/ 1000;
-      }
-    }
+    final created =
+        tx['created_at'] ?? tx['date'] ?? tx['txn_date'] ?? tx['created_on'];
+    final createdAtSeconds = parseTimestampSeconds(created);
+    final orderId = tx['order_id']?.toString() ?? '';
+    final txnId = tx['transaction_id']?.toString() ??
+        tx['txn_id']?.toString() ??
+        tx['id']?.toString() ??
+        '';
+
+    final gateway = tx['gateway']?.toString() ??
+        tx['provider']?.toString() ??
+        tx['payment_gateway']?.toString() ??
+        '';
 
     return {
-      'amount': amountNum,
-      'amount_in_paise': amountNum >= 1000 ? amountNum.toInt() : (amountNum * 100).toInt(),
+      'amount': amountNum.abs(),
+      'amount_in_paise': amountNum.abs() >= 1000
+          ? amountNum.abs().toInt()
+          : (amountNum.abs() * 100).toInt(),
       'created_at': createdAtSeconds,
       'description': tx['description']?.toString() ??
           tx['remark']?.toString() ??
-          tx['type']?.toString() ??
           tx['title']?.toString() ??
-          'Transaction',
+          (orderId.isNotEmpty ? 'Order #$orderId' : 'Wallet transaction'),
       'method': tx['method']?.toString() ??
           tx['payment_method']?.toString() ??
           'Wallet',
-      'gateway': tx['gateway']?.toString() ?? tx['provider']?.toString() ?? '',
-      'status': tx['status']?.toString() ?? 'success',
+      'gateway': gateway,
+      'status': _resolveWalletPaymentStatus(tx),
+      'order_id': orderId,
+      'txn_id': txnId,
+      'source': 'wallet',
+      'dedupe_key': orderId.isNotEmpty
+          ? 'order_$orderId'
+          : 'wallet_${txnId.isNotEmpty ? txnId : createdAtSeconds}_$amountNum',
     };
   }).toList();
+}
+
+String resolveOrderPaymentStatus(Order order) {
+  final pay = order.paymentStatus.toLowerCase().trim();
+  if (order.isCancelled || pay.contains('cancel')) return 'cancelled';
+  if (pay.contains('fail') ||
+      pay.contains('declined') ||
+      pay.contains('refund')) {
+    return 'failed';
+  }
+  if (pay.contains('pending') ||
+      pay.contains('unpaid') ||
+      pay.contains('initiated')) {
+    return 'pending';
+  }
+  if (order.isPaymentComplete ||
+      pay.contains('paid') ||
+      pay.contains('success') ||
+      pay.contains('complete')) {
+    return 'success';
+  }
+
+  final method = order.paymentMethod.toLowerCase();
+  if (method.contains('cod') || method.contains('cash')) {
+    final status = order.status.toLowerCase();
+    if (status.contains('deliver') || status.contains('complete')) {
+      return 'success';
+    }
+    if (order.isCancelled) return 'cancelled';
+    return 'pending';
+  }
+
+  return pay.isNotEmpty ? pay : 'pending';
+}
+
+List<Map<String, dynamic>> paymentRecordsFromOrders(List<Order> orders) {
+  return orders.map((order) {
+    final method = order.paymentMethod.trim().isNotEmpty
+        ? order.paymentMethod
+        : 'Online';
+    final gateway = method.toLowerCase().contains('wallet')
+        ? 'Wallet'
+        : method.toLowerCase().contains('cod') ||
+                method.toLowerCase().contains('cash')
+            ? 'COD'
+            : method.toLowerCase().contains('online') ||
+                    method.toLowerCase().contains('upi') ||
+                    method.toLowerCase().contains('phonepe')
+                ? 'Online'
+                : method;
+
+    final itemSummary = order.items.isNotEmpty
+        ? order.items.first.name
+        : 'Order #${order.orderId}';
+
+    return {
+      'amount': order.total,
+      'created_at': parseTimestampSeconds(order.date),
+      'description': 'Order #${order.orderId} · $itemSummary',
+      'method': method,
+      'gateway': gateway,
+      'status': resolveOrderPaymentStatus(order),
+      'order_id': order.orderId.toString(),
+      'txn_id': '',
+      'source': 'order',
+      'dedupe_key': 'order_${order.orderId}',
+    };
+  }).toList();
+}
+
+List<Map<String, dynamic>> mergePaymentRecords(
+  List<Map<String, dynamic>> walletRecords,
+  List<Map<String, dynamic>> orderRecords,
+) {
+  final merged = <String, Map<String, dynamic>>{};
+
+  void put(Map<String, dynamic> record) {
+    final key = record['dedupe_key']?.toString() ??
+        '${record['source']}_${record['order_id'] ?? record['txn_id']}_${record['amount']}';
+    final existing = merged[key];
+    if (existing == null) {
+      merged[key] = record;
+      return;
+    }
+    // Prefer order records over wallet rows when both refer to the same payment.
+    if (existing['source'] == 'wallet' && record['source'] == 'order') {
+      merged[key] = record;
+    }
+  }
+
+  for (final record in walletRecords) {
+    if (record['order_id']?.toString().isNotEmpty == true) {
+      continue;
+    }
+    put(record);
+  }
+  for (final record in orderRecords) {
+    put(record);
+  }
+
+  final list = merged.values.toList()
+    ..sort((a, b) {
+      final aTs = a['created_at'] as int? ?? 0;
+      final bTs = b['created_at'] as int? ?? 0;
+      return bTs.compareTo(aTs);
+    });
+  return list;
 }
 
 String? extractAuthToken(Map<String, dynamic> data) {

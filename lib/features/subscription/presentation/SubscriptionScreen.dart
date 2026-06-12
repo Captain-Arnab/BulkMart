@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/Utils/Loader.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/subscription/domain/subscription_controller.dart';
-import 'package:urban_roots/features/wallet/presentation/wallet_payment_webview.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
+import 'package:urban_roots/features/subscription/subscription_controller.dart';
+import 'package:urban_roots/features/subscription/subscription_flow_controller.dart';
+import 'package:urban_roots/features/subscription/presentation/subscription_products_screen.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -17,38 +19,19 @@ class SubscriptionScreen extends StatefulWidget {
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final _controller = Get.put(SubscriptionController());
 
-  Future<void> _subscribe(Map<String, dynamic> plan) async {
-    Loader.show(context);
-    final result = await _controller.subscribe(plan);
-    if (mounted) Loader.hide(context);
+  void _selectPlanAndBrowseProducts(Map<String, dynamic> plan) {
+    SubscriptionFlowController.findOrPut().selectPlan(plan);
 
-    if (!mounted) return;
-
-    if (!result.success) {
-      await SweetAlert.error(context, message: result.message);
+    if (Get.isRegistered<DashboardController>()) {
+      Navigator.pop(context);
+      DashboardController.findOrPut().goToTab(1);
       return;
     }
 
-    final paymentUrl = result.paymentUrl;
-    if (paymentUrl != null && paymentUrl.isNotEmpty) {
-      final paid = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => WalletPaymentWebView(
-            paymentUrl: paymentUrl,
-            amount: (plan['price'] as num?)?.toDouble() ?? 0,
-          ),
-        ),
-      );
-      if (!mounted) return;
-      await _controller.loadStatus();
-      if (paid == true) {
-        await SweetAlert.success(context, message: result.message);
-      }
-      return;
-    }
-
-    await SweetAlert.success(context, message: result.message);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionProductsScreen()),
+    );
   }
 
   @override
@@ -305,34 +288,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Obx(
-              () => SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF019934),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onPressed: _controller.isSubscribing.value
-                      ? null
-                      : () => _subscribe(plan),
-                  child: _controller.isSubscribing.value
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Subscribe',
-                          style: GoogleFonts.rubik(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: () => _selectPlanAndBrowseProducts(plan),
+                child: Text(
+                  'Select & Browse Products',
+                  style: GoogleFonts.rubik(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
