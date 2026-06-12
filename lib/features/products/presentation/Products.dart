@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:urban_roots/Utils/AppBarWidget.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
+import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/banner.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/offers.dart';
@@ -134,20 +135,16 @@ class _ProductScreenState extends State<ProductScreen> {
                                     : 0.7,
                           ),
                           itemBuilder: (context, index) {
-                            return InkWell(
-                              onTap: () {
-                                BlocProvider.of<DashboardBloc>(context).add(
-                                    NavigateToProductDescriptionEvent(
-                                        productId:
-                                            snapshot.data![index].id));
-                              },
-                              child: ProductCard(
-                                id: int.parse(snapshot.data![index].id),
-                                name: snapshot.data![index].name,
-                                grams: snapshot.data![index].grams,
-                                stock: snapshot.data![index].stock,
-                                price: snapshot.data![index].price,
-                                imageUrl: snapshot.data![index].imageUrl,
+                            return ProductCard(
+                              id: int.tryParse(snapshot.data![index].id) ?? 0,
+                              name: snapshot.data![index].name,
+                              grams: snapshot.data![index].grams,
+                              stock: snapshot.data![index].stock,
+                              price: snapshot.data![index].price,
+                              imageUrl: snapshot.data![index].imageUrl,
+                              onProductTap: () => openProductDetails(
+                                context,
+                                snapshot.data![index],
                               ),
                             );
                           },

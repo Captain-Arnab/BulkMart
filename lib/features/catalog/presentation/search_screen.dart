@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
+import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/products/presentation/ProductCard.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -67,6 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
               stock: p.stock,
               price: p.price,
               imageUrl: p.imageUrl,
+              onProductTap: () => openProductDetails(context, p),
             );
           },
         ),

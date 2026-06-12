@@ -33,11 +33,19 @@ class DeviceTokenRepository {
       );
 
       if (result is ApiSuccess<Map<String, dynamic>>) {
+        if (kDebugMode) {
+          debugPrint('[DeviceToken] registered successfully');
+        }
         return DeviceTokenRegisterResult.success('Device token registered');
       }
       final failure = result as ApiFailure<Map<String, dynamic>>;
+      debugPrint(
+        '[API_ERROR] register-device failed: ${failure.message} '
+        '(status=${failure.statusCode})',
+      );
       return DeviceTokenRegisterResult.failed(failure.message);
     } catch (e) {
+      debugPrint('[API_ERROR] register-device exception: $e');
       return DeviceTokenRegisterResult.failed(e.toString());
     }
   }

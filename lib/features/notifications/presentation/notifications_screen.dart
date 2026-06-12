@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
+import 'package:urban_roots/features/notifications/domain/notifications_controller.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
@@ -39,6 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
     setState(() => _status = _items.isEmpty ? ApiViewStatus.empty : ApiViewStatus.success);
+    NotificationsController.findOrPut().refreshUnreadCount();
   }
 
   Future<void> _markRead(String id) async {

@@ -51,7 +51,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
       await PushNotificationService.instance.unregisterFromBackend();
       await AuthSession.instance.clear();
       if (!mounted) return;
-      navigateToLogin(context);
+      await showLogoutSuccessAndNavigate(context);
     }
   }
 

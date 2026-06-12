@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
@@ -38,7 +39,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Sign in with mobile number & password',
+              'We will send a 6-digit OTP to your number',
               style: GoogleFonts.rubik(fontSize: 14, color: Colors.white70),
             ),
             const SizedBox(height: 4),
@@ -85,45 +86,37 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     ),
                     const SizedBox(height: 18),
                     RoleSelector(controller: _loginController),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Password',
-                      style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-                    ),
-                    const SizedBox(height: 8),
-                    Obx(
-                      () => TextFormField(
-                        controller: _loginController.passwordController,
-                        obscureText: !_loginController.passwordVisible.value,
-                        decoration: _fieldDecoration(
-                          hint: 'Enter your password',
-                          prefixIcon: Icons.lock_outline,
-                        ).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _loginController.passwordVisible.value ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.grey.shade500,
-                              size: 20,
-                            ),
-                            onPressed: () => _loginController.passwordVisible.value = !_loginController.passwordVisible.value,
-                          ),
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF019934),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 3,
-                        ),
-                        onPressed: _continueToOtp,
-                        child: Text(
-                          'Continue',
-                          style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                      child: Obx(
+                        () => ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF019934),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 3,
+                          ),
+                          onPressed: _loginController.isLoading.value ? null : _continueToOtp,
+                          child: _loginController.isLoading.value
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Send OTP',
+                                  style: GoogleFonts.rubik(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -152,15 +145,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   }
 
   Future<void> _continueToOtp() async {
-    final phone = _phoneController.text.trim();
+    final normalized = normalizeIndianMobile(_phoneController.text.trim());
 
-    if (phone.length != 10) {
+    if (normalized == null) {
       await SweetAlert.warning(context, message: 'Please enter a valid 10-digit mobile number');
       return;
     }
 
     _loginController.isLoading(true);
-    final result = await UrbanRootsApi.instance.auth.sendLoginOtp(phone: phone);
+    final result = await UrbanRootsApi.instance.auth.sendLoginOtp(phone: normalized);
     _loginController.isLoading(false);
 
     if (result is ApiFailure<Map<String, dynamic>>) {
@@ -169,13 +162,22 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       return;
     }
 
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final message = data['message']?.toString() ?? 'OTP sent successfully';
+
+    if (!mounted) return;
+    await SweetAlert.success(
+      context,
+      message: '$message\n\nPlease check SMS on +91 $normalized.',
+    );
+
     if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => OtpVerificationPage(
           loginMethod: LoginMethod.phone,
-          identifier: phone,
+          identifier: normalized,
           selectedRole: _loginController.selectedRole.value,
         ),
       ),

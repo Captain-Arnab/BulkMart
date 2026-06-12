@@ -1,62 +1,102 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 
 import '../../model/Address.dart';
 
 class AddressFormWidget extends StatefulWidget {
   final Address? address;
-  final Function(Address) onSave;
+  final Future<bool> Function(Address) onSave;
 
-  AddressFormWidget({this.address, required this.onSave});
+  const AddressFormWidget({
+    super.key,
+    this.address,
+    required this.onSave,
+  });
 
   @override
-  _AddressFormWidgetState createState() => _AddressFormWidgetState();
+  State<AddressFormWidget> createState() => _AddressFormWidgetState();
 }
 
 class _AddressFormWidgetState extends State<AddressFormWidget> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers for address lines, pincode, and instructions
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _addressLine1Controller = TextEditingController();
   final _addressLine2Controller = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _instructionsController = TextEditingController();
 
   String _selectedCategory = 'Home';
-
-  // State and city dropdown variables
-  String? _selectedState;
-  String? _selectedCity;
-
-  // State and city data
-  final Map<String, List<String>> _stateCityMap = {
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
-    'Delhi': ['New Delhi'],
-    // Add more states and cities as needed
-  };
+  bool _isDefault = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.address != null) {
-      _addressLine1Controller.text = widget.address!.addressLine1;
-      _addressLine2Controller.text = widget.address!.addressLine2 ?? '';
-      _pincodeController.text = widget.address!.pincode;
-      _selectedCategory = widget.address!.category;
-      _instructionsController.text = widget.address!.deliveryInstructions ?? '';
-      _selectedState = widget.address!.state;
-      _selectedCity = widget.address!.city;
+      final address = widget.address!;
+      _fullNameController.text = address.fullName;
+      _phoneController.text = address.phone;
+      _addressLine1Controller.text = address.addressLine1;
+      _addressLine2Controller.text = address.addressLine2 ?? '';
+      _cityController.text = address.city;
+      _stateController.text = address.state;
+      _pincodeController.text = address.pincode;
+      _selectedCategory = address.category;
+      _instructionsController.text = address.deliveryInstructions ?? '';
+      _isDefault = address.isDefault;
     }
   }
 
   @override
   void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
     _addressLine1Controller.dispose();
     _addressLine2Controller.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     _pincodeController.dispose();
     _instructionsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    final newAddress = Address(
+      id: widget.address?.id ?? '',
+      fullName: _fullNameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      addressLine1: _addressLine1Controller.text.trim(),
+      addressLine2: _addressLine2Controller.text.trim().isEmpty
+          ? null
+          : _addressLine2Controller.text.trim(),
+      state: _stateController.text.trim(),
+      city: _cityController.text.trim(),
+      pincode: _pincodeController.text.trim(),
+      category: _selectedCategory,
+      deliveryInstructions: _instructionsController.text.trim().isEmpty
+          ? null
+          : _instructionsController.text.trim(),
+      isDefault: _isDefault,
+    );
+
+    final success = await widget.onSave(newAddress);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      Navigator.of(context).pop();
+    } else {
+      await SweetAlert.error(context, message: 'Could not save address');
+    }
   }
 
   @override
@@ -69,114 +109,111 @@ class _AddressFormWidgetState extends State<AddressFormWidget> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Address Line 1
+              TextFormField(
+                controller: _fullNameController,
+                decoration: const InputDecoration(labelText: 'Full Name'),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter full name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter phone number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _addressLine1Controller,
-                decoration: InputDecoration(labelText: 'Address Line 1'),
+                decoration: const InputDecoration(labelText: 'Address'),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter Address Line 1';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter address';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 10),
-
-              // Address Line 2
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _addressLine2Controller,
-                decoration: InputDecoration(labelText: 'Address Line 2'),
+                decoration: const InputDecoration(labelText: 'Landmark (optional)'),
               ),
-              SizedBox(height: 10),
-
-              // State Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedState,
-                decoration: InputDecoration(labelText: 'State'),
-                items: _stateCityMap.keys.map((String state) {
-                  return DropdownMenuItem<String>(
-                    value: state,
-                    child: Text(state),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedState = value!;
-                    _selectedCity = null; // Reset city when state changes
-                  });
-                },
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _stateController,
+                decoration: const InputDecoration(labelText: 'State'),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select a state';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter state';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 10),
-
-              // City Dropdown (depends on selected state)
-              DropdownButtonFormField<String>(
-                value: _selectedCity,
-                decoration: InputDecoration(labelText: 'City'),
-                items: _selectedState != null
-                    ? _stateCityMap[_selectedState]!.map((String city) {
-                  return DropdownMenuItem<String>(
-                    value: city,
-                    child: Text(city),
-                  );
-                }).toList()
-                    : [],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCity = value!;
-                  });
-                },
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select a city';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter city';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 10),
-
-              // Pincode
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _pincodeController,
-                decoration: InputDecoration(labelText: 'Pincode'),
+                decoration: const InputDecoration(labelText: 'Pincode'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a pincode';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter pincode';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 10),
-
-              // Category Dropdown
+              const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                decoration: InputDecoration(labelText: 'Category'),
-                items: ['Home', 'Work', 'Others'].map((String category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category),
-                  );
-                }).toList(),
+                decoration: const InputDecoration(labelText: 'Address Type'),
+                items: ['Home', 'Work', 'Others']
+                    .map((category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ))
+                    .toList(),
                 onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value!;
-                  });
+                  if (value != null) setState(() => _selectedCategory = value);
                 },
               ),
-              SizedBox(height: 10),
-
-              // Delivery Instructions
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _instructionsController,
-                maxLines: 3,
-                decoration: InputDecoration(labelText: 'Delivery Instructions'),
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Delivery Instructions (optional)',
+                ),
+              ),
+              const SizedBox(height: 6),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Set as default address',
+                  style: GoogleFonts.rubik(fontSize: 13),
+                ),
+                value: _isDefault,
+                onChanged: (value) =>
+                    setState(() => _isDefault = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
             ],
           ),
@@ -184,26 +221,18 @@ class _AddressFormWidgetState extends State<AddressFormWidget> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel'),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              final newAddress = Address(
-                addressLine1: _addressLine1Controller.text.trim(),
-                addressLine2: _addressLine2Controller.text.trim(),
-                state: _selectedState!,
-                city: _selectedCity!,
-                pincode: _pincodeController.text.trim(),
-                category: _selectedCategory,
-                deliveryInstructions: _instructionsController.text.trim(),
-              );
-              widget.onSave(newAddress);
-              Navigator.of(context).pop();
-            }
-          },
-          child: Text(widget.address == null ? 'Add' : 'Save'),
+          onPressed: _isSaving ? null : _submit,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(widget.address == null ? 'Add' : 'Save'),
         ),
       ],
     );

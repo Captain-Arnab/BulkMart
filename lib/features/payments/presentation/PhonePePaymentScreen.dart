@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/payments/domain/PhonePeService.dart';
 import 'package:urban_roots/Payment.dart';
 
@@ -166,19 +165,6 @@ class _PhonePePaymentScreenState extends State<PhonePePaymentScreen> {
       await SweetAlert.error(context, message: 'Payment failed. Please try again.');
       return;
     }
-
-    DummyData.samplePayments.insert(0, {
-      'id': result.transactionId,
-      'amount': result.amountInPaise,
-      'currency': 'INR',
-      'status': 'SUCCESS',
-      'method': 'PhonePe $_selectedMethod',
-      'gateway': 'PhonePe',
-      'email': DummyData.demoUserEmail,
-      'contact': DummyData.demoUserPhone,
-      'description': widget.title,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    });
 
     widget.onSuccess?.call();
 

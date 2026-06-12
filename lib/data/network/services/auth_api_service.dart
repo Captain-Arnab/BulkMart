@@ -75,10 +75,19 @@ class AuthApiService {
     required String phone,
     required String otp,
   }) async {
+    final normalized = normalizeIndianMobile(phone);
+    if (normalized == null) {
+      return const ApiFailure('Please enter a valid 10-digit mobile number');
+    }
+
     final result = await _client.post(
       APIClass.otpLogin,
       token: TokenMode.none,
-      body: {'phone': phone, 'otp': otp},
+      body: {
+        'phone': normalized,
+        'otp': normalizeOtpInput(otp),
+      },
+      skipSessionClear: true,
     );
     if (result is ApiSuccess<Map<String, dynamic>>) {
       final token = extractAuthToken(result.data);
@@ -94,12 +103,17 @@ class AuthApiService {
 
   Future<ApiResult<Map<String, dynamic>>> sendLoginOtp({
     required String phone,
-  }) {
-    final normalized = phone.replaceAll(RegExp(r'\D'), '');
+  }) async {
+    final normalized = normalizeIndianMobile(phone);
+    if (normalized == null) {
+      return const ApiFailure('Please enter a valid 10-digit mobile number');
+    }
+
     return _client.post(
       APIClass.sendLoginOtp,
       token: TokenMode.none,
       body: {'phone': normalized},
+      skipSessionClear: true,
     );
   }
 

@@ -166,7 +166,7 @@ class Login extends StatelessWidget {
                           );
                           await syncDeviceTokenAfterAuth(role: response.role);
                           if (!context.mounted) return;
-                          navigateAfterLogin(context, response.role);
+                          await showLoginSuccessAndNavigate(context, response.role);
                         },
                         child: Text('Continue', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
@@ -176,7 +176,7 @@ class Login extends StatelessWidget {
                       child: GestureDetector(
                         onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const OTPVerificationScreen())),
                         child: Text(
-                          'Login with phone number',
+                          'Login with phone & OTP (no password)',
                           style: GoogleFonts.rubik(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF019934)),
                         ),
                       ),

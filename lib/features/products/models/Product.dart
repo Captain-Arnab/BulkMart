@@ -1,3 +1,5 @@
+import 'package:urban_roots/core/ui/network_image_widget.dart';
+
 class Product {
   final String id;
   final String name;
@@ -21,13 +23,22 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['pd_id']?.toString() ?? '',
-      name: json['name'] ?? '',
+      id: json['pd_id']?.toString() ??
+          json['product_id']?.toString() ??
+          json['id']?.toString() ??
+          '',
+      name: json['name']?.toString() ??
+          json['product_name']?.toString() ??
+          '',
       price: json['price']?.toString() ?? '0',
-      grams: json['product_grams'] ?? '0g',
-      stock: json['product_stock']?.toString() ?? '0',
-      imageUrl: json['imageUrl'] ?? '',
-      packingType: json['packing_type'] ?? '',
+      grams: json['product_grams']?.toString() ??
+          json['grams']?.toString() ??
+          '0g',
+      stock: json['product_stock']?.toString() ??
+          json['stock']?.toString() ??
+          '0',
+      imageUrl: pickImageUrl(json),
+      packingType: json['packing_type']?.toString() ?? '',
       gst: json['gst']?.toString() ?? '0',
     );
   }

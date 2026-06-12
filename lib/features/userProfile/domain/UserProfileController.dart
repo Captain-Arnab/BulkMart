@@ -27,7 +27,11 @@ class UserProfileController extends GetxController {
     required String city,
     required String state,
   }) async {
-    final custId = await AuthSession.instance.getUserId() ?? '';
+    var custId = await AuthSession.instance.getUserId() ?? '';
+    if (custId.isEmpty) {
+      final profile = await fetchUserData();
+      custId = profile['cust_id']?.toString() ?? '';
+    }
     return _api.profile.updateProfile(
       custId: custId,
       custFname: custFname,

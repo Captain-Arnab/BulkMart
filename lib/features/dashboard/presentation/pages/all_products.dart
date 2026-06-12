@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_bloc.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
+import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/presentation/ProductCard.dart';
@@ -136,16 +136,14 @@ class _ProductPageState extends State<ProductPage> {
                 ),
                 itemBuilder: (context, index) {
                   final product = filteredProducts[index];
-                  return GestureDetector(
-                    onTap: () => BlocProvider.of<DashboardBloc>(context).add(NavigateToProductDescriptionEvent(productId: product.id)),
-                    child: ProductCard(
-                      id: int.parse(product.id),
-                      name: product.name,
-                      grams: product.grams,
-                      stock: product.stock,
-                      price: product.price,
-                      imageUrl: product.imageUrl,
-                    ),
+                  return ProductCard(
+                    id: int.tryParse(product.id) ?? 0,
+                    name: product.name,
+                    grams: product.grams,
+                    stock: product.stock,
+                    price: product.price,
+                    imageUrl: product.imageUrl,
+                    onProductTap: () => openProductDetails(context, product),
                   );
                 },
               ),

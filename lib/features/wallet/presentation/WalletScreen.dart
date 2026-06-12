@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/Utils/Loader.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/network/api_result.dart';
-import 'package:urban_roots/features/payments/presentation/PhonePePaymentScreen.dart';
 import 'package:urban_roots/features/wallet/domain/WalletController.dart';
+import 'package:urban_roots/features/wallet/presentation/wallet_payment_webview.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -146,35 +147,54 @@ class WalletScreen extends StatelessWidget {
   }
 
   Future<void> _topUp(BuildContext context, WalletController wallet) async {
-    final result = await wallet.initiateTopUp(500);
-    if (result is ApiFailure) {
+    const amount = 500.0;
+
+    Loader.show(context);
+    final result = await wallet.initiateTopUp(amount);
+    if (context.mounted) Loader.hide(context);
+
+    if (result is ApiFailure<Map<String, dynamic>>) {
       if (context.mounted) {
-        await SweetAlert.error(context, message: (result as ApiFailure).message);
+        await SweetAlert.error(context, message: result.message);
       }
       return;
     }
-    final data = (result as ApiSuccess).data;
-    final redirect = data['data']?['redirect_url']?.toString();
-    if (redirect != null && context.mounted) {
-      await SweetAlert.info(context, message: 'Complete payment at: $redirect');
+
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final inner = data['data'];
+    final redirect = inner is Map ? inner['redirect_url']?.toString() : null;
+    final txnId = inner is Map ? inner['transaction_id']?.toString() ?? '' : '';
+
+    if (redirect == null || redirect.isEmpty) {
+      if (context.mounted) {
+        await SweetAlert.error(
+          context,
+          message: 'Could not start payment. Please try again.',
+        );
+      }
+      return;
     }
-    Navigator.push(
+
+    if (!context.mounted) return;
+
+    final success = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => PhonePePaymentScreen(
-          amount: 500,
-          title: 'Wallet Top-up',
-          subtitle: 'Add ₹500 to Urban Roots Wallet',
-          showSuccessScreen: false,
-          onSuccess: () async {
-            await wallet.loadBalance();
-            await wallet.loadTransactions();
-            if (context.mounted) {
-              await SweetAlert.success(context, message: 'Wallet updated');
-            }
-          },
+        builder: (_) => WalletPaymentWebView(
+          paymentUrl: redirect,
+          transactionId: txnId,
+          amount: amount,
         ),
       ),
     );
+
+    if (!context.mounted) return;
+
+    if (success == true) {
+      await SweetAlert.success(
+        context,
+        message: 'Wallet topped up successfully!',
+      );
+    }
   }
 }

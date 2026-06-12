@@ -7,30 +7,44 @@ import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/products_slider.dart';
+import 'package:urban_roots/features/home/domain/delivery_location_controller.dart';
+import 'package:urban_roots/features/notifications/domain/notifications_controller.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
-import 'package:urban_roots/features/products/models/Product.dart';
+import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/products/presentation/ProductCard.dart';
 
 class ProductScreenNew extends StatefulWidget {
+  const ProductScreenNew({super.key});
+
   @override
-  _ProductScreenNewState createState() => _ProductScreenNewState();
+  State<ProductScreenNew> createState() => _ProductScreenNewState();
 }
 
 class _ProductScreenNewState extends State<ProductScreenNew> {
-  late Future<List<Product>> futureProducts;
-  String _currentCity = "Bangalore";
-  ProductsController productsController = Get.put(ProductsController());
+  final ProductsController _productsController = Get.put(ProductsController());
+  final DeliveryLocationController _locationController =
+      DeliveryLocationController.findOrPut();
+  final NotificationsController _notificationsController =
+      NotificationsController.findOrPut();
 
   @override
   void initState() {
     super.initState();
-    loadProducts();
+    _bootstrapHome();
   }
 
-  void loadProducts() {
-    setState(() {
-      futureProducts = productsController.listProducts(context, 0, 0, 10000, null, null, null);
-    });
+  Future<void> _bootstrapHome() async {
+    await Future.wait([
+      _locationController.resolve(),
+      _notificationsController.refreshUnreadCount(),
+      _productsController.fetchAllProducts(context: context),
+      _productsController.fetchCategories(),
+      _productsController.fetchBanners(),
+    ]);
+  }
+
+  Future<void> _refreshHome() async {
+    await _bootstrapHome();
   }
 
   @override
@@ -39,62 +53,120 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
-      appBar: AppSearchBarWidget(currentCity: _currentCity),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(height: 170, child: SliderPage()),
+      appBar: const AppSearchBarWidget(),
+      body: RefreshIndicator(
+        color: const Color(0xFF019934),
+        onRefresh: _refreshHome,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: const SizedBox(height: 170, child: SliderPage()),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text("Shop by Category", style: GoogleFonts.rubik(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87)),
-            ),
-            ProductSliderPage(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Popular Products", style: GoogleFonts.rubik(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87)),
-                  GestureDetector(
-                    onTap: () => BlocProvider.of<DashboardBloc>(context).add(DashboardUpdateEvent(index: 1, category: 0)),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(color: const Color(0xFF019934).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                      child: Text("See All", style: GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF019934))),
-                    ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Shop by Category',
+                  style: GoogleFonts.rubik(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
-                ],
+                ),
               ),
-            ),
-            FutureBuilder<List<Product>>(
-              future: futureProducts,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Color(0xFF019934))));
-                }
-                if (snapshot.hasError) {
-                  return SizedBox(
-                    height: 200,
-                    child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 12),
-                      Text('Something went wrong', style: GoogleFonts.rubik(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      ElevatedButton(onPressed: loadProducts, child: const Text('Retry')),
-                    ])),
+              const ProductSliderPage(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Popular Products',
+                      style: GoogleFonts.rubik(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => BlocProvider.of<DashboardBloc>(context)
+                          .add(DashboardUpdateEvent(index: 1, category: 0)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF019934).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'See All',
+                          style: GoogleFonts.rubik(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF019934),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Obx(() {
+                if (_productsController.isLoading.value) {
+                  return const SizedBox(
+                    height: 220,
+                    child: Center(
+                      child: CircularProgressIndicator(color: Color(0xFF019934)),
+                    ),
                   );
                 }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return SizedBox(height: 200, child: Center(child: Text('No products available', style: GoogleFonts.rubik(fontSize: 16, color: Colors.grey))));
+
+                if (_productsController.errorMessage.value.isNotEmpty) {
+                  return SizedBox(
+                    height: 220,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              _productsController.errorMessage.value,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.rubik(color: Colors.grey),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: _refreshHome,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
-                final products = snapshot.data!;
+
+                final products = _productsController.products;
+                if (products.isEmpty) {
+                  return SizedBox(
+                    height: 220,
+                    child: Center(
+                      child: Text(
+                        'No products available',
+                        style: GoogleFonts.rubik(fontSize: 16, color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
                 final displayCount = products.length < 6 ? products.length : 6;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -110,17 +182,22 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
                     ),
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      return GestureDetector(
-                        onTap: () => BlocProvider.of<DashboardBloc>(context).add(NavigateToProductDescriptionEvent(productId: product.id)),
-                        child: ProductCard(id: int.parse(product.id), name: product.name, grams: product.grams, stock: product.stock, price: product.price, imageUrl: product.imageUrl),
+                      return ProductCard(
+                        id: int.tryParse(product.id) ?? 0,
+                        name: product.name,
+                        grams: product.grams,
+                        stock: product.stock,
+                        price: product.price,
+                        imageUrl: product.imageUrl,
+                        onProductTap: () => openProductDetails(context, product),
                       );
                     },
                   ),
                 );
-              },
-            ),
-            const SizedBox(height: 24),
-          ],
+              }),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

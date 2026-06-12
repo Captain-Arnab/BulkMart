@@ -9,6 +9,32 @@ class AddressApiService {
   Future<ApiResult<Map<String, dynamic>>> listAddresses() =>
       _client.get(APIClass.getAddresses);
 
+  Future<ApiResult<Map<String, dynamic>>> editAddress({
+    required String addressId,
+    required String fullName,
+    required String phone,
+    required String pincode,
+    required String address,
+    required String landmark,
+    required String city,
+    required String state,
+    required bool addDefault,
+  }) =>
+      _client.post(
+        APIClass.editAddress,
+        body: {
+          'address_id': addressId,
+          'full_name': fullName,
+          'phone': phone,
+          'pincode': pincode,
+          'address': address,
+          'landmark': landmark,
+          'city': city,
+          'state': state,
+          'add_default': addDefault ? 1 : 0,
+        },
+      );
+
   Future<ApiResult<Map<String, dynamic>>> addAddress({
     required String fullName,
     required String phone,

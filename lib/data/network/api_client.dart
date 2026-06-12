@@ -8,6 +8,9 @@ import 'package:urban_roots/data/network/api_result.dart';
 
 enum TokenMode { none, user, vendor }
 
+/// When true, API failures must not clear session or redirect to login.
+const String kSkipSessionClear = 'skipSessionClear';
+
 /// Dio client for Urban Roots API — one instance per base URL.
 class ApiClient {
   ApiClient._(String baseUrl) {
@@ -75,14 +78,16 @@ class ApiClient {
     Object? body,
     TokenMode token = TokenMode.user,
     Map<String, String>? extraHeaders,
+    bool skipSessionClear = false,
   }) =>
       _request(
         () => _dio.post(
           path,
           data: body,
-          options: _options(token, extraHeaders),
+          options: _options(token, extraHeaders, skipSessionClear: skipSessionClear),
         ),
         authenticated: token != TokenMode.none,
+        skipSessionClear: skipSessionClear,
       );
 
   Future<ApiResult<Map<String, dynamic>>> put(
@@ -143,18 +148,33 @@ class ApiClient {
     }
   }
 
-  Options _options(TokenMode token, Map<String, String>? extraHeaders) {
-    return Options(headers: extraHeaders, extra: {'tokenMode': token});
+  Options _options(
+    TokenMode token,
+    Map<String, String>? extraHeaders, {
+    bool skipSessionClear = false,
+  }) {
+    return Options(
+      headers: extraHeaders,
+      extra: {
+        'tokenMode': token,
+        if (skipSessionClear) kSkipSessionClear: true,
+      },
+    );
   }
 
   Future<ApiResult<Map<String, dynamic>>> _request(
     Future<Response<dynamic>> Function() call, {
     required bool authenticated,
+    bool skipSessionClear = false,
   }) async {
     try {
       final response = await call();
       final statusCode = response.statusCode;
-      final data = _parseResponseBody(response.data);
+      final requestUri = response.requestOptions.uri.toString();
+      final data = _parseResponseBody(
+        response.data,
+        requestUri: requestUri,
+      );
 
       if (data == null) {
         return ApiFailure(
@@ -163,10 +183,18 @@ class ApiClient {
         );
       }
 
+      if (data['_nonJsonResponse'] == true) {
+        return ApiFailure(
+          _extractMessage(data) ?? 'Server error: non-JSON response received',
+          statusCode: statusCode,
+        );
+      }
+
       if (statusCode != null && statusCode >= 400) {
         final message =
             _extractMessage(data) ?? 'Server error (HTTP $statusCode)';
         if (authenticated &&
+            !skipSessionClear &&
             (statusCode == 401 || _isSessionExpired(message))) {
           await _handleUnauthorized();
         }
@@ -178,6 +206,7 @@ class ApiClient {
           (apiSuccess == null && _messageIndicatesFailure(data))) {
         final message = _extractMessage(data) ?? 'Request failed';
         if (authenticated &&
+            !skipSessionClear &&
             (statusCode == 401 || _isSessionExpired(message))) {
           await _handleUnauthorized();
         }
@@ -186,7 +215,9 @@ class ApiClient {
 
       return ApiSuccess(data);
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401 && authenticated) {
+      final skipClear = skipSessionClear ||
+          (e.requestOptions.extra[kSkipSessionClear] == true);
+      if (e.response?.statusCode == 401 && authenticated && !skipClear) {
         await _handleUnauthorized();
       }
       return ApiFailure(
@@ -199,7 +230,30 @@ class ApiClient {
     }
   }
 
-  Map<String, dynamic>? _parseResponseBody(dynamic raw) {
+  bool _looksLikeHtml(String raw) {
+    final trimmed = raw.trimLeft();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return false;
+    return trimmed.startsWith('<!') ||
+        trimmed.startsWith('<html') ||
+        trimmed.startsWith('<');
+  }
+
+  String? _extractEmbeddedJson(String raw) {
+    final start = raw.indexOf('{');
+    final end = raw.lastIndexOf('}');
+    if (start == -1 || end <= start) return null;
+    return raw.substring(start, end + 1);
+  }
+
+  void _logApiError(String? requestUri, String rawBody) {
+    final preview = rawBody.length > 500 ? '${rawBody.substring(0, 500)}...' : rawBody;
+    debugPrint('[API_ERROR] uri=${requestUri ?? 'unknown'} body=$preview');
+  }
+
+  Map<String, dynamic>? _parseResponseBody(
+    dynamic raw, {
+    String? requestUri,
+  }) {
     if (raw == null) return null;
 
     if (raw is Map<String, dynamic>) return raw;
@@ -209,18 +263,41 @@ class ApiClient {
       final trimmed = raw.trim();
       if (trimmed.isEmpty) return null;
 
+      if (_looksLikeHtml(trimmed)) {
+        _logApiError(requestUri, trimmed);
+        return {
+          'status': false,
+          '_nonJsonResponse': true,
+          'message': 'Server error: non-JSON response received',
+        };
+      }
+
       try {
         final decoded = jsonDecode(trimmed);
         if (decoded is Map) {
           return Map<String, dynamic>.from(decoded);
         }
       } catch (_) {
+        final embedded = _extractEmbeddedJson(trimmed);
+        if (embedded != null) {
+          try {
+            final decoded = jsonDecode(embedded);
+            if (decoded is Map) {
+              return Map<String, dynamic>.from(decoded);
+            }
+          } catch (_) {}
+        }
+        _logApiError(requestUri, trimmed);
         if (kDebugMode) {
-          debugPrint('[ApiClient] Non-JSON response: ${trimmed.length > 300 ? '${trimmed.substring(0, 300)}...' : trimmed}');
+          debugPrint(
+            '[ApiClient] Non-JSON response: '
+            '${trimmed.length > 300 ? '${trimmed.substring(0, 300)}...' : trimmed}',
+          );
         }
         return {
           'status': false,
-          'message': trimmed.length > 200 ? trimmed.substring(0, 200) : trimmed,
+          '_nonJsonResponse': true,
+          'message': 'Server error: non-JSON response received',
         };
       }
     }
@@ -278,7 +355,10 @@ class ApiClient {
   }
 
   String _dioErrorMessage(DioException e) {
-    final parsed = _parseResponseBody(e.response?.data);
+    final parsed = _parseResponseBody(
+      e.response?.data,
+      requestUri: e.requestOptions.uri.toString(),
+    );
     if (parsed != null) {
       final msg = _extractMessage(parsed);
       if (msg != null) return msg;
@@ -340,6 +420,8 @@ class _UrbanRootsInterceptor extends Interceptor {
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }
+    } else {
+      options.headers.remove('Authorization');
     }
 
     handler.next(options);
@@ -348,6 +430,11 @@ class _UrbanRootsInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401) {
+      final skipClear = err.requestOptions.extra[kSkipSessionClear] == true;
+      if (skipClear) {
+        handler.next(err);
+        return;
+      }
       final tokenMode =
           err.requestOptions.extra['tokenMode'] as TokenMode? ?? TokenMode.user;
       if (tokenMode != TokenMode.none) {

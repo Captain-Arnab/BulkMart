@@ -80,27 +80,58 @@ class ProductsController extends GetxController {
   }
 
   Future<Map<String, dynamic>?> fetchProductById(String productId) async {
-    final result = await _api.catalog.productDetail(productId: productId);
-    if (result is ApiSuccess<Map<String, dynamic>>) {
-      final data = result.data['data'];
-      if (data is Map<String, dynamic>) return data;
-      return result.data;
+    final id = productId.trim();
+    if (id.isEmpty) {
+      errorMessage.value = 'Invalid product ID';
+      return null;
+    }
+
+    final result = await _api.catalog.productDetail(productId: id);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      errorMessage.value = result.message;
+      return null;
+    }
+    errorMessage.value = '';
+    final envelope = (result as ApiSuccess<Map<String, dynamic>>).data;
+    dynamic raw = envelope['data'] ?? envelope['product'] ?? envelope;
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
     }
     return null;
   }
 
-  Future<Map<String, dynamic>> fetchProductData(String productId) async {
+  Map<String, dynamic> _previewFromProduct(Product product) {
+    return parseProductDetail({
+      'pd_id': product.id,
+      'name': product.name,
+      'price': product.price,
+      'product_grams': product.grams,
+      'product_stock': product.stock,
+      'main_image': product.imageUrl,
+      'packing_type': product.packingType,
+      'gst': product.gst,
+    });
+  }
+
+  Future<Map<String, dynamic>> fetchProductData(
+    String productId, {
+    Product? preview,
+  }) async {
     final details = await fetchProductById(productId);
-    if (details == null) return {};
-    return {
-      'imageUrl': details['imageUrl'] ?? details['product_image'] ?? '',
-      'name': details['name'] ?? details['product_name'] ?? 'Product',
-      'description': details['description'] ?? details['product_description'] ?? '',
-      'healthBenefits': details['health_benefits'] ?? '',
-      'nutritionalInfo': details['nutritional_info'] ?? '',
-      'sellingPoints': details['selling_points'] ?? '',
-      'price': details['price']?.toString() ?? '0',
-    };
+    if (details != null && details.isNotEmpty) {
+      return parseProductDetail(details);
+    }
+
+    if (preview != null) {
+      return _previewFromProduct(preview);
+    }
+
+    final cached = products.where((p) => p.id == productId.trim());
+    if (cached.isNotEmpty) {
+      return _previewFromProduct(cached.first);
+    }
+
+    return {};
   }
 
   Future<List<Product>> searchProducts({

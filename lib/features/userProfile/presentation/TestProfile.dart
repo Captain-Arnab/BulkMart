@@ -10,6 +10,7 @@ import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard
 import 'package:urban_roots/features/dashboard/presentation/pages/bloc/dashboard_event.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
 import 'package:urban_roots/features/wallet/presentation/WalletScreen.dart';
 import 'package:get/get.dart';
@@ -53,6 +54,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ]),
       ),
     );
+  }
+
+  Future<void> _handleLogout() async {
+    await PushNotificationService.instance.unregisterFromBackend();
+    await userProfileController.logout();
+    if (!mounted) return;
+    await showLogoutSuccessAndNavigate(context);
   }
 
   @override
@@ -148,11 +156,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()));
                     }),
                     const SizedBox(height: 20),
-                    _profileMenuItem(Icons.logout, 'Logout', () async {
-                      await PushNotificationService.instance.unregisterFromBackend();
-                      await userProfileController.logout();
-                      if (!context.mounted) return;
-                      navigateToLogin(context);
+                    _profileMenuItem(Icons.logout, 'Logout', () {
+                      SweetAlert.confirm(
+                        context,
+                        title: 'Logout',
+                        message: 'Are you sure you want to logout?',
+                        confirmText: 'Logout',
+                        onConfirm: _handleLogout,
+                      );
                     }, iconColor: Colors.red),
                     const SizedBox(height: 24),
                     Text('App Version 1.0.0', style: GoogleFonts.rubik(fontSize: 12, color: Colors.grey.shade400)),

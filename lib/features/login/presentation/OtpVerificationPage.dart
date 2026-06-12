@@ -66,7 +66,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   }
 
   Future<void> _verifyOtp() async {
-    if (_otpController.text.length != 6) {
+    final otp = normalizeOtpInput(_otpController.text);
+    if (otp.length != 6) {
       await SweetAlert.warning(context, message: 'Please enter the 6-digit OTP');
       return;
     }
@@ -77,8 +78,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       final inferredRole = _resolveRole() ?? AuthRole.user;
 
       final result = await UrbanRootsApi.instance.auth.otpLogin(
-        phone: widget.identifier.replaceAll(RegExp(r'\D'), ''),
-        otp: _otpController.text,
+        phone: widget.identifier,
+        otp: otp,
       );
 
       if (result is ApiFailure<Map<String, dynamic>>) {
@@ -102,6 +103,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         token: token,
         role: inferredRole,
         userId: extractUserId(data),
+        name: extractUserDisplayName(data),
       );
 
       await AuthSession.instance.save(
@@ -115,7 +117,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       await syncDeviceTokenAfterAuth(role: response.role);
 
       if (!mounted) return;
-      navigateAfterLogin(context, response.role);
+      await showLoginSuccessAndNavigate(context, response.role);
     } catch (e) {
       if (!mounted) return;
       await SweetAlert.error(context, message: 'Login failed: $e');
@@ -218,13 +220,17 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                                 setState(() => _resendSeconds = 30);
                                 _startResendTimer();
                                 final result = await UrbanRootsApi.instance.auth.sendLoginOtp(
-                                  phone: widget.identifier.replaceAll(RegExp(r'\D'), ''),
+                                  phone: widget.identifier,
                                 );
                                 if (!mounted) return;
                                 if (result is ApiFailure<Map<String, dynamic>>) {
                                   await SweetAlert.error(context, message: result.message);
                                 } else {
-                                  await SweetAlert.success(context, message: 'OTP resent successfully');
+                                  final data =
+                                      (result as ApiSuccess<Map<String, dynamic>>).data;
+                                  final message =
+                                      data['message']?.toString() ?? 'OTP resent successfully';
+                                  await SweetAlert.success(context, message: message);
                                 }
                               },
                               child: Text(

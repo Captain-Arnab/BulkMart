@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class TabBarWidget extends StatelessWidget {
   final String name;
@@ -21,51 +22,62 @@ class TabBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Text(
-            name,
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20.0),
-          ),
-          bottom: TabBar(
-            labelColor: Theme.of(context).primaryColor,
-            indicatorColor: Theme.of(context).primaryColor,
+      child: Column(
+        children: [
+          TabBar(
+            labelColor: const Color(0xFF019934),
+            unselectedLabelColor: Colors.grey.shade600,
+            indicatorColor: const Color(0xFF019934),
             isScrollable: true,
-            tabs: [
-              Tab(child: Text('Description')),
-              Tab(child: Text('Health Benefits')),
-              Tab(child: Text('Unique Selling Points')),
-              Tab(child: Text('Nutritional Information')),
+            labelStyle: GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(text: 'Description'),
+              Tab(text: 'Health Benefits'),
+              Tab(text: 'Selling Points'),
+              Tab(text: 'Nutrition'),
             ],
           ),
-        ),
-        body: TabBarView(
-          children: <Widget>[
-            _buildScrollableHtmlTabContent(description.isEmpty ? "No description available." : description),
-            _buildScrollableHtmlTabContent(healthBenefits.isEmpty ? "No health benefits information available." : healthBenefits),
-            _buildScrollableHtmlTabContent(sellingPoints.isEmpty ? "No selling points provided." : sellingPoints),
-            _buildScrollableHtmlTabContent(nutritionalInfo.isEmpty ? "No nutritional information available." : nutritionalInfo),
-          ],
-        ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildScrollableHtmlTabContent(
+                  description.isEmpty ? 'No description available.' : description,
+                ),
+                _buildScrollableHtmlTabContent(
+                  healthBenefits.isEmpty
+                      ? 'No health benefits information available.'
+                      : healthBenefits,
+                ),
+                _buildScrollableHtmlTabContent(
+                  sellingPoints.isEmpty ? 'No selling points provided.' : sellingPoints,
+                ),
+                _buildScrollableHtmlTabContent(
+                  nutritionalInfo.isEmpty
+                      ? 'No nutritional information available.'
+                      : nutritionalInfo,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildScrollableHtmlTabContent(String content) {
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-        child: Html(
-          data: content,
-          style: {
-            "body": Style(
-              fontSize: FontSize(14.0),
-              fontWeight: FontWeight.w400,
-              color: Colors.black,
-            ),
-          },
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      child: Html(
+        data: content,
+        style: {
+          'body': Style(
+            fontSize: FontSize(14),
+            fontWeight: FontWeight.w400,
+            color: Colors.black87,
+            margin: Margins.zero,
+            padding: HtmlPaddings.zero,
+          ),
+        },
       ),
     );
   }

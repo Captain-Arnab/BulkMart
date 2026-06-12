@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/network/api_result.dart';
@@ -31,8 +32,16 @@ class _CartPageState extends State<CartPage> {
       confirmText: 'Clear',
       onConfirm: () async {
         final success = await _cart.clearCart();
-        if (!success && mounted) {
-          await SweetAlert.error(context, message: _cart.errorMessage.value);
+        if (!mounted) return;
+        if (success) {
+          await SweetAlert.success(context, message: 'Cart cleared');
+        } else {
+          await SweetAlert.error(
+            context,
+            message: _cart.errorMessage.value.isNotEmpty
+                ? _cart.errorMessage.value
+                : 'Could not clear cart',
+          );
         }
       },
     );
@@ -48,7 +57,16 @@ class _CartPageState extends State<CartPage> {
         title: Text('My Cart', style: GoogleFonts.rubik(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black87)),
         actions: [
           Obx(() => _cart.items.isNotEmpty
-              ? TextButton(onPressed: _confirmClear, child: Text('Clear All', style: GoogleFonts.rubik(fontSize: 13, color: Colors.red.shade400)))
+              ? TextButton(
+                  onPressed: _confirmClear,
+                  child: Text(
+                    'Clear All',
+                    style: GoogleFonts.rubik(
+                      fontSize: 13,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                )
               : const SizedBox.shrink()),
         ],
       ),
@@ -84,13 +102,31 @@ class _CartPageState extends State<CartPage> {
                   final cartItemId = item['cart_item_id']?.toString() ?? '';
                   final qty = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
                   final price = double.tryParse(item['price']?.toString() ?? '0') ?? 0;
+                  final imageUrl = pickImageUrl(item);
                   return Dismissible(
                     key: Key(cartItemId.isNotEmpty ? cartItemId : '$index'),
                     direction: DismissDirection.endToStart,
-                    onDismissed: (_) => _cart.removeItem(cartItemId),
+                    onDismissed: (_) async {
+                      final ok = await _cart.removeItem(cartItemId);
+                      if (!ok && mounted) {
+                        await SweetAlert.error(
+                          context,
+                          message: _cart.errorMessage.value.isNotEmpty
+                              ? _cart.errorMessage.value
+                              : 'Could not remove item',
+                        );
+                        _cart.loadCart();
+                      }
+                    },
                     background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
                     child: Card(
                       child: ListTile(
+                        leading: NetworkOrAssetImage(
+                          url: imageUrl,
+                          width: 48,
+                          height: 48,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         title: Text(item['name']?.toString() ?? item['product_name']?.toString() ?? ''),
                         subtitle: Text('₹${price.toStringAsFixed(0)} × $qty'),
                         trailing: Row(

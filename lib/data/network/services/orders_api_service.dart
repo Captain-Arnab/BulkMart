@@ -1,12 +1,13 @@
 import 'package:urban_roots/Utils/APIClass.dart';
 import 'package:urban_roots/data/network/api_client.dart';
 import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/features/orders/domain/order_payment_utils.dart';
 
 class OrdersApiService {
   OrdersApiService({ApiClient? client}) : _client = client ?? ApiClient.user;
   final ApiClient _client;
 
-  Map<String, dynamic> _orderAddressBody({
+  Map<String, dynamic> _orderBody({
     required String firstName,
     required String lastName,
     required String email,
@@ -17,25 +18,51 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required String productId,
-    required int quantity,
     required double amount,
-  }) =>
-      {
-        'first_name': firstName,
-        'last_name': lastName,
-        'email': email,
-        'phone': phone,
-        'state': state,
-        'city': city,
-        'address': address,
-        'pincode': pincode,
-        'landmark': landmark,
-        'address_type': addressType,
-        'product_id': productId,
-        'quantity': quantity,
-        'amount': amount,
-      };
+    List<Map<String, dynamic>>? products,
+    String? productId,
+    int quantity = 1,
+    String? orderId,
+    String? paymentMethod,
+  }) {
+    final body = <String, dynamic>{
+      'first_name': firstName,
+      'last_name': lastName,
+      'email': email,
+      'phone': phone,
+      'state': state,
+      'city': city,
+      'address': address,
+      'pincode': pincode.toString(),
+      'landmark': landmark.isNotEmpty ? landmark : '-',
+      'address_type': addressType,
+      'amount': amount,
+    };
+
+    final resolvedProductId = productId ??
+        (products != null && products.isNotEmpty
+            ? products.first['product_id']?.toString()
+            : null);
+    final resolvedQuantity = productId != null
+        ? quantity
+        : (products != null && products.isNotEmpty
+            ? int.tryParse(products.first['quantity']?.toString() ?? '1') ?? 1
+            : quantity);
+
+    if (resolvedProductId != null && resolvedProductId.isNotEmpty) {
+      body['product_id'] = resolvedProductId;
+      body['quantity'] = resolvedQuantity;
+    }
+
+    if (orderId != null && orderId.isNotEmpty) {
+      body['order_id'] = orderId;
+    }
+    if (paymentMethod != null && paymentMethod.isNotEmpty) {
+      body['payment_method'] = paymentMethod;
+    }
+
+    return body;
+  }
 
   Future<ApiResult<Map<String, dynamic>>> placeCodOrder({
     required String firstName,
@@ -48,13 +75,15 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required String productId,
-    required int quantity,
     required double amount,
+    List<Map<String, dynamic>>? products,
+    String? productId,
+    int quantity = 1,
+    String? orderId,
   }) =>
       _client.post(
         APIClass.codOrder,
-        body: _orderAddressBody(
+        body: _orderBody(
           firstName: firstName,
           lastName: lastName,
           email: email,
@@ -65,9 +94,12 @@ class OrdersApiService {
           pincode: pincode,
           landmark: landmark,
           addressType: addressType,
+          amount: amount,
+          products: products,
           productId: productId,
           quantity: quantity,
-          amount: amount,
+          orderId: orderId,
+          paymentMethod: 'cod',
         ),
       );
 
@@ -82,13 +114,15 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required String productId,
-    required int quantity,
     required double amount,
+    List<Map<String, dynamic>>? products,
+    String? productId,
+    int quantity = 1,
+    String? orderId,
   }) =>
       _client.post(
         APIClass.onlineOrder,
-        body: _orderAddressBody(
+        body: _orderBody(
           firstName: firstName,
           lastName: lastName,
           email: email,
@@ -99,9 +133,60 @@ class OrdersApiService {
           pincode: pincode,
           landmark: landmark,
           addressType: addressType,
+          amount: amount,
+          products: products,
           productId: productId,
           quantity: quantity,
-          amount: amount,
+          orderId: orderId,
+          paymentMethod: 'online',
+        ),
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> retryOnlinePayment({
+    required OrderPaymentFields fields,
+  }) =>
+      _client.post(
+        APIClass.onlineOrder,
+        body: _orderBody(
+          firstName: fields.firstName,
+          lastName: fields.lastName,
+          email: fields.email,
+          phone: fields.phone,
+          state: fields.state,
+          city: fields.city,
+          address: fields.address,
+          pincode: fields.pincode,
+          landmark: fields.landmark,
+          addressType: fields.addressType,
+          amount: fields.amount,
+          productId: fields.productId,
+          quantity: fields.quantity,
+          orderId: fields.orderId,
+          paymentMethod: 'online',
+        ),
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> switchOrderToCod({
+    required OrderPaymentFields fields,
+  }) =>
+      _client.post(
+        APIClass.codOrder,
+        body: _orderBody(
+          firstName: fields.firstName,
+          lastName: fields.lastName,
+          email: fields.email,
+          phone: fields.phone,
+          state: fields.state,
+          city: fields.city,
+          address: fields.address,
+          pincode: fields.pincode,
+          landmark: fields.landmark,
+          addressType: fields.addressType,
+          amount: fields.amount,
+          productId: fields.productId,
+          quantity: fields.quantity,
+          orderId: fields.orderId,
+          paymentMethod: 'cod',
         ),
       );
 

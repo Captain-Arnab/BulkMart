@@ -64,11 +64,35 @@ class CartApiService {
       );
 
   Future<ApiResult<Map<String, dynamic>>> checkout({
-    required String userId,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phone,
+    required String state,
+    required String city,
+    required String address,
+    required String pincode,
+    required String landmark,
+    required String addressType,
+    required String paymentMethod,
+    required double amount,
   }) =>
       _client.post(
         APIClass.cartCheckout,
-        body: {'user_id': userId},
+        body: {
+          'first_name': firstName,
+          'last_name': lastName,
+          'email': email,
+          'phone': phone,
+          'state': state,
+          'city': city,
+          'address': address,
+          'pincode': pincode,
+          'landmark': landmark,
+          'address_type': addressType,
+          'payment_method': paymentMethod,
+          'amount': amount,
+        },
         extraHeaders: cartPlatformHeader,
       );
 }

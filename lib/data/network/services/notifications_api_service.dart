@@ -25,5 +25,6 @@ class NotificationsApiService {
       _client.post(
         APIClass.registerDevice,
         body: {'fcm_token': fcmToken, 'platform': platform},
+        skipSessionClear: true,
       );
 }

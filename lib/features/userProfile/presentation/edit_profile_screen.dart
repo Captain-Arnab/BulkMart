@@ -34,10 +34,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _status = ApiViewStatus.loading);
     try {
       final data = await _controller.fetchUserData();
-      _fname.text = data['cust_fname']?.toString() ?? data['name']?.toString() ?? '';
+      _fname.text = data['cust_fname']?.toString() ?? '';
       _lname.text = data['cust_lname']?.toString() ?? '';
-      _email.text = data['cust_email']?.toString() ?? data['email']?.toString() ?? '';
-      _mobile.text = data['cust_mobile']?.toString() ?? data['phone']?.toString() ?? '';
+      _email.text = data['cust_email']?.toString() ?? '';
+      _mobile.text = data['cust_mobile']?.toString() ?? '';
       _address.text = data['address']?.toString() ?? '';
       _city.text = data['city']?.toString() ?? '';
       _state.text = data['state']?.toString() ?? '';

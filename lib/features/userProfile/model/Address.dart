@@ -1,13 +1,20 @@
 class Address {
+  String id;
+  String fullName;
+  String phone;
   String addressLine1;
-  String? addressLine2; // Optional field
+  String? addressLine2;
   String state;
   String city;
   String pincode;
-  String category; // Home, Work, Others
-  String? deliveryInstructions; // Optional field
+  String category;
+  String? deliveryInstructions;
+  bool isDefault;
 
   Address({
+    this.id = '',
+    this.fullName = '',
+    this.phone = '',
     required this.addressLine1,
     this.addressLine2,
     required this.state,
@@ -15,11 +22,14 @@ class Address {
     required this.pincode,
     required this.category,
     this.deliveryInstructions,
+    this.isDefault = false,
   });
 
-  // Optionally, you can add methods for JSON serialization/deserialization
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'fullName': fullName,
+      'phone': phone,
       'addressLine1': addressLine1,
       'addressLine2': addressLine2,
       'state': state,
@@ -27,18 +37,23 @@ class Address {
       'pincode': pincode,
       'category': category,
       'deliveryInstructions': deliveryInstructions,
+      'isDefault': isDefault,
     };
   }
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
-      addressLine1: json['addressLine1'],
-      addressLine2: json['addressLine2'],
-      state: json['state'],
-      city: json['city'],
-      pincode: json['pincode'],
-      category: json['category'],
-      deliveryInstructions: json['deliveryInstructions'],
+      id: json['id']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      addressLine1: json['addressLine1']?.toString() ?? '',
+      addressLine2: json['addressLine2']?.toString(),
+      state: json['state']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      pincode: json['pincode']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'Home',
+      deliveryInstructions: json['deliveryInstructions']?.toString(),
+      isDefault: json['isDefault'] == true,
     );
   }
 }

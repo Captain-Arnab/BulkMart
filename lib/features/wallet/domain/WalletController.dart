@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
@@ -49,6 +51,49 @@ class WalletController extends GetxController {
 
   Future<ApiResult<String>> verifyTopUp(String txnId) async {
     return _api.wallet.topUpVerify(txnId: txnId);
+  }
+
+  /// Verifies wallet top-up with backend and refreshes balance on success.
+  Future<bool> completeTopUpVerification(String txnId) async {
+    if (txnId.isEmpty) return false;
+
+    final result = await verifyTopUp(txnId);
+    if (result is ApiFailure<String>) {
+      errorMessage.value = result.message;
+      return false;
+    }
+
+    final raw = (result as ApiSuccess<String>).data.trim();
+    final text = raw.toLowerCase();
+
+    var verified = text.contains('success') ||
+        text.contains('verified') ||
+        text.contains('complete') ||
+        text.contains('paid');
+
+    if (!verified && text.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          final map = Map<String, dynamic>.from(decoded);
+          verified = ApiStatus.fromMap(map) == true;
+        }
+      } catch (_) {}
+    }
+
+    if (verified) {
+      await loadBalance();
+      await loadTransactions();
+    }
+
+    return verified;
+  }
+
+  static WalletController findOrPut() {
+    if (Get.isRegistered<WalletController>()) {
+      return Get.find<WalletController>();
+    }
+    return Get.put(WalletController());
   }
 
   @override

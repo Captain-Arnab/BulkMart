@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/Utils/GlobalVariable.dart';
-import 'package:urban_roots/data/dummy_data.dart';
 import 'package:urban_roots/features/dashboard/presentation/WishlistView.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/CartView.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/all_products.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/product_description.dart';
 import 'package:urban_roots/features/orders/presentation/OrderHistory.dart';
 import 'package:urban_roots/features/payments/presentation/PaymentHistory.dart';
 import 'package:urban_roots/features/products/presentation/NewScreen.dart';
@@ -53,9 +51,8 @@ class DashboardScreenState extends State<Dashboard> {
               else if (state is HomeWishList) return const WishListPage();
               else if (state is HomeCart) return const CartPage();
               else if (state is HomeProfile) return UserProfileScreen();
-              else if (state is ProductDetailsState) return ProductDetailsPage(productVal: state.productId);
-              else if (state is PaymentScreenState) return PaymentHistoryScreen();
-              else if (state is OrderScreenState) return OrderHistory(orders: DummyData.sampleOrders);
+              else if (state is PaymentScreenState) return const PaymentHistoryScreen();
+              else if (state is OrderScreenState) return const OrderHistory();
               else if (state is AddressScreenState) return AddressListScreen();
               else return ProductScreen();
             },

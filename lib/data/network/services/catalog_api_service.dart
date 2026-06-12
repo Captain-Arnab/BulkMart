@@ -29,12 +29,14 @@ class CatalogApiService {
 
   Future<ApiResult<Map<String, dynamic>>> productDetail({
     required String productId,
-  }) =>
-      _client.get(
-        APIClass.productView,
-        token: TokenMode.none,
-        queryParameters: {'pd_id': productId},
-      );
+  }) {
+    final id = productId.trim();
+    return _client.get(
+      APIClass.productView,
+      token: TokenMode.none,
+      queryParameters: {'pd_id': id},
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> searchProducts({
     required String keyword,

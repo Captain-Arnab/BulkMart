@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
-import 'package:urban_roots/data/network/urban_roots_api.dart';
-import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/features/cart/domain/cart_controller.dart';
 import 'package:urban_roots/features/wishlist/domain/wishlist_controller.dart';
 
 class WishListPage extends StatefulWidget {
@@ -23,15 +23,21 @@ class _WishListPageState extends State<WishListPage> {
   }
 
   Future<void> _addToCart(String productId) async {
-    final result = await UrbanRootsApi.instance.cart.addToCart(
-      productId: productId,
-      quantity: 1,
-    );
+    final cart = Get.isRegistered<CartController>()
+        ? Get.find<CartController>()
+        : Get.put(CartController());
+    final success = await cart.addProduct(productId);
     if (!mounted) return;
-    if (result is ApiFailure) {
-      showApiSnackBar(context, (result as ApiFailure).message, isError: true);
-    } else {
+    if (success) {
       showApiSnackBar(context, 'Added to cart');
+    } else {
+      showApiSnackBar(
+        context,
+        cart.errorMessage.value.isNotEmpty
+            ? cart.errorMessage.value
+            : 'Could not add to cart',
+        isError: true,
+      );
     }
   }
 
