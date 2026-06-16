@@ -1,4 +1,5 @@
 import 'package:urban_roots/Utils/APIClass.dart';
+import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/data/network/api_client.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 
@@ -52,10 +53,18 @@ class CartApiService {
         extraHeaders: cartPlatformHeader,
       );
 
-  Future<ApiResult<Map<String, dynamic>>> clearCart() => _client.get(
-        APIClass.cartClear,
-        extraHeaders: cartPlatformHeader,
-      );
+  /// Clears the whole cart. `clear.php` is unauthenticated and identifies the
+  /// cart by `user_id`, so it must be sent as a query param.
+  Future<ApiResult<Map<String, dynamic>>> clearCart() async {
+    final userId = await AuthSession.instance.getUserId();
+    return _client.get(
+      APIClass.cartClear,
+      queryParameters: {
+        if (userId != null && userId.isNotEmpty) 'user_id': userId,
+      },
+      extraHeaders: cartPlatformHeader,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> checkout({
     required String firstName,

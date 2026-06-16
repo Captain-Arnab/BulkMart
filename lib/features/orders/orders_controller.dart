@@ -13,20 +13,24 @@ class OrderPaymentResult {
     required this.success,
     this.message = '',
     this.paymentUrl,
+    this.txnId,
   });
 
   final bool success;
   final String message;
   final String? paymentUrl;
+  final String? txnId;
 
   factory OrderPaymentResult.success({
     required String message,
     String? paymentUrl,
+    String? txnId,
   }) =>
       OrderPaymentResult._(
         success: true,
         message: message,
         paymentUrl: paymentUrl,
+        txnId: txnId,
       );
 
   factory OrderPaymentResult.failure(String message) =>
@@ -62,8 +66,18 @@ class OrdersController extends GetxController {
     orders.assignAll(parseOrders(data));
   }
 
-  Future<Order?> loadOrderDetail(int orderId) async {
-    final result = await _api.orders.orderDetail(orderId: orderId.toString());
+  Future<Order?> loadOrderDetail({int? orderId, String? txnId}) async {
+    final hasTxn = txnId != null && txnId.trim().isNotEmpty;
+    final hasOrderId = orderId != null && orderId > 0;
+    if (!hasTxn && !hasOrderId) {
+      errorMessage.value = 'Missing order reference';
+      return null;
+    }
+
+    final result = await _api.orders.orderDetail(
+      orderId: hasTxn ? null : (hasOrderId ? orderId.toString() : null),
+      txnId: hasTxn ? txnId.trim() : null,
+    );
     if (result is ApiFailure<Map<String, dynamic>>) {
       errorMessage.value = result.message;
       return null;
@@ -71,8 +85,8 @@ class OrdersController extends GetxController {
     return parseOrderDetail((result as ApiSuccess<Map<String, dynamic>>).data);
   }
 
-  Future<bool> verifyOrderPayment(int orderId) async {
-    final order = await loadOrderDetail(orderId);
+  Future<bool> verifyOrderPayment({int? orderId, String? txnId}) async {
+    final order = await loadOrderDetail(orderId: orderId, txnId: txnId);
     return order?.isPaymentComplete ?? false;
   }
 
@@ -118,9 +132,11 @@ class OrdersController extends GetxController {
     }
 
     final data = (result as ApiSuccess<Map<String, dynamic>>).data;
-    final paymentUrl =
-        extractPaymentUrl(data) ?? order.pendingPaymentUrl;
-    if (paymentUrl == null || paymentUrl.isEmpty) {
+    final paymentUrl = extractPaymentUrl(data);
+    final resolvedUrl = (paymentUrl != null && paymentUrl.isNotEmpty)
+        ? paymentUrl
+        : order.pendingPaymentUrl;
+    if (resolvedUrl.isEmpty) {
       return OrderPaymentResult.failure(
         'Could not start online payment for this order.',
       );
@@ -128,7 +144,8 @@ class OrdersController extends GetxController {
 
     return OrderPaymentResult.success(
       message: data['message']?.toString() ?? 'Continue to payment',
-      paymentUrl: paymentUrl,
+      paymentUrl: resolvedUrl,
+      txnId: extractTxnId(data),
     );
   }
 

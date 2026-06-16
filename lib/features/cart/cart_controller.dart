@@ -19,6 +19,11 @@ class CartController extends GetxController {
   final RxDouble discount = 0.0.obs;
   final RxDouble finalAmount = 0.0.obs;
 
+  /// Caches catalog product detail by product id for the session so repeated
+  /// cart loads (quantity change, remove, re-open) don't re-fetch heavy
+  /// product-view payloads for items already seen.
+  final Map<String, Map<String, dynamic>> _productDetailCache = {};
+
   static CartController findOrPut() {
     if (Get.isRegistered<CartController>()) {
       return Get.find<CartController>();
@@ -180,6 +185,15 @@ class CartController extends GetxController {
           item['pd_id']?.toString() ??
           '';
       if (productId.isEmpty) continue;
+
+      // Use the cached detail when available — avoids re-fetching the heavy
+      // product-view payload on every cart reload.
+      final cached = _productDetailCache[productId];
+      if (cached != null) {
+        _applyProductDetail(item, cached);
+        continue;
+      }
+
       futures.add(() async {
         final result = await _api.catalog.productDetail(productId: productId);
         if (result is! ApiSuccess<Map<String, dynamic>>) return;
@@ -188,28 +202,36 @@ class CartController extends GetxController {
         if (data is! Map) return;
 
         final product = Map<String, dynamic>.from(data);
-        final imageUrl = pickImageUrl(product);
-        if (imageUrl.isNotEmpty) {
-          item['imageUrl'] = imageUrl;
-        }
-
-        final productName = product['name']?.toString() ??
-            product['product_name']?.toString() ??
-            product['pd_name']?.toString();
-        if (productName != null && productName.trim().isNotEmpty) {
-          item['name'] = productName.trim();
-        }
-
-        final grams = product['grams']?.toString() ??
-            product['product_grams']?.toString() ??
-            product['weight']?.toString();
-        if (grams != null && grams.trim().isNotEmpty) {
-          item['product_grams'] = grams.trim();
-        }
+        _productDetailCache[productId] = product;
+        _applyProductDetail(item, product);
       }());
     }
     if (futures.isNotEmpty) {
       await Future.wait(futures);
+    }
+  }
+
+  void _applyProductDetail(
+    Map<String, dynamic> item,
+    Map<String, dynamic> product,
+  ) {
+    final imageUrl = pickImageUrl(product);
+    if (imageUrl.isNotEmpty) {
+      item['imageUrl'] = imageUrl;
+    }
+
+    final productName = product['name']?.toString() ??
+        product['product_name']?.toString() ??
+        product['pd_name']?.toString();
+    if (productName != null && productName.trim().isNotEmpty) {
+      item['name'] = productName.trim();
+    }
+
+    final grams = product['grams']?.toString() ??
+        product['product_grams']?.toString() ??
+        product['weight']?.toString();
+    if (grams != null && grams.trim().isNotEmpty) {
+      item['product_grams'] = grams.trim();
     }
   }
 
@@ -242,13 +264,32 @@ class CartController extends GetxController {
       return false;
     }
 
+    // Remove the item from the list in the same synchronous frame the request
+    // starts. Swipe-to-delete (Dismissible) requires the dismissed item to be
+    // gone from its data source immediately — otherwise Flutter asserts that a
+    // "dismissed Dismissible widget is still part of the tree" and the app
+    // crashes on the next delete. We restore the item if the server rejects it.
+    final index = items.indexWhere(
+      (e) => e['cart_item_id']?.toString() == cartItemId,
+    );
+    final Map<String, dynamic>? removedItem =
+        index != -1 ? items[index] : null;
+    if (index != -1) {
+      items.removeAt(index);
+    }
+
     updatingItemId.value = cartItemId;
     final result = await _api.cart.removeCartItem(cartItemId: cartItemId);
     updatingItemId.value = '';
+
     if (result is ApiFailure) {
       errorMessage.value = (result as ApiFailure).message;
+      if (removedItem != null) {
+        items.insert(index.clamp(0, items.length), removedItem);
+      }
       return false;
     }
+
     await loadCart();
     return true;
   }

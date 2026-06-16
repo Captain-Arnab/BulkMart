@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:urban_roots/features/orders/orders_controller.dart';
 
 /// Which main area of the app shell is visible.
 enum DashboardRoute {
@@ -52,7 +53,10 @@ class DashboardController extends GetxController {
   }
 
   void openPaymentHistory() => route.value = DashboardRoute.paymentHistory;
-  void openOrderHistory() => route.value = DashboardRoute.orderHistory;
+  void openOrderHistory() {
+    route.value = DashboardRoute.orderHistory;
+    OrdersController.findOrPut().loadOrders();
+  }
   void openAddresses() => route.value = DashboardRoute.addresses;
   void backToProfile() => route.value = DashboardRoute.profile;
 

@@ -7,56 +7,65 @@ enum OrderSegment {
 }
 
 extension OrderSegmentX on Order {
-  bool get isDelivered {
-    final value = status.toLowerCase();
-    return value.contains('delivered') ||
-        value.contains('completed') ||
-        value.contains('complete');
-  }
-
-  bool get isCancelledOrNotPaid {
-    if (isCancelled) return true;
-    if (isDelivered) return false;
-
-    final pay = paymentStatus.toLowerCase();
-    if (pay.contains('fail') ||
-        pay.contains('unpaid') ||
-        pay.contains('declined') ||
-        pay.contains('refund')) {
+  bool get isWillDeliverSegment {
+    if (isCodLike && isDeliveryProcessing) return true;
+    if (isOnlinePayment &&
+        isOnlinePaymentCompleted &&
+        isDeliveryProcessing) {
       return true;
     }
-
-    final method = paymentMethod.toLowerCase();
-    final isCod = method.contains('cod') || method.contains('cash');
-
-    if (!isPaymentComplete && !isCod) return true;
-
-    final statusLower = status.toLowerCase();
-    if (statusLower.contains('unpaid') ||
-        statusLower.contains('payment pending') ||
-        statusLower.contains('not paid')) {
-      return true;
-    }
-
     return false;
   }
 
-  bool get isWillDeliver {
-    if (isDelivered || isCancelledOrNotPaid) return false;
-    return true;
+  bool get isDeliveredSegment {
+    if (isCodLike && isDeliveryCompleted) return true;
+    if (isOnlinePayment &&
+        isOnlinePaymentCompleted &&
+        isDeliveryCompleted) {
+      return true;
+    }
+    return false;
+  }
+
+  bool get isCancelledSegment {
+    if (isCancelled) return true;
+    if (isOnlinePayment && isOnlinePaymentPending) return true;
+    return false;
   }
 
   OrderSegment get segment {
-    if (isDelivered) return OrderSegment.delivered;
-    if (isCancelledOrNotPaid) return OrderSegment.cancelledOrUnpaid;
+    if (isCancelledSegment) return OrderSegment.cancelledOrUnpaid;
+    if (isDeliveredSegment) return OrderSegment.delivered;
+    if (isWillDeliverSegment) return OrderSegment.willDeliver;
+
+    // Sensible fallbacks when API fields are sparse.
+    if (isDeliveryCompleted) return OrderSegment.delivered;
+    if (isOnlinePayment && isOnlinePaymentPending) {
+      return OrderSegment.cancelledOrUnpaid;
+    }
+    if (isCodLike || isOnlinePaymentCompleted) {
+      return OrderSegment.willDeliver;
+    }
     return OrderSegment.willDeliver;
+  }
+
+  /// Normalized badge label for order history tabs.
+  String displayStatusForSegment(OrderSegment segment) {
+    switch (segment) {
+      case OrderSegment.willDeliver:
+        return 'Processing';
+      case OrderSegment.delivered:
+        return 'Completed';
+      case OrderSegment.cancelledOrUnpaid:
+        return isCancelled ? 'Cancelled' : 'Pending';
+    }
   }
 }
 
 String orderSegmentLabel(OrderSegment segment) {
   switch (segment) {
     case OrderSegment.cancelledOrUnpaid:
-      return 'Cancelled / Not Paid';
+      return 'Cancelled';
     case OrderSegment.willDeliver:
       return 'Will Deliver';
     case OrderSegment.delivered:

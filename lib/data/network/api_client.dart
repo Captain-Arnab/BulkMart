@@ -31,12 +31,17 @@ class ApiClient {
     );
     _dio.interceptors.add(_UrbanRootsInterceptor(this));
     if (kDebugMode) {
+      // NOTE: never enable `responseBody`/`responseHeader` here. Endpoints like
+      // product-view return very large HTML payloads, and LogInterceptor prints
+      // the body line-by-line on the UI isolate — dumping several of those (e.g.
+      // cart enrichment fetching every item) freezes the app / triggers an ANR.
+      // Errors are already logged in a truncated form via `_logApiError`.
       _dio.interceptors.add(
         LogInterceptor(
-          requestHeader: true,
+          requestHeader: false,
           requestBody: true,
           responseHeader: false,
-          responseBody: true,
+          responseBody: false,
           error: true,
         ),
       );

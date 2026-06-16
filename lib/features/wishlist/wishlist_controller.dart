@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
@@ -80,14 +81,36 @@ class WishlistController extends GetxController {
   }
 
   Future<bool> isInWishlist(String productId) async {
-    if (productId.trim().isEmpty) return false;
+    final id = productId.trim();
+    if (id.isEmpty) return false;
+
+    final result = await _api.wishlist.check(productId: id);
+    if (result is ApiSuccess<Map<String, dynamic>>) {
+      final inWishlist = result.data['in_wishlist'];
+      final isListed = inWishlist == true ||
+          inWishlist?.toString() == '1' ||
+          inWishlist?.toString().toLowerCase() == 'true';
+      if (isListed) {
+        _cachedProductIds.add(id);
+      } else {
+        _cachedProductIds.remove(id);
+      }
+      _cacheLoaded = true;
+      return isListed;
+    }
+
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      if (kDebugMode) {
+        debugPrint(
+          '[API_ERROR] wishlist/check.php failed for product_id=$id: ${result.message}',
+        );
+      }
+    }
 
     if (!_cacheLoaded) {
       await _refreshProductIdCache();
     }
-
-    // Backend wishlist/check.php currently throws SQL errors — use list cache.
-    return _cachedProductIds.contains(productId.trim());
+    return _cachedProductIds.contains(id);
   }
 
   static WishlistController findOrPut() {

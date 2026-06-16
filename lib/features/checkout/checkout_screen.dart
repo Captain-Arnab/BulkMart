@@ -126,15 +126,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Future<void> _finishSuccessfulOrder(CartController cart, String orderId) async {
+  Future<void> _finishSuccessfulOrder(
+    CartController cart,
+    String orderId, {
+    String? txnId,
+  }) async {
     if (widget.isSubscriptionCheckout) {
       SubscriptionFlowController.findOrPut().clear();
+      await cart.loadCart();
+    } else {
+      // A normal order consumes the whole cart — clear it so the user doesn't
+      // see the same items still sitting there after checkout.
+      await cart.clearCart();
     }
-    await cart.loadCart();
     if (!mounted) return;
+    await OrdersController.findOrPut().loadOrders();
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => OrderSuccessScreen(orderId: orderId)),
+      MaterialPageRoute(
+        builder: (_) => OrderSuccessScreen(orderId: orderId, txnId: txnId),
+      ),
     );
   }
 
@@ -218,7 +229,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         landmark: address['landmark']!,
         addressType: address['addressType']!,
         products: products,
-        amount: payable,
         paymentMethod: 'wallet',
       );
     } else if (_payment == 'cod') {
@@ -234,7 +244,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         landmark: address['landmark']!,
         addressType: address['addressType']!,
         products: products,
-        amount: payable,
         paymentMethod: 'cod',
       );
     } else {
@@ -250,7 +259,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         landmark: address['landmark']!,
         addressType: address['addressType']!,
         products: products,
-        amount: payable,
       );
     }
 
@@ -264,6 +272,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final data = (result as ApiSuccess<Map<String, dynamic>>).data;
     final orderId = extractOrderId(data) ?? '';
+    final txnId = extractTxnId(data);
 
     if (_payment == 'wallet' && orderId.isNotEmpty) {
       final deduct = await UrbanRootsApi.instance.wallet.deduct(
@@ -302,10 +311,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           builder: (_) => WalletPaymentWebView(
             paymentUrl: paymentUrl,
             amount: payable,
-            onReturnVerify: orderId.isEmpty
-                ? null
-                : () => OrdersController.findOrPut()
-                    .verifyOrderPayment(int.parse(orderId)),
+            onReturnVerify: (orderId.isNotEmpty || (txnId?.isNotEmpty ?? false))
+                ? () => OrdersController.findOrPut().verifyOrderPayment(
+                      orderId:
+                          orderId.isNotEmpty ? int.tryParse(orderId) : null,
+                      txnId: txnId,
+                    )
+                : null,
           ),
         ),
       );
@@ -323,9 +335,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         return;
       }
 
-      if (orderId.isNotEmpty) {
-        final verified = await OrdersController.findOrPut()
-            .verifyOrderPayment(int.parse(orderId));
+      if (orderId.isNotEmpty || (txnId?.isNotEmpty ?? false)) {
+        final verified = await OrdersController.findOrPut().verifyOrderPayment(
+          orderId: orderId.isNotEmpty ? int.tryParse(orderId) : null,
+          txnId: txnId,
+        );
         if (!verified) {
           await SweetAlert.warning(
             context,
@@ -339,7 +353,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() => _status = ApiViewStatus.idle);
     }
 
-    await _finishSuccessfulOrder(cart, orderId);
+    await _finishSuccessfulOrder(cart, orderId, txnId: txnId);
   }
 
   Widget _sectionTitle(String title) {

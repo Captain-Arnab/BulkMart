@@ -31,6 +31,21 @@ String? extractOrderId(Map<String, dynamic> data) {
   return null;
 }
 
+String? extractTxnId(Map<String, dynamic> data) {
+  for (final key in ['txn_id', 'txnId', 'transaction_id']) {
+    final value = data[key]?.toString();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  final inner = data['data'];
+  if (inner is Map) {
+    for (final key in ['txn_id', 'txnId', 'transaction_id']) {
+      final value = inner[key]?.toString();
+      if (value != null && value.isNotEmpty) return value;
+    }
+  }
+  return null;
+}
+
 List<Map<String, dynamic>> cartItemsToProducts(
   List<Map<String, dynamic>> cartItems,
 ) {
@@ -51,6 +66,18 @@ List<Map<String, dynamic>> cartItemsToProducts(
       .toList();
 }
 
+List<Map<String, dynamic>> orderItemsToProducts(List<OrderItem> items) {
+  return items
+      .where((item) => item.productId.isNotEmpty)
+      .map(
+        (item) => {
+          'product_id': item.productId,
+          'quantity': item.quantity,
+        },
+      )
+      .toList();
+}
+
 class OrderPaymentFields {
   const OrderPaymentFields({
     required this.firstName,
@@ -63,10 +90,8 @@ class OrderPaymentFields {
     required this.pincode,
     required this.landmark,
     required this.addressType,
-    required this.amount,
+    required this.products,
     required this.orderId,
-    required this.productId,
-    required this.quantity,
     this.txnId = '',
   });
 
@@ -80,10 +105,8 @@ class OrderPaymentFields {
   final String pincode;
   final String landmark;
   final String addressType;
-  final double amount;
+  final List<Map<String, dynamic>> products;
   final String orderId;
-  final String productId;
-  final int quantity;
   final String txnId;
 
   bool get isComplete {
@@ -96,9 +119,7 @@ class OrderPaymentFields {
         address.isNotEmpty &&
         pincode.isNotEmpty &&
         landmark.isNotEmpty &&
-        productId.isNotEmpty &&
-        quantity > 0 &&
-        amount > 0 &&
+        products.isNotEmpty &&
         orderId.isNotEmpty;
   }
 
@@ -113,9 +134,7 @@ class OrderPaymentFields {
     if (address.isEmpty) missing.add('address');
     if (pincode.isEmpty) missing.add('pincode');
     if (landmark.isEmpty) missing.add('landmark');
-    if (productId.isEmpty) missing.add('product');
-    if (quantity <= 0) missing.add('quantity');
-    if (amount <= 0) missing.add('amount');
+    if (products.isEmpty) missing.add('products');
     if (orderId.isEmpty) missing.add('order id');
     return missing;
   }
@@ -202,8 +221,6 @@ OrderPaymentFields buildOrderPaymentFields({
       ? defaultAddress!.category.toLowerCase()
       : 'home';
 
-  final firstItem = order.items.isNotEmpty ? order.items.first : null;
-
   return OrderPaymentFields(
     firstName: firstName,
     lastName: lastName,
@@ -215,10 +232,9 @@ OrderPaymentFields buildOrderPaymentFields({
     pincode: pincode,
     landmark: landmark,
     addressType: addressType,
-    amount: order.total,
+    products: orderItemsToProducts(order.items),
     orderId: order.orderId.toString(),
-    productId: firstItem?.productId ?? '',
-    quantity: firstItem?.quantity ?? 1,
+    txnId: order.txnId,
   );
 }
 

@@ -10,11 +10,13 @@ import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
     super.key,
-    required this.orderId,
+    this.orderId,
+    this.txnId,
     this.summary,
   });
 
-  final int orderId;
+  final int? orderId;
+  final String? txnId;
   final Order? summary;
 
   @override
@@ -34,13 +36,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _loadDetail() async {
+    final hasTxn = widget.txnId != null && widget.txnId!.trim().isNotEmpty;
+    final hasOrderId = widget.orderId != null && widget.orderId! > 0;
+    if (!hasTxn && !hasOrderId) {
+      setState(() {
+        _status = ApiViewStatus.error;
+        _errorMessage = 'Missing order reference';
+      });
+      return;
+    }
+
     setState(() {
       _status = ApiViewStatus.loading;
       _errorMessage = null;
     });
 
-    final detail =
-        await OrdersController.findOrPut().loadOrderDetail(widget.orderId);
+    final detail = await OrdersController.findOrPut().loadOrderDetail(
+      orderId: widget.orderId,
+      txnId: widget.txnId,
+    );
 
     if (!mounted) return;
 
@@ -139,6 +153,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     return Order(
       orderId: detail.orderId,
+      txnId: detail.txnId.isNotEmpty ? detail.txnId : summary.txnId,
       date: detail.date.isNotEmpty ? detail.date : summary.date,
       total: total,
       status: detail.status.isNotEmpty ? detail.status : summary.status,
@@ -165,9 +180,34 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  String get _screenTitle {
+    if (widget.orderId != null && widget.orderId! > 0) {
+      return 'Order #${widget.orderId}';
+    }
+    final txn = widget.txnId ?? _order?.txnId ?? '';
+    if (txn.isNotEmpty) return 'Order $txn';
+    return 'Order Details';
+  }
+
+  int? get _resolvedOrderId {
+    if (widget.orderId != null && widget.orderId! > 0) return widget.orderId;
+    final fromOrder = _order?.orderId;
+    return fromOrder != null && fromOrder > 0 ? fromOrder : null;
+  }
+
+  String? get _resolvedTxnId {
+    if (widget.txnId != null && widget.txnId!.trim().isNotEmpty) {
+      return widget.txnId!.trim();
+    }
+    final fromOrder = _order?.txnId ?? '';
+    return fromOrder.isNotEmpty ? fromOrder : null;
+  }
+
   Future<void> _reloadDetail() async {
-    final detail =
-        await OrdersController.findOrPut().loadOrderDetail(widget.orderId);
+    final detail = await OrdersController.findOrPut().loadOrderDetail(
+      orderId: _resolvedOrderId,
+      txnId: _resolvedTxnId,
+    );
     if (!mounted || detail == null) return;
     setState(() => _order = _mergeWithSummary(detail, widget.summary));
   }
@@ -198,8 +238,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         builder: (_) => WalletPaymentWebView(
           paymentUrl: result.paymentUrl!,
           amount: order.total,
-          onReturnVerify: () =>
-              OrdersController.findOrPut().verifyOrderPayment(widget.orderId),
+          onReturnVerify: () => OrdersController.findOrPut().verifyOrderPayment(
+                orderId: _resolvedOrderId,
+                txnId: _resolvedTxnId,
+              ),
         ),
       ),
     );
@@ -322,7 +364,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
         title: Text(
-          'Order #${widget.orderId}',
+          _screenTitle,
           style: GoogleFonts.rubik(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -516,7 +558,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Qty: ${item.quantity}',
+                                          item.quantity > 1 && item.unitPrice > 0
+                                              ? 'Qty: ${item.quantity} × ₹${item.unitPrice.toStringAsFixed(0)}'
+                                              : 'Qty: ${item.quantity}',
                                           style: GoogleFonts.rubik(
                                             fontSize: 12,
                                             color: Colors.grey.shade500,

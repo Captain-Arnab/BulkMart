@@ -18,10 +18,7 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required double amount,
-    List<Map<String, dynamic>>? products,
-    String? productId,
-    int quantity = 1,
+    required List<Map<String, dynamic>> products,
     String? orderId,
     String? paymentMethod,
   }) {
@@ -36,23 +33,8 @@ class OrdersApiService {
       'pincode': pincode.toString(),
       'landmark': landmark.isNotEmpty ? landmark : '-',
       'address_type': addressType,
-      'amount': amount,
+      'products': products,
     };
-
-    final resolvedProductId = productId ??
-        (products != null && products.isNotEmpty
-            ? products.first['product_id']?.toString()
-            : null);
-    final resolvedQuantity = productId != null
-        ? quantity
-        : (products != null && products.isNotEmpty
-            ? int.tryParse(products.first['quantity']?.toString() ?? '1') ?? 1
-            : quantity);
-
-    if (resolvedProductId != null && resolvedProductId.isNotEmpty) {
-      body['product_id'] = resolvedProductId;
-      body['quantity'] = resolvedQuantity;
-    }
 
     if (orderId != null && orderId.isNotEmpty) {
       body['order_id'] = orderId;
@@ -75,10 +57,7 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required double amount,
-    List<Map<String, dynamic>>? products,
-    String? productId,
-    int quantity = 1,
+    required List<Map<String, dynamic>> products,
     String? orderId,
     String paymentMethod = 'cod',
   }) =>
@@ -95,10 +74,7 @@ class OrdersApiService {
           pincode: pincode,
           landmark: landmark,
           addressType: addressType,
-          amount: amount,
           products: products,
-          productId: productId,
-          quantity: quantity,
           orderId: orderId,
           paymentMethod: paymentMethod,
         ),
@@ -115,10 +91,7 @@ class OrdersApiService {
     required String pincode,
     required String landmark,
     required String addressType,
-    required double amount,
-    List<Map<String, dynamic>>? products,
-    String? productId,
-    int quantity = 1,
+    required List<Map<String, dynamic>> products,
     String? orderId,
   }) =>
       _client.post(
@@ -134,10 +107,7 @@ class OrdersApiService {
           pincode: pincode,
           landmark: landmark,
           addressType: addressType,
-          amount: amount,
           products: products,
-          productId: productId,
-          quantity: quantity,
           orderId: orderId,
           paymentMethod: 'online',
         ),
@@ -159,9 +129,7 @@ class OrdersApiService {
           pincode: fields.pincode,
           landmark: fields.landmark,
           addressType: fields.addressType,
-          amount: fields.amount,
-          productId: fields.productId,
-          quantity: fields.quantity,
+          products: fields.products,
           orderId: fields.orderId,
           paymentMethod: 'online',
         ),
@@ -183,9 +151,7 @@ class OrdersApiService {
           pincode: fields.pincode,
           landmark: fields.landmark,
           addressType: fields.addressType,
-          amount: fields.amount,
-          productId: fields.productId,
-          quantity: fields.quantity,
+          products: fields.products,
           orderId: fields.orderId,
           paymentMethod: 'cod',
         ),
@@ -195,12 +161,20 @@ class OrdersApiService {
       _client.get(APIClass.ordersList);
 
   Future<ApiResult<Map<String, dynamic>>> orderDetail({
-    required String orderId,
-  }) =>
-      _client.get(
-        APIClass.orderDetail,
-        queryParameters: {'order_id': orderId},
-      );
+    String? orderId,
+    String? txnId,
+  }) {
+    final params = <String, dynamic>{};
+    if (txnId != null && txnId.isNotEmpty) {
+      params['txn_id'] = txnId;
+    } else if (orderId != null && orderId.isNotEmpty) {
+      params['order_id'] = orderId;
+    }
+    return _client.get(
+      APIClass.orderDetail,
+      queryParameters: params,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> trackOrder({
     required String txnId,

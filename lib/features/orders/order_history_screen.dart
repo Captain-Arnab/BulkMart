@@ -9,8 +9,19 @@ import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/orders/order_segment.dart';
 import 'package:urban_roots/features/orders/orders_controller.dart';
 
-class OrderHistory extends StatelessWidget {
+class OrderHistory extends StatefulWidget {
   const OrderHistory({super.key});
+
+  @override
+  State<OrderHistory> createState() => _OrderHistoryState();
+}
+
+class _OrderHistoryState extends State<OrderHistory> {
+  @override
+  void initState() {
+    super.initState();
+    OrdersController.findOrPut().loadOrders();
+  }
 
   Color _statusColor(String status) {
     final lower = status.toLowerCase();
@@ -34,11 +45,8 @@ class OrderHistory extends StatelessWidget {
     return Colors.orange.shade50;
   }
 
-  String _displayStatus(Order order) {
-    if (order.status.trim().isNotEmpty) return order.status;
-    if (order.isCancelled) return 'Cancelled';
-    if (!order.isPaymentComplete) return 'Not Paid';
-    return 'Processing';
+  String _displayStatus(Order order, OrderSegment segment) {
+    return order.displayStatusForSegment(segment);
   }
 
   void _openOrderDetail(BuildContext context, Order order) {
@@ -46,20 +54,27 @@ class OrderHistory extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) => OrderDetailScreen(
-          orderId: order.orderId,
+          orderId: order.orderId > 0 ? order.orderId : null,
+          txnId: order.txnId.isNotEmpty ? order.txnId : null,
           summary: order,
         ),
       ),
     );
   }
 
-  Widget _orderTile(BuildContext context, Order order) {
-    final status = _displayStatus(order);
-    final itemPreview = order.items.isEmpty
-        ? 'Tap to view details'
-        : order.items.length == 1
-            ? order.items.first.name
-            : '${order.items.length} items';
+  String _itemPreview(Order order) {
+    if (order.items.isEmpty) return 'Tap to view details';
+    if (order.items.length == 1) return order.items.first.name;
+    return '${order.items.length} items · ${order.items.first.name}';
+  }
+
+  Widget _orderTile(
+    BuildContext context,
+    Order order,
+    OrderSegment segment,
+  ) {
+    final status = _displayStatus(order, segment);
+    final itemPreview = _itemPreview(order);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -100,7 +115,9 @@ class OrderHistory extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Order #${order.orderId}',
+                        order.orderId > 0
+                            ? 'Order #${order.orderId}'
+                            : 'Order ${order.txnId.isNotEmpty ? order.txnId : ''}',
                         style: GoogleFonts.rubik(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -198,7 +215,7 @@ class OrderHistory extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       itemCount: orders.length,
       itemBuilder: (context, index) =>
-          _orderTile(context, orders[index]),
+          _orderTile(context, orders[index], segment),
     );
   }
 
@@ -258,13 +275,6 @@ class OrderHistory extends StatelessWidget {
               child: const SizedBox(),
             );
           }
-          if (controller.orders.isEmpty) {
-            return ApiStateView(
-              status: ApiViewStatus.empty,
-              emptyMessage: 'No orders yet',
-              child: const SizedBox(),
-            );
-          }
 
           return TabBarView(
             children: [
@@ -295,7 +305,7 @@ class OrderHistory extends StatelessWidget {
                   context,
                   controller,
                   OrderSegment.cancelledOrUnpaid,
-                  'No cancelled or unpaid orders',
+                  'No pending or cancelled orders',
                 ),
               ),
             ],

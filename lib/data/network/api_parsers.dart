@@ -21,6 +21,8 @@ List<dynamic> extractList(dynamic data, {String key = 'data'}) {
       'list',
       'items',
       'records',
+      'orders',
+      'order_list',
     ]) {
       if (altKey == key) continue;
       final alt = map[altKey];
@@ -38,6 +40,8 @@ List<dynamic> extractList(dynamic data, {String key = 'data'}) {
         'list',
         'items',
         'data',
+        'orders',
+        'order_list',
       ]) {
         final nestedValue = nested[nestedKey];
         if (nestedValue is List) return nestedValue;
@@ -367,23 +371,107 @@ Map<String, dynamic>? parseSubscriptionStatus(Map<String, dynamic> envelope) {
 }
 
 List<Order> parseOrders(dynamic raw) {
-  final rows = extractList(raw)
-      .whereType<Map>()
-      .map((orderRaw) => Map<String, dynamic>.from(orderRaw))
-      .toList();
+  final rows = _extractOrderRows(raw);
   if (rows.isEmpty) return [];
 
-  final grouped = <int, List<Map<String, dynamic>>>{};
-  for (final row in rows) {
-    final orderId = int.tryParse(
-          row['order_id']?.toString() ?? row['id']?.toString() ?? '0',
-        ) ??
-        0;
-    grouped.putIfAbsent(orderId, () => []).add(row);
+  return rows.map(parseOrderFromMap).toList()
+    ..sort((a, b) {
+      final dateCompare = b.date.compareTo(a.date);
+      if (dateCompare != 0) return dateCompare;
+      return b.orderId.compareTo(a.orderId);
+    });
+}
+
+bool _isOrderRow(Map<String, dynamic> row) {
+  return row.containsKey('order_id') ||
+      row.containsKey('id') ||
+      row.containsKey('products') ||
+      row.containsKey('order_items') ||
+      row.containsKey('items') ||
+      row.containsKey('total_amount') ||
+      row.containsKey('txn_id');
+}
+
+List<dynamic> _findOrderRowList(dynamic raw, [int depth = 0]) {
+  if (depth > 6) return const [];
+  if (raw is List) {
+    if (raw.isEmpty) return raw;
+    final first = raw.first;
+    if (first is Map && _isOrderRow(Map<String, dynamic>.from(first))) {
+      return raw;
+    }
+    return const [];
+  }
+  if (raw is! Map) return const [];
+
+  final map = Map<String, dynamic>.from(raw);
+  for (final key in ['data', 'orders', 'order_list', 'list', 'items']) {
+    if (!map.containsKey(key)) continue;
+    final value = map[key];
+    if (value is List) {
+      if (value.isEmpty) return value;
+      final first = value.first;
+      if (first is Map && _isOrderRow(Map<String, dynamic>.from(first))) {
+        return value;
+      }
+      continue;
+    }
+    if (value is Map) {
+      final nested = _findOrderRowList(value, depth + 1);
+      if (nested.isNotEmpty) return nested;
+    }
   }
 
-  return grouped.values.map(_mergeOrderRows).toList()
-    ..sort((a, b) => b.orderId.compareTo(a.orderId));
+  if (_isOrderRow(map)) return [map];
+  return const [];
+}
+
+Map<String, dynamic> _flattenOrderListRow(Map<String, dynamic> raw) {
+  final flat = Map<String, dynamic>.from(raw);
+
+  final payment = raw['payment'];
+  if (payment is Map) {
+    final paymentMap = Map<String, dynamic>.from(payment);
+    flat.putIfAbsent(
+      'payment_method',
+      () =>
+          paymentMap['method'] ??
+          paymentMap['payment_method'] ??
+          paymentMap['type'],
+    );
+    flat.putIfAbsent(
+      'payment_status',
+      () => paymentMap['status'] ?? paymentMap['payment_status'],
+    );
+  }
+
+  final customer = raw['customer'];
+  if (customer is Map) {
+    final customerMap = Map<String, dynamic>.from(customer);
+    flat.putIfAbsent('customer_name', () => customerMap['name']);
+    flat.putIfAbsent('first_name', () => customerMap['first_name']);
+    flat.putIfAbsent('last_name', () => customerMap['last_name']);
+    flat.putIfAbsent('email', () => customerMap['email']);
+    flat.putIfAbsent('phone', () => customerMap['phone']);
+  }
+
+  final addressFields = _parseOrderAddressFields(raw);
+  if (addressFields.address.isNotEmpty) flat['address'] = addressFields.address;
+  if (addressFields.city.isNotEmpty) flat['city'] = addressFields.city;
+  if (addressFields.state.isNotEmpty) flat['state'] = addressFields.state;
+  if (addressFields.pincode.isNotEmpty) flat['pincode'] = addressFields.pincode;
+  if (addressFields.landmark.isNotEmpty) flat['landmark'] = addressFields.landmark;
+
+  return flat;
+}
+
+List<Map<String, dynamic>> _extractOrderRows(dynamic raw) {
+  final list = _findOrderRowList(raw);
+  return list
+      .whereType<Map>()
+      .map((row) => _flattenOrderListRow(Map<String, dynamic>.from(row)))
+      .where(_isOrderRow)
+      .toList();
 }
 
 Order? parseOrderDetail(Map<String, dynamic> envelope) {
@@ -416,15 +504,13 @@ Map<String, dynamic> _flattenOrderDetailMap(Map<String, dynamic> raw) {
     flat.putIfAbsent('email', () => customerMap['email']);
     flat.putIfAbsent('phone', () => customerMap['phone']);
   }
-  final shipping = raw['shipping_address'] ?? raw['billing_address'];
-  if (shipping is Map) {
-    final addressMap = Map<String, dynamic>.from(shipping);
-    flat.putIfAbsent('address', () => addressMap['address']);
-    flat.putIfAbsent('city', () => addressMap['city']);
-    flat.putIfAbsent('state', () => addressMap['state']);
-    flat.putIfAbsent('pincode', () => addressMap['pincode']);
-    flat.putIfAbsent('landmark', () => addressMap['landmark']);
-  }
+
+  final addressFields = _parseOrderAddressFields(raw);
+  flat['address'] = addressFields.address;
+  flat['city'] = addressFields.city;
+  flat['state'] = addressFields.state;
+  flat['pincode'] = addressFields.pincode;
+  flat['landmark'] = addressFields.landmark;
 
   final payment = raw['payment'];
   if (payment is Map) {
@@ -480,9 +566,11 @@ Order _copyOrder(
   List<OrderItem>? items,
   double? total,
   String? pendingPaymentUrl,
+  String? txnId,
 }) {
   return Order(
     orderId: order.orderId,
+    txnId: txnId ?? order.txnId,
     date: order.date,
     total: total ?? order.total,
     status: order.status,
@@ -557,6 +645,19 @@ List<OrderItem> _parseOrderItems(Map<String, dynamic> order) {
         ) ??
         1;
 
+    final unitPrice = double.tryParse(
+          item['price']?.toString() ??
+              item['product_price']?.toString() ??
+              item['item_price']?.toString() ??
+              item['rate']?.toString() ??
+              '0',
+        ) ??
+        0;
+    final subtotal = _parseLineAmount(item, qty);
+    final resolvedUnitPrice = unitPrice > 0
+        ? unitPrice
+        : (qty > 0 ? subtotal / qty : 0.0);
+
     return OrderItem(
       productId: item['product_id']?.toString() ??
           item['pd_id']?.toString() ??
@@ -566,31 +667,11 @@ List<OrderItem> _parseOrderItems(Map<String, dynamic> order) {
           item['product_name']?.toString() ??
           'Product',
       quantity: qty,
-      subtotal: _parseLineAmount(item, qty),
+      unitPrice: resolvedUnitPrice,
+      subtotal: subtotal,
       imageUrl: pickImageUrl(item),
     );
   }).toList();
-
-  if (items.isEmpty) {
-    final productName = order['product_name']?.toString() ??
-        order['name']?.toString() ??
-        order['item_name']?.toString();
-    if (productName != null && productName.trim().isNotEmpty) {
-      final qty = int.tryParse(order['quantity']?.toString() ?? '1') ?? 1;
-      items.add(
-        OrderItem(
-          productId: order['product_id']?.toString() ??
-              order['pd_id']?.toString() ??
-              order['productId']?.toString() ??
-              '',
-          name: productName.trim(),
-          quantity: qty,
-          subtotal: _parseLineAmount(order, qty),
-          imageUrl: pickImageUrl(order),
-        ),
-      );
-    }
-  }
 
   return items;
 }
@@ -604,6 +685,103 @@ Order _finalizeOrderTotals(Order order) {
   return _copyOrder(order, total: total);
 }
 
+class _OrderAddressFields {
+  const _OrderAddressFields({
+    this.address = '',
+    this.city = '',
+    this.state = '',
+    this.pincode = '',
+    this.landmark = '',
+  });
+
+  final String address;
+  final String city;
+  final String state;
+  final String pincode;
+  final String landmark;
+}
+
+_OrderAddressFields _parseOrderAddressFields(Map<String, dynamic> order) {
+  var address = '';
+  var city = '';
+  var state = '';
+  var pincode = '';
+  var landmark = '';
+
+  void applyMap(Map<String, dynamic> map) {
+    final line = map['address']?.toString() ??
+        map['address_line1']?.toString() ??
+        map['address_line']?.toString() ??
+        map['street']?.toString() ??
+        '';
+    if (line.isNotEmpty) address = line;
+
+    final mapCity = map['city']?.toString() ?? '';
+    if (mapCity.isNotEmpty) city = mapCity;
+
+    final mapState = map['state']?.toString() ?? '';
+    if (mapState.isNotEmpty) state = mapState;
+
+    final mapPin = map['pincode']?.toString() ?? map['zip']?.toString() ?? '';
+    if (mapPin.isNotEmpty) pincode = mapPin;
+
+    final mapLandmark = map['landmark']?.toString() ??
+        map['address_line2']?.toString() ??
+        '';
+    if (mapLandmark.isNotEmpty && mapLandmark != '-') landmark = mapLandmark;
+  }
+
+  final nestedAddress = order['address'];
+  if (nestedAddress is Map) {
+    applyMap(Map<String, dynamic>.from(nestedAddress));
+  }
+
+  for (final key in [
+    'shipping_address',
+    'billing_address',
+    'delivery_address',
+  ]) {
+    final value = order[key];
+    if (value is Map) {
+      applyMap(Map<String, dynamic>.from(value));
+    }
+  }
+
+  if (address.isEmpty && nestedAddress is! Map) {
+    final raw = nestedAddress?.toString() ?? '';
+    if (raw.isNotEmpty && !raw.trim().startsWith('{')) {
+      address = raw;
+    }
+  }
+  if (address.isEmpty) {
+    final delivery = order['delivery_address'];
+    if (delivery is Map) {
+      applyMap(Map<String, dynamic>.from(delivery));
+    } else {
+      final raw = delivery?.toString() ?? '';
+      if (raw.isNotEmpty && !raw.trim().startsWith('{')) address = raw;
+    }
+  }
+
+  if (city.isEmpty) city = order['city']?.toString() ?? '';
+  if (state.isEmpty) state = order['state']?.toString() ?? '';
+  if (pincode.isEmpty) {
+    pincode = order['pincode']?.toString() ?? order['zip']?.toString() ?? '';
+  }
+  if (landmark.isEmpty) {
+    final raw = order['landmark']?.toString() ?? '';
+    if (raw.isNotEmpty && raw != '-') landmark = raw;
+  }
+
+  return _OrderAddressFields(
+    address: address,
+    city: city,
+    state: state,
+    pincode: pincode,
+    landmark: landmark,
+  );
+}
+
 Order parseOrderFromMap(Map<String, dynamic> order) {
   final orderId = int.tryParse(
         order['order_id']?.toString() ?? order['id']?.toString() ?? '0',
@@ -612,11 +790,13 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
 
   final date = order['order_date']?.toString() ??
       order['created_at']?.toString() ??
+      order['created_on']?.toString() ??
       order['date']?.toString() ??
       '';
 
   final total = double.tryParse(
-        order['total']?.toString() ??
+        order['total_amount']?.toString() ??
+            order['total']?.toString() ??
             order['amount']?.toString() ??
             order['order_total']?.toString() ??
             order['grand_total']?.toString() ??
@@ -627,6 +807,9 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
       ) ??
       0;
 
+  final txnId =
+      order['txn_id']?.toString() ?? order['txnId']?.toString() ?? '';
+
   final status = order['status']?.toString() ??
       order['order_status']?.toString() ??
       '';
@@ -636,7 +819,27 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
       order['payment_state']?.toString() ??
       '';
 
+  var paymentMethod = order['payment_method']?.toString() ??
+      order['payment_type']?.toString() ??
+      order['payment_mode']?.toString() ??
+      order['pay_method']?.toString() ??
+      order['pay_type']?.toString() ??
+      '';
+
+  // List API sometimes stores the method in payment_status (e.g. "Cash on Delivery").
+  final payLower = paymentStatus.toLowerCase();
+  if (paymentMethod.isEmpty &&
+      (payLower.contains('cod') ||
+          payLower.contains('cash') ||
+          payLower.contains('delivery') ||
+          payLower.contains('online') ||
+          payLower.contains('wallet') ||
+          payLower.contains('upi'))) {
+    paymentMethod = paymentStatus;
+  }
+
   final items = _parseOrderItems(order);
+  final addressFields = _parseOrderAddressFields(order);
 
   final firstName = order['first_name']?.toString() ?? '';
   final lastName = order['last_name']?.toString() ?? '';
@@ -649,25 +852,22 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
   return _finalizeOrderTotals(
     Order(
       orderId: orderId,
+      txnId: txnId,
       date: date,
       total: total,
       status: status,
       items: items,
-      paymentMethod: order['payment_method']?.toString() ??
-          order['payment_type']?.toString() ??
-          order['payment_mode']?.toString() ??
-          '',
+      paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
       pendingPaymentUrl: extractPaymentUrl(order) ?? '',
       customerName: customerName,
       email: order['email']?.toString() ?? order['cust_email']?.toString() ?? '',
       phone: order['phone']?.toString() ?? order['mobile']?.toString() ?? '',
-      address:
-          order['address']?.toString() ?? order['delivery_address']?.toString() ?? '',
-      city: order['city']?.toString() ?? '',
-      state: order['state']?.toString() ?? '',
-      pincode: order['pincode']?.toString() ?? order['zip']?.toString() ?? '',
-      landmark: order['landmark']?.toString() ?? '',
+      address: addressFields.address,
+      city: addressFields.city,
+      state: addressFields.state,
+      pincode: addressFields.pincode,
+      landmark: addressFields.landmark,
     ),
   );
 }
@@ -814,7 +1014,7 @@ String resolveOrderPaymentStatus(Order order) {
 }
 
 List<Map<String, dynamic>> paymentRecordsFromOrders(List<Order> orders) {
-  return orders.map((order) {
+  return orders.where((order) => !order.isCodLike).map((order) {
     final method = order.paymentMethod.trim().isNotEmpty
         ? order.paymentMethod
         : 'Online';
