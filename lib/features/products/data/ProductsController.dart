@@ -198,10 +198,6 @@ class ProductsController extends GetxController {
 
     return productsList;
   }
-
-  Future<String?> getCityFromCoordinates(double latitude, double longitude) async {
-    return 'Bangalore';
-  }
 }
 
 class Category {

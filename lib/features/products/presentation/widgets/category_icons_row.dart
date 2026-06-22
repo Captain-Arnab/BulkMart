@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/category_icon_helper.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/all_products.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 
-class ProductSliderPage extends StatefulWidget {
-  const ProductSliderPage({super.key});
+class CategoryIconsRow extends StatefulWidget {
+  const CategoryIconsRow({super.key});
 
   @override
-  State<ProductSliderPage> createState() => _ProductSliderPageState();
+  State<CategoryIconsRow> createState() => _CategoryIconsRowState();
 }
 
-class _ProductSliderPageState extends State<ProductSliderPage> {
+class _CategoryIconsRowState extends State<CategoryIconsRow> {
   final _controller = Get.put(ProductsController());
 
   @override
@@ -27,47 +28,21 @@ class _ProductSliderPageState extends State<ProductSliderPage> {
     return Obx(() {
       if (_controller.isCategoriesLoading.value) {
         return const SizedBox(
-          height: 120,
+          height: 110,
           child: Center(
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Color(0xFF019934),
+              color: AppColors.primary,
             ),
           ),
         );
       }
 
       final categories = _controller.categories;
-      if (categories.isEmpty) {
-        final message = _controller.errorMessage.value;
-        return SizedBox(
-          height: 120,
-          child: Center(
-            child: message.isEmpty
-                ? Text(
-                    'No categories yet',
-                    style: GoogleFonts.rubik(fontSize: 13, color: Colors.grey),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        message,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.rubik(fontSize: 12, color: Colors.grey),
-                      ),
-                      TextButton(
-                        onPressed: _controller.fetchCategories,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-          ),
-        );
-      }
+      if (categories.isEmpty) return const SizedBox.shrink();
 
       return SizedBox(
-        height: 120,
+        height: 110,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -76,12 +51,13 @@ class _ProductSliderPageState extends State<ProductSliderPage> {
             final cat = categories[index];
             final categoryId = int.tryParse(cat.id) ?? 0;
             final hasImage = cat.image.trim().isNotEmpty;
+
             return GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProductPage(
+                    builder: (_) => ProductPage(
                       category: categoryId,
                       minPrice: 0,
                       maxPrice: 2000,
@@ -90,40 +66,29 @@ class _ProductSliderPageState extends State<ProductSliderPage> {
                 );
               },
               child: Container(
-                width: 90,
-                margin: const EdgeInsets.only(right: 12),
+                width: 84,
+                margin: const EdgeInsets.only(right: 10),
                 child: Column(
                   children: [
                     Container(
-                      width: 72,
-                      height: 72,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.green.withValues(alpha: 0.15),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
                       ),
                       child: ClipOval(
                         child: hasImage
                             ? NetworkOrAssetImage(
                                 url: cat.image,
-                                width: 72,
-                                height: 72,
+                                width: 64,
+                                height: 64,
                                 fit: BoxFit.cover,
                               )
-                            : Container(
-                                width: 72,
-                                height: 72,
-                                color: const Color(0xFF019934).withValues(alpha: 0.1),
-                                child: Icon(
-                                  categoryFallbackIcon(cat.name),
-                                  color: const Color(0xFF019934),
-                                  size: 32,
-                                ),
+                            : Icon(
+                                categoryFallbackIcon(cat.name),
+                                color: AppColors.primary,
+                                size: 28,
                               ),
                       ),
                     ),
@@ -136,7 +101,6 @@ class _ProductSliderPageState extends State<ProductSliderPage> {
                       style: GoogleFonts.rubik(
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
                       ),
                     ),
                   ],

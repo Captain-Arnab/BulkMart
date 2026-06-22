@@ -10,7 +10,6 @@ import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/tabbar.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
-import 'package:urban_roots/features/wishlist/wishlist_controller.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String productVal;
@@ -31,20 +30,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   bool _isLoading = true;
   String? _errorMessage;
   int _quantity = 1;
-  bool _isFavorite = false;
   bool _isAddingToCart = false;
 
   @override
   void initState() {
     super.initState();
     _loadProductData();
-    _loadWishlistState();
-  }
-
-  Future<void> _loadWishlistState() async {
-    final inList =
-        await WishlistController.findOrPut().isInWishlist(widget.productVal);
-    if (mounted) setState(() => _isFavorite = inList);
   }
 
   Future<void> _loadProductData() async {
@@ -94,28 +85,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         message: cart.errorMessage.value.isNotEmpty
             ? cart.errorMessage.value
             : 'Could not add to cart',
-      );
-    }
-  }
-
-  Future<void> _toggleWishlist() async {
-    final wishlist = WishlistController.findOrPut();
-    final nextAdd = !_isFavorite;
-    final success = await wishlist.toggle(widget.productVal, add: nextAdd);
-    if (!mounted) return;
-
-    if (success) {
-      setState(() => _isFavorite = nextAdd);
-      await SweetAlert.success(
-        context,
-        message: nextAdd ? 'Added to wishlist' : 'Removed from wishlist',
-      );
-    } else {
-      await SweetAlert.error(
-        context,
-        message: wishlist.errorMessage.value.isNotEmpty
-            ? wishlist.errorMessage.value
-            : 'Could not update wishlist',
       );
     }
   }
@@ -180,16 +149,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GlassIconButton(
-                  icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  iconColor: _isFavorite ? Colors.red : Colors.black87,
-                  onPressed: _toggleWishlist,
-                ),
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
               background: Container(

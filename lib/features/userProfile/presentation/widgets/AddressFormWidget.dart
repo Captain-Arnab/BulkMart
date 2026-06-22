@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/location/location_service.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/features/checkout/map_pin_picker_screen.dart';
 
 import '../../model/Address.dart';
 
@@ -34,6 +36,7 @@ class _AddressFormWidgetState extends State<AddressFormWidget> {
   String _selectedCategory = 'Home';
   bool _isDefault = false;
   bool _isSaving = false;
+  bool _isLocating = false;
 
   static const _categories = ['Home', 'Work', 'Others'];
 
@@ -66,6 +69,51 @@ class _AddressFormWidgetState extends State<AddressFormWidget> {
     _pincodeController.dispose();
     _instructionsController.dispose();
     super.dispose();
+  }
+
+  void _applyDetectedAddress(DetectedAddress detected) {
+    if (detected.addressLine.isNotEmpty) {
+      _addressLine1Controller.text = detected.addressLine;
+    }
+    if (detected.landmark.isNotEmpty) {
+      _addressLine2Controller.text = detected.landmark;
+    }
+    if (detected.city.isNotEmpty) _cityController.text = detected.city;
+    if (detected.state.isNotEmpty) _stateController.text = detected.state;
+    if (detected.pincode.isNotEmpty) {
+      _pincodeController.text = detected.pincode;
+    }
+  }
+
+  Future<void> _detectMyLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      final detected = await LocationService.instance.detectCurrentAddress();
+      if (!mounted) return;
+      _applyDetectedAddress(detected);
+      await SweetAlert.success(
+        context,
+        message: 'Location detected successfully',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await SweetAlert.error(
+        context,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
+  Future<void> _pinOnMap() async {
+    final detected = await Navigator.push<DetectedAddress>(
+      context,
+      MaterialPageRoute(builder: (_) => const MapPinPickerScreen()),
+    );
+    if (detected == null || !mounted) return;
+    _applyDetectedAddress(detected);
+    await SweetAlert.success(context, message: 'Location pinned on map');
   }
 
   InputDecoration _fieldDecoration(
@@ -341,6 +389,34 @@ class _AddressFormWidgetState extends State<AddressFormWidget> {
                         'Delivery address',
                         subtitle: 'House no., street, area',
                       ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isLocating ? null : _detectMyLocation,
+                              icon: _isLocating
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.my_location_outlined),
+                              label: const Text('Detect My Location'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _pinOnMap,
+                              icon: const Icon(Icons.map_outlined),
+                              label: const Text('Pin on Map'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
                       TextFormField(
                         controller: _addressLine1Controller,
                         decoration: _fieldDecoration(

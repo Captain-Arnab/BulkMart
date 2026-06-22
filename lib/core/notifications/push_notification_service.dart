@@ -7,6 +7,7 @@ import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/config/firebase_config.dart';
 import 'package:urban_roots/core/notifications/fcm_notification_router.dart';
+import 'package:urban_roots/core/notifications/local_notification_service.dart';
 import 'package:urban_roots/data/models/device_token_register_result.dart';
 import 'package:urban_roots/data/repositories/device_token_repository.dart';
 
@@ -37,9 +38,21 @@ class PushNotificationService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     await _requestPermission();
+    await LocalNotificationService.instance.initialize();
 
-    FirebaseMessaging.onMessage.listen((message) {
-      FcmNotificationRouter.instance.handleMessage(message, source: 'foreground');
+    FirebaseMessaging.onMessage.listen((message) async {
+      await FcmNotificationRouter.instance.handleMessage(
+        message,
+        source: 'foreground',
+      );
+      final title = message.notification?.title ?? 'Urban Roots';
+      final body = message.notification?.body ?? '';
+      if (body.isNotEmpty) {
+        await LocalNotificationService.instance.showFromFcm(
+          title: title,
+          body: body,
+        );
+      }
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {

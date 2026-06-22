@@ -1,53 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/features/offers/presentation/widgets/offers_coming_soon_banner.dart';
 
 class DelightOffers extends StatelessWidget {
+  const DelightOffers({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 20), // Optional: Add padding if needed
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Title Section
-          Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child: Text(
-              'Delight Offers',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+          Text(
+            'Delight Offers',
+            style: GoogleFonts.rubik(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          // Images Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // First Image
-              Expanded(
-                child: Container(
-                  margin: EdgeInsets.all(8), // Optional: Adjust margin as needed
-                  child: Image.asset(
-                    'assets/poster1.jpg', // Adjust path accordingly
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-              // Second Image
-              Expanded(
-                child: Container(
-                  margin: EdgeInsets.all(8), // Optional: Adjust margin as needed
-                  child: Image.asset(
-                    'assets/poster2.jpg', // Adjust path accordingly
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 12),
+          const OffersComingSoonBanner(),
         ],
       ),
     );

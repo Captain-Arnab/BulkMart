@@ -7,6 +7,7 @@ import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/presentation/ProductCard.dart';
 import 'package:urban_roots/features/products/presentation/filterScreen.dart';
+import 'package:urban_roots/features/products/presentation/widgets/category_icons_row.dart';
 
 class ProductPage extends StatefulWidget {
   const ProductPage({
@@ -38,9 +39,22 @@ class _ProductPageState extends State<ProductPage> {
   Timer? _debounce;
   bool isLoading = true;
 
+  late int _category;
+  late double _minPrice;
+  late double _maxPrice;
+  int? _minGrams;
+  int? _maxGrams;
+  String? _packingType;
+
   @override
   void initState() {
     super.initState();
+    _category = widget.category;
+    _minPrice = widget.minPrice;
+    _maxPrice = widget.maxPrice;
+    _minGrams = widget.minGrams;
+    _maxGrams = widget.maxGrams;
+    _packingType = widget.packingType;
     _fetchProducts();
   }
 
@@ -52,9 +66,19 @@ class _ProductPageState extends State<ProductPage> {
   }
 
   void _fetchProducts() {
+    setState(() => isLoading = true);
     productsController
-        .listProducts(context, widget.category, widget.minPrice, widget.maxPrice, widget.maxGrams, widget.minGrams, widget.packingType)
+        .listProducts(
+          context,
+          _category,
+          _minPrice,
+          _maxPrice,
+          _maxGrams,
+          _minGrams,
+          _packingType,
+        )
         .then((products) {
+      if (!mounted) return;
       setState(() {
         allProducts = products;
         filteredProducts = products;
@@ -63,11 +87,31 @@ class _ProductPageState extends State<ProductPage> {
     });
   }
 
+  Future<void> _openFilters() async {
+    final result = await Navigator.push<ProductFilterResult>(
+      context,
+      MaterialPageRoute(builder: (_) => FilterScreen()),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _category = result.categoryId;
+      _minPrice = result.minPrice;
+      _maxPrice = result.maxPrice;
+      _minGrams = result.minGrams;
+      _maxGrams = result.maxGrams;
+      _packingType = result.packingType;
+    });
+    _fetchProducts();
+  }
+
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       setState(() {
-        filteredProducts = allProducts.where((p) => p.name.toLowerCase().contains(query.toLowerCase())).toList();
+        filteredProducts = allProducts
+            .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
       });
     });
   }
@@ -81,11 +125,18 @@ class _ProductPageState extends State<ProductPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text('All Products', style: GoogleFonts.rubik(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black87)),
+        title: Text(
+          'All Products',
+          style: GoogleFonts.rubik(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+          ),
+        ),
         centerTitle: false,
         actions: [
           IconButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FilterScreen())),
+            onPressed: _openFilters,
             icon: const Icon(Icons.tune, color: Color(0xFF019934)),
           ),
         ],
@@ -100,26 +151,60 @@ class _ProductPageState extends State<ProductPage> {
               style: GoogleFonts.poppins(fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Search products...',
-                hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade400),
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.grey.shade400,
+                ),
                 prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade200)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF019934), width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF019934),
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
+          const CategoryIconsRow(),
           if (isLoading)
-            const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF019934))))
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF019934)),
+              ),
+            )
           else if (filteredProducts.isEmpty)
             Expanded(
-              child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
-                const SizedBox(height: 12),
-                Text('No products found', style: GoogleFonts.rubik(fontSize: 16, color: Colors.grey.shade500)),
-              ])),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No products found',
+                      style: GoogleFonts.rubik(
+                        fontSize: 16,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             )
           else
             Expanded(
@@ -141,6 +226,7 @@ class _ProductPageState extends State<ProductPage> {
                     stock: product.stock,
                     price: product.price,
                     imageUrl: product.imageUrl,
+                    offerLabel: product.offerLabel,
                     onProductTap: () => openProductDetails(context, product),
                   );
                 },

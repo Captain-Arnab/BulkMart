@@ -209,12 +209,21 @@ class OrdersApiService {
   }
 
   Future<ApiResult<Map<String, dynamic>>> trackOrder({
-    required String txnId,
-  }) =>
-      _client.post(
-        APIClass.orderTracking,
-        body: {'txn_id': txnId},
-      );
+    String? txnId,
+    String? orderId,
+  }) {
+    final body = <String, dynamic>{};
+    if (txnId != null && txnId.trim().isNotEmpty) {
+      body['txn_id'] = txnId.trim();
+    }
+    if (orderId != null && orderId.trim().isNotEmpty) {
+      body['order_id'] = orderId.trim();
+    }
+    return _client.post(
+      APIClass.orderTracking,
+      body: body,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> cancelOrder({
     required String orderId,

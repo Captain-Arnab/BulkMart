@@ -5,7 +5,7 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
 import 'package:urban_roots/features/dashboard/dashboard.dart';
-import 'package:urban_roots/features/login/presentation/Login.dart';
+import 'package:urban_roots/features/auth/presentation/welcome_screen.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 
@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (!loggedIn) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => Login()),
+        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
       );
       return;
     }

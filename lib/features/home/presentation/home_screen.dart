@@ -7,6 +7,7 @@ import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/home/home_view_model.dart';
 import 'package:urban_roots/features/home/models/home_models.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_banner_carousel.dart';
+import 'package:urban_roots/features/home/presentation/widgets/home_featured_grid.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_horizontal_product_row.dart';
 import 'package:urban_roots/features/notifications/notifications_controller.dart';
 
@@ -105,11 +106,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (data.featuredProducts.isNotEmpty) {
       children.add(
-        HomeHorizontalProductRow(
-          sectionTitle: 'Popular Picks',
+        HomeFeaturedGrid(
           products: data.featuredProducts,
-          showSeeAll: true,
-          onSeeAll: () => DashboardController.findOrPut().goToTab(1),
+          onViewAll: () => DashboardController.findOrPut().goToTab(1),
         ),
       );
     }

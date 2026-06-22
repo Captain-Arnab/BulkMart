@@ -1,3 +1,4 @@
+import 'package:urban_roots/core/ui/category_icon_helper.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 
 class Product {
@@ -9,6 +10,7 @@ class Product {
   final String imageUrl;
   final String packingType;
   final String gst;
+  final String? offerLabel;
   final Map<String, dynamic> rawJson;
 
   Product({
@@ -20,6 +22,7 @@ class Product {
     required this.imageUrl,
     required this.packingType,
     required this.gst,
+    this.offerLabel,
     Map<String, dynamic>? rawJson,
   }) : rawJson = rawJson ?? const {};
 
@@ -43,6 +46,7 @@ class Product {
       imageUrl: pickImageUrl(json),
       packingType: json['packing_type']?.toString() ?? '',
       gst: json['gst']?.toString() ?? '0',
+      offerLabel: productOfferLabel(map),
       rawJson: map,
     );
   }

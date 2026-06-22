@@ -1,6 +1,8 @@
+import 'package:urban_roots/core/ui/category_icon_helper.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
+import 'package:urban_roots/features/orders/order_tracking_models.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/utils/catalog_filters.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
@@ -81,10 +83,12 @@ List<Category> parseCategories(dynamic raw) {
               m['category_id']?.toString() ??
               m['id']?.toString() ??
               '',
-          name: m['categ_name']?.toString() ??
-              m['category_name']?.toString() ??
-              m['name']?.toString() ??
-              '',
+          name: formatCategoryDisplayName(
+            m['categ_name']?.toString() ??
+                m['category_name']?.toString() ??
+                m['name']?.toString() ??
+                '',
+          ),
           image: pickImageUrl(m),
           status: m['status']?.toString() ?? '0',
         );
@@ -1189,6 +1193,365 @@ String? extractUserDisplayName(Map<String, dynamic> data) {
 
 String normalizeOtpInput(String otp) =>
     otp.replaceAll(RegExp(r'\D'), '').trim();
+
+double? _pickCoordinateComponent(
+  Map<String, dynamic> map,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final value = map[key];
+    if (value == null) continue;
+    final parsed = double.tryParse(value.toString().trim());
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+TrackingCoordinate? _parseTrackingCoordinate(dynamic raw) {
+  if (raw is! Map) return null;
+  final map = Map<String, dynamic>.from(raw);
+  final lat = _pickCoordinateComponent(map, [
+    'lat',
+    'latitude',
+    'delivery_lat',
+    'dest_lat',
+    'destination_lat',
+    'address_lat',
+    'customer_lat',
+    'drop_lat',
+  ]);
+  final lng = _pickCoordinateComponent(map, [
+    'lng',
+    'lon',
+    'long',
+    'longitude',
+    'delivery_lng',
+    'delivery_lon',
+    'dest_lng',
+    'destination_lng',
+    'address_lng',
+    'customer_lng',
+    'drop_lng',
+  ]);
+  if (lat == null || lng == null) return null;
+  final coordinate = TrackingCoordinate(latitude: lat, longitude: lng);
+  return coordinate.isValid ? coordinate : null;
+}
+
+TrackingCoordinate? _findTrackingCoordinate(Map<String, dynamic> map) {
+  for (final key in [
+    'destination',
+    'delivery_location',
+    'delivery_address',
+    'drop_location',
+    'address',
+    'customer_location',
+  ]) {
+    final nested = _parseTrackingCoordinate(map[key]);
+    if (nested != null) return nested;
+  }
+
+  final direct = _parseTrackingCoordinate(map);
+  if (direct != null) return direct;
+
+  return null;
+}
+
+TrackingCoordinate? _findAgentCoordinate(Map<String, dynamic> map) {
+  for (final key in [
+    'agent',
+    'delivery_agent',
+    'delivery_boy',
+    'driver',
+    'rider',
+    'courier',
+    'current_location',
+    'live_location',
+    'location',
+  ]) {
+    final nested = _parseTrackingCoordinate(map[key]);
+    if (nested != null) return nested;
+  }
+
+  final lat = _pickCoordinateComponent(map, [
+    'agent_lat',
+    'agent_latitude',
+    'rider_lat',
+    'driver_lat',
+    'delivery_boy_lat',
+    'boy_lat',
+    'current_lat',
+    'live_lat',
+  ]);
+  final lng = _pickCoordinateComponent(map, [
+    'agent_lng',
+    'agent_lon',
+    'agent_longitude',
+    'rider_lng',
+    'driver_lng',
+    'delivery_boy_lng',
+    'boy_lng',
+    'current_lng',
+    'live_lng',
+  ]);
+  if (lat == null || lng == null) return null;
+  final coordinate = TrackingCoordinate(latitude: lat, longitude: lng);
+  return coordinate.isValid ? coordinate : null;
+}
+
+String _pickRawTrackingStatusCode(Map<String, dynamic> map) {
+  for (final key in [
+    'status',
+    'order_status',
+    'delivery_status',
+    'tracking_status',
+    'current_status',
+  ]) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+String _pickTrackingStatus(Map<String, dynamic> map) {
+  for (final key in [
+    'order_status',
+    'delivery_status',
+    'tracking_status',
+    'current_status',
+    'status_label',
+    'status_text',
+    'status_name',
+    'status',
+  ]) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (isMeaningfulTrackingStatus(value)) return value;
+  }
+  return '';
+}
+
+String _pickTrackingTimestamp(Map<String, dynamic> map) {
+  for (final key in [
+    'timestamp',
+    'time',
+    'date',
+    'updated_at',
+    'created_at',
+    'status_time',
+  ]) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+String _pickTrackingLabel(Map<String, dynamic> map) {
+  for (final key in [
+    'title',
+    'label',
+    'step',
+    'name',
+    'tracking_status',
+    'description',
+    'status',
+  ]) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (isMeaningfulTrackingStatus(value)) return value;
+  }
+  return '';
+}
+
+bool _isTrackingStepCompleted(Map<String, dynamic> map) {
+  for (final key in ['completed', 'done', 'is_completed', 'is_done']) {
+    final value = map[key];
+    if (value is bool) return value;
+    if (value == 1 || value == '1' || value == true) return true;
+    final text = value?.toString().toLowerCase() ?? '';
+    if (text == 'true' || text == 'yes' || text == 'completed') return true;
+  }
+  return false;
+}
+
+bool _isTrackingStepCurrent(Map<String, dynamic> map) {
+  for (final key in ['current', 'is_current', 'active', 'is_active']) {
+    final value = map[key];
+    if (value is bool) return value;
+    if (value == 1 || value == '1' || value == true) return true;
+    final text = value?.toString().toLowerCase() ?? '';
+    if (text == 'true' || text == 'yes') return true;
+  }
+  return false;
+}
+
+List<OrderTrackingStep> _parseTrackingSteps(Map<String, dynamic> map) {
+  dynamic raw;
+  for (final key in [
+    'tracking_history',
+    'status_history',
+    'timeline',
+    'history',
+    'tracking_steps',
+    'steps',
+    'tracking',
+    'tracking_data',
+  ]) {
+    final value = map[key];
+    if (value is List && value.isNotEmpty) {
+      raw = value;
+      break;
+    }
+  }
+
+  if (raw is! List) return const [];
+
+  return raw
+      .whereType<Map>()
+      .map((entry) {
+        final stepMap = Map<String, dynamic>.from(entry);
+        final label = _pickTrackingLabel(stepMap);
+        if (label.isEmpty) return null;
+        return OrderTrackingStep(
+          label: label,
+          timestamp: _pickTrackingTimestamp(stepMap),
+          completed: _isTrackingStepCompleted(stepMap),
+          isCurrent: _isTrackingStepCurrent(stepMap),
+        );
+      })
+      .whereType<OrderTrackingStep>()
+      .toList();
+}
+
+String _pickAgentName(Map<String, dynamic> map) {
+  for (final key in [
+    'agent_name',
+    'delivery_agent_name',
+    'delivery_boy_name',
+    'driver_name',
+    'rider_name',
+    'boy_name',
+    'name',
+  ]) {
+    final direct = map[key]?.toString().trim() ?? '';
+    if (direct.isNotEmpty && !direct.contains('{')) return direct;
+  }
+
+  for (final key in ['agent', 'delivery_agent', 'delivery_boy', 'driver', 'rider']) {
+    final nested = map[key];
+    if (nested is Map) {
+      final nestedMap = Map<String, dynamic>.from(nested);
+      final name = nestedMap['name']?.toString().trim() ?? '';
+      if (name.isNotEmpty) return name;
+    }
+  }
+  return '';
+}
+
+String _pickAgentPhone(Map<String, dynamic> map) {
+  for (final key in [
+    'agent_phone',
+    'delivery_agent_phone',
+    'delivery_boy_phone',
+    'driver_phone',
+    'rider_phone',
+    'phone',
+    'mobile',
+  ]) {
+    final direct = map[key]?.toString().trim() ?? '';
+    if (direct.isNotEmpty && !direct.contains('{')) return direct;
+  }
+
+  for (final key in ['agent', 'delivery_agent', 'delivery_boy', 'driver', 'rider']) {
+    final nested = map[key];
+    if (nested is Map) {
+      final nestedMap = Map<String, dynamic>.from(nested);
+      final phone = nestedMap['phone']?.toString().trim() ??
+          nestedMap['mobile']?.toString().trim() ??
+          '';
+      if (phone.isNotEmpty) return phone;
+    }
+  }
+  return '';
+}
+
+String _pickTrackingEta(Map<String, dynamic> map) {
+  for (final key in [
+    'eta',
+    'eta_minutes',
+    'estimated_delivery',
+    'estimated_time',
+    'expected_delivery',
+  ]) {
+    final value = map[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+Map<String, dynamic> _unwrapTrackingEnvelope(Map<String, dynamic> envelope) {
+  final data = envelope['data'] ?? envelope['tracking'] ?? envelope;
+  if (data is Map) return Map<String, dynamic>.from(data);
+  return envelope;
+}
+
+OrderTrackingData? parseOrderTracking(Map<String, dynamic> envelope) {
+  final map = _unwrapTrackingEnvelope(envelope);
+  final statusCode = _pickRawTrackingStatusCode(map);
+  final status = _pickTrackingStatus(map);
+  final steps = _parseTrackingSteps(map);
+  final destination = _findTrackingCoordinate(map);
+
+  if (status.isEmpty &&
+      statusCode.isEmpty &&
+      steps.isEmpty &&
+      destination == null) {
+    final topStatus = _pickTrackingStatus(envelope);
+    if (topStatus.isNotEmpty) {
+      return OrderTrackingData(status: topStatus);
+    }
+    return null;
+  }
+
+  final resolvedStatus = resolveTrackingDisplayStatus(
+    rawStatus: statusCode.isNotEmpty ? statusCode : status,
+    steps: steps,
+  );
+
+  return OrderTrackingData(
+    status: resolvedStatus,
+    statusCode: statusCode,
+    steps: steps,
+    destination: destination,
+    agentName: _pickAgentName(map),
+    agentPhone: _pickAgentPhone(map),
+    eta: _pickTrackingEta(map),
+  );
+}
+
+OrderLiveTrackingData? parseLiveTracking(Map<String, dynamic> envelope) {
+  final map = _unwrapTrackingEnvelope(envelope);
+  final destination = _findTrackingCoordinate(map);
+  final agent = _findAgentCoordinate(map);
+  final statusCode = _pickRawTrackingStatusCode(map);
+  final steps = _parseTrackingSteps(map);
+  final status = _pickTrackingStatus(map);
+
+  if (destination == null && agent == null && status.isEmpty && statusCode.isEmpty) {
+    return null;
+  }
+
+  return OrderLiveTrackingData(
+    destination: destination,
+    agent: agent,
+    agentName: _pickAgentName(map),
+    agentPhone: _pickAgentPhone(map),
+    eta: _pickTrackingEta(map),
+    statusCode: statusCode,
+    status: resolveTrackingDisplayStatus(
+      rawStatus: statusCode.isNotEmpty ? statusCode : status,
+      steps: steps,
+    ),
+  );
+}
 
 /// Normalizes user input to a 10-digit Indian mobile number for auth APIs.
 String? normalizeIndianMobile(String phone) {

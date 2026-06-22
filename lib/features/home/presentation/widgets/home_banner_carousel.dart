@@ -14,7 +14,6 @@ class HomeBannerCarousel extends StatefulWidget {
     'assets/slider5.png',
   ];
 
-  /// Lower value = taller banner. ~2.05 gives a comfortable height on phones.
   static const double bannerAspectRatio = 2.05;
 
   @override

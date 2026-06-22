@@ -5,7 +5,6 @@ import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/features/cart/cart_controller.dart';
-import 'package:urban_roots/features/wishlist/wishlist_controller.dart';
 
 class ProductCard extends StatefulWidget {
   final int id;
@@ -14,6 +13,7 @@ class ProductCard extends StatefulWidget {
   final String stock;
   final String price;
   final String imageUrl;
+  final String? offerLabel;
   final VoidCallback? onProductTap;
 
   const ProductCard({
@@ -24,6 +24,7 @@ class ProductCard extends StatefulWidget {
     required this.price,
     required this.imageUrl,
     required this.id,
+    this.offerLabel,
     this.onProductTap,
   });
 
@@ -32,8 +33,6 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  bool isFavorite = false;
-  bool _isWishlistLoading = false;
   bool _isCartLoading = false;
 
   String get _productId => widget.id.toString();
@@ -46,17 +45,6 @@ class _ProductCardState extends State<ProductCard> {
   }
 
   bool get _canAddToCart => widget.id > 0 && _productId.isNotEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWishlistState();
-  }
-
-  Future<void> _loadWishlistState() async {
-    final inList = await WishlistController.findOrPut().isInWishlist(_productId);
-    if (mounted) setState(() => isFavorite = inList);
-  }
 
   Future<void> addToCart() async {
     if (_isCartLoading || !_canAddToCart) return;
@@ -77,33 +65,6 @@ class _ProductCardState extends State<ProductCard> {
         message: message.toLowerCase().contains('not found')
             ? 'This product is unavailable. Please try another item.'
             : (message.isNotEmpty ? message : 'Could not add to cart'),
-      );
-    }
-  }
-
-  Future<void> toggleWishlist() async {
-    if (_isWishlistLoading) return;
-    setState(() => _isWishlistLoading = true);
-
-    final wishlist = WishlistController.findOrPut();
-    final nextAdd = !isFavorite;
-    final success = await wishlist.toggle(_productId, add: nextAdd);
-
-    if (!mounted) return;
-    setState(() => _isWishlistLoading = false);
-
-    if (success) {
-      setState(() => isFavorite = nextAdd);
-      await SweetAlert.success(
-        context,
-        message: nextAdd ? 'Added to wishlist' : 'Removed from wishlist',
-      );
-    } else {
-      await SweetAlert.error(
-        context,
-        message: wishlist.errorMessage.value.isNotEmpty
-            ? wishlist.errorMessage.value
-            : 'Could not update wishlist',
       );
     }
   }
@@ -137,36 +98,35 @@ class _ProductCardState extends State<ProductCard> {
                       height: double.infinity,
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: GestureDetector(
-                      onTap: _isWishlistLoading ? null : toggleWishlist,
-                      behavior: HitTestBehavior.opaque,
+                  if (widget.offerLabel != null &&
+                      widget.offerLabel!.trim().isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      left: 8,
                       child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: AppDecorations.glassCircle(),
-                        child: _isWishlistLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Icon(
-                                isFavorite
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                size: 16,
-                                color: isFavorite ? Colors.red : Colors.grey.shade600,
-                              ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          widget.offerLabel!,
+                          style: GoogleFonts.rubik(
+                            fontSize: 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
                   if (int.tryParse(widget.stock) != null &&
                       int.parse(widget.stock) < 30)
                     Positioned(
                       top: 8,
-                      left: 8,
+                      right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,

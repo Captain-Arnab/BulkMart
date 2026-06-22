@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/all_products.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
+
+class ProductFilterResult {
+  const ProductFilterResult({
+    required this.categoryId,
+    required this.minPrice,
+    required this.maxPrice,
+    this.minGrams,
+    this.maxGrams,
+    this.packingType,
+  });
+
+  final int categoryId;
+  final double minPrice;
+  final double maxPrice;
+  final int? minGrams;
+  final int? maxGrams;
+  final String? packingType;
+}
 
 class FilterScreen extends StatefulWidget {
   @override
@@ -88,17 +105,15 @@ class _FilterScreenState extends State<FilterScreen> {
       categoryId = int.tryParse(selectedCategoryIds.first) ?? 0;
     }
 
-    Navigator.push(
+    Navigator.pop(
       context,
-      MaterialPageRoute(
-        builder: (context) => ProductPage(
-          category: categoryId,
-          minPrice: _currentMinPrice,
-          maxPrice: _currentMaxPrice,
-          minGrams: minGrams,
-          maxGrams: maxGrams,
-          packingType: packingType,
-        ),
+      ProductFilterResult(
+        categoryId: categoryId,
+        minPrice: _currentMinPrice,
+        maxPrice: _currentMaxPrice,
+        minGrams: minGrams,
+        maxGrams: maxGrams,
+        packingType: packingType,
       ),
     );
   }

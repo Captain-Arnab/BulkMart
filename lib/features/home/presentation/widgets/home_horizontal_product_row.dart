@@ -76,6 +76,7 @@ class HomeHorizontalProductRow extends StatelessWidget {
                   stock: product.stock,
                   price: product.price,
                   imageUrl: product.imageUrl,
+                  offerLabel: product.offerLabel,
                   onProductTap: () => openProductDetails(context, product),
                 ),
               );

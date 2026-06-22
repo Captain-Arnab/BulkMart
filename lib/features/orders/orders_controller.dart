@@ -4,6 +4,7 @@ import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
+import 'package:urban_roots/features/orders/order_tracking_models.dart';
 import 'package:urban_roots/features/userProfile/user_profile_controller.dart';
 import 'package:urban_roots/features/userProfile/address_controller.dart';
 import 'package:urban_roots/features/userProfile/model/Address.dart';
@@ -35,6 +36,33 @@ class OrderPaymentResult {
 
   factory OrderPaymentResult.failure(String message) =>
       OrderPaymentResult._(success: false, message: message);
+}
+
+class TrackingFetchResult<T> {
+  const TrackingFetchResult({
+    this.data,
+    this.userMessage,
+    this.unavailable = false,
+  });
+
+  final T? data;
+  final String? userMessage;
+
+  /// True when the endpoint is missing or permanently unavailable (e.g. HTTP 404).
+  final bool unavailable;
+}
+
+String _friendlyTrackingMessage(String? technical) {
+  if (technical == null || technical.trim().isEmpty) {
+    return 'Unable to load tracking updates right now. Please try again.';
+  }
+  final lower = technical.toLowerCase();
+  if (lower.contains('non-json') ||
+      lower.contains('html') ||
+      lower.contains('server error')) {
+    return 'Unable to load tracking updates right now. Please try again.';
+  }
+  return technical;
 }
 
 class OrdersController extends GetxController {
@@ -95,6 +123,59 @@ class OrdersController extends GetxController {
       return null;
     }
     return parseOrderDetail((result as ApiSuccess<Map<String, dynamic>>).data);
+  }
+
+  Future<TrackingFetchResult<OrderTrackingData>> loadOrderTracking({
+    int? orderId,
+    String? txnId,
+  }) async {
+    final hasTxn = txnId != null && txnId.trim().isNotEmpty;
+    final hasOrderId = orderId != null && orderId > 0;
+    if (!hasTxn && !hasOrderId) {
+      return const TrackingFetchResult(
+        userMessage: 'Missing order reference for tracking',
+      );
+    }
+
+    final result = await _api.orders.trackOrder(
+      txnId: hasTxn ? txnId.trim() : null,
+      orderId: hasOrderId ? orderId.toString() : null,
+    );
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return TrackingFetchResult(
+        userMessage: _friendlyTrackingMessage(result.message),
+      );
+    }
+
+    final parsed = parseOrderTracking(
+      (result as ApiSuccess<Map<String, dynamic>>).data,
+    );
+    if (parsed == null) {
+      return const TrackingFetchResult(
+        userMessage: 'No tracking updates are available yet.',
+      );
+    }
+    return TrackingFetchResult(data: parsed);
+  }
+
+  Future<TrackingFetchResult<OrderLiveTrackingData>> loadLiveTracking({
+    required int orderId,
+  }) async {
+    if (orderId <= 0) {
+      return const TrackingFetchResult();
+    }
+
+    final result = await _api.orders.liveTracking(orderId: orderId.toString());
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      final unavailable = result.statusCode == 404 ||
+          result.message.toLowerCase().contains('not found');
+      return TrackingFetchResult(unavailable: unavailable);
+    }
+
+    final parsed = parseLiveTracking(
+      (result as ApiSuccess<Map<String, dynamic>>).data,
+    );
+    return TrackingFetchResult(data: parsed);
   }
 
   Future<bool> verifyOrderPayment({int? orderId, String? txnId}) async {

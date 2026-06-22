@@ -5,7 +5,6 @@ import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/products/navigation/product_navigation.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/banner.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
-import 'package:urban_roots/features/dashboard/presentation/widgets/offers.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/products_slider.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
@@ -150,10 +149,6 @@ class _ProductScreenState extends State<ProductScreen> {
                     }
                   },
                 ),
-              ),
-              SizedBox(
-                height: 320,
-                child: DelightOffers(),
               ),
               SizedBox(
                 height: 320,

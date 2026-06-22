@@ -16,12 +16,6 @@ class _SliderPageState extends State<SliderPage> {
   int _currentIndex = 0;
   final _controller = Get.put(ProductsController());
 
-  static const _fallbackSliders = [
-    'assets/slider1.png',
-    'assets/slider2.png',
-    'assets/slider3.png',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -39,41 +33,31 @@ class _SliderPageState extends State<SliderPage> {
   Widget build(BuildContext context) {
     return Obx(() {
       final bannerUrls = _bannerUrls();
-      final useNetwork = bannerUrls.isNotEmpty;
-      final itemCount = useNetwork ? bannerUrls.length : _fallbackSliders.length;
+      if (bannerUrls.isEmpty) {
+        return const SizedBox.shrink();
+      }
 
       return Column(
         children: [
           Expanded(
             child: CarouselSlider.builder(
-              itemCount: itemCount,
+              itemCount: bannerUrls.length,
               itemBuilder: (context, index, _) {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: useNetwork
-                      ? Image.network(
-                          bannerUrls[index],
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            _fallbackSliders[index % _fallbackSliders.length],
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : Image.asset(
-                          _fallbackSliders[index],
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                  child: NetworkOrAssetImage(
+                    url: bannerUrls[index],
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 );
               },
               options: CarouselOptions(
                 enlargeCenterPage: true,
-                autoPlay: itemCount > 1,
+                autoPlay: bannerUrls.length > 1,
                 aspectRatio: 16 / 7,
                 autoPlayCurve: Curves.easeInOut,
-                enableInfiniteScroll: itemCount > 1,
+                enableInfiniteScroll: bannerUrls.length > 1,
                 autoPlayAnimationDuration: const Duration(milliseconds: 800),
                 viewportFraction: 1,
                 onPageChanged: (index, _) =>
@@ -84,7 +68,7 @@ class _SliderPageState extends State<SliderPage> {
           const SizedBox(height: 8),
           AnimatedSmoothIndicator(
             activeIndex: _currentIndex,
-            count: itemCount,
+            count: bannerUrls.length,
             effect: WormEffect(
               activeDotColor: const Color(0xFF019934),
               dotColor: Colors.grey.shade300,
