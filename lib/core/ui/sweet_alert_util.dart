@@ -100,7 +100,7 @@ class SweetAlert {
     required String message,
     String confirmText = 'Yes',
     String cancelText = 'Cancel',
-    required VoidCallback onConfirm,
+    required Future<void> Function() onConfirm,
   }) {
     return QuickAlert.show(
       context: context,
@@ -111,9 +111,9 @@ class SweetAlert {
       cancelBtnText: cancelText,
       showCancelBtn: true,
       confirmBtnColor: _confirmColor,
-      onConfirmBtnTap: () {
+      onConfirmBtnTap: () async {
         Navigator.of(context, rootNavigator: true).pop();
-        onConfirm();
+        await onConfirm();
       },
       onCancelBtnTap: () {
         Navigator.of(context, rootNavigator: true).pop();

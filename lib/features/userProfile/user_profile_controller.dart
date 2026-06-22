@@ -45,7 +45,10 @@ class UserProfileController extends GetxController {
   }
 
   Future<void> logout() async {
-    await _api.auth.logout();
-    await AuthSession.instance.clear();
+    try {
+      await _api.auth.logout();
+    } finally {
+      await AuthSession.instance.clear();
+    }
   }
 }

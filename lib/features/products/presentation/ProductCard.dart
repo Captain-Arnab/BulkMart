@@ -108,6 +108,11 @@ class _ProductCardState extends State<ProductCard> {
     }
   }
 
+  bool get _showGrams {
+    final value = widget.grams.trim().toLowerCase();
+    return value.isNotEmpty && value != '0' && value != '0g';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -117,7 +122,6 @@ class _ProductCardState extends State<ProductCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: 3,
             child: GestureDetector(
               onTap: widget.onProductTap,
               behavior: HitTestBehavior.opaque,
@@ -186,86 +190,92 @@ class _ProductCardState extends State<ProductCard> {
               ),
             ),
           ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: widget.onProductTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.rubik(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                            height: 1.25,
-                          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: widget.onProductTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.rubik(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          height: 1.2,
                         ),
-                        const SizedBox(height: 4),
+                      ),
+                      if (_showGrams) ...[
+                        const SizedBox(height: 2),
                         Text(
                           widget.grams,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.rubik(
                             fontSize: 10,
                             color: Colors.grey.shade500,
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
                         '\u20B9${widget.price}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.rubik(
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primary,
                         ),
                       ),
-                      Material(
-                        color: _canAddToCart
-                            ? AppColors.primary
-                            : Colors.grey.shade400,
+                    ),
+                    Material(
+                      color: _canAddToCart
+                          ? AppColors.primary
+                          : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(12),
+                      elevation: 2,
+                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                      child: InkWell(
+                        onTap: _isCartLoading || !_canAddToCart ? null : addToCart,
                         borderRadius: BorderRadius.circular(12),
-                        elevation: 2,
-                        shadowColor: AppColors.primary.withValues(alpha: 0.3),
-                        child: InkWell(
-                          onTap: _isCartLoading || !_canAddToCart ? null : addToCart,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: _isCartLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.add_rounded,
-                                    size: 18,
+                        child: Padding(
+                          padding: const EdgeInsets.all(7),
+                          child: _isCartLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                     color: Colors.white,
                                   ),
-                          ),
+                                )
+                              : const Icon(
+                                  Icons.add_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],

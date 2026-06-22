@@ -7,8 +7,7 @@ import 'package:urban_roots/features/dashboard/wishlist_screen.dart';
 import 'package:urban_roots/features/orders/order_history_screen.dart';
 import 'package:urban_roots/features/payments/payment_history_screen.dart';
 import 'package:urban_roots/features/dashboard/presentation/pages/all_products.dart';
-import 'package:urban_roots/features/products/presentation/NewScreen.dart';
-import 'package:urban_roots/features/products/presentation/Products.dart';
+import 'package:urban_roots/features/home/presentation/home_screen.dart';
 import 'package:urban_roots/features/subscription/subscription_flow_controller.dart';
 import 'package:urban_roots/features/subscription/presentation/subscription_products_screen.dart';
 import 'package:urban_roots/features/userProfile/presentation/AddressListScreen.dart';
@@ -79,7 +78,7 @@ class Dashboard extends StatelessWidget {
   Widget _buildBody(DashboardRoute route) {
     switch (route) {
       case DashboardRoute.home:
-        return ProductScreenNew();
+        return const HomeScreen();
       case DashboardRoute.products:
         final flow = SubscriptionFlowController.findOrPut();
         if (flow.hasActivePlan) {

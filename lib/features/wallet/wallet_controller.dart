@@ -19,13 +19,21 @@ class WalletController extends GetxController {
     final result = await _api.wallet.balance();
     isLoading(false);
     if (result is ApiSuccess<Map<String, dynamic>>) {
-      final data = result.data['data'];
-      if (data is Map) {
-        balance.value =
-            double.tryParse(data['balance']?.toString() ?? '0') ?? 0;
-      }
+      _applyBalanceFromResponse(result.data);
     } else if (result is ApiFailure<Map<String, dynamic>>) {
       errorMessage.value = result.message;
+    }
+  }
+
+  void setCachedBalance(double value) {
+    balance.value = value;
+  }
+
+  void _applyBalanceFromResponse(Map<String, dynamic> envelope) {
+    final data = envelope['data'];
+    if (data is Map) {
+      balance.value =
+          double.tryParse(data['balance']?.toString() ?? '0') ?? 0;
     }
   }
 

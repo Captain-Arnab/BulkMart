@@ -49,8 +49,8 @@ class _OrderHistoryState extends State<OrderHistory> {
     return order.displayStatusForSegment(segment);
   }
 
-  void _openOrderDetail(BuildContext context, Order order) {
-    Navigator.push(
+  Future<void> _openOrderDetail(BuildContext context, Order order) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => OrderDetailScreen(
@@ -60,6 +60,9 @@ class _OrderHistoryState extends State<OrderHistory> {
         ),
       ),
     );
+    if (context.mounted) {
+      await OrdersController.findOrPut().loadOrders();
+    }
   }
 
   String _itemPreview(Order order) {

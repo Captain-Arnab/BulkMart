@@ -209,13 +209,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             height: 220,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => Image.asset(
-                              'assets/sample.png',
+                              kProductPlaceholderAsset,
                               height: 220,
                               fit: BoxFit.contain,
                             ),
                           )
                         : Image.asset(
-                            'assets/sample.png',
+                            kProductPlaceholderAsset,
                             height: 220,
                             fit: BoxFit.contain,
                           ),

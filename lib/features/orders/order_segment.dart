@@ -49,15 +49,23 @@ extension OrderSegmentX on Order {
     return OrderSegment.willDeliver;
   }
 
-  /// Normalized badge label for order history tabs.
+  /// Badge label for order history list tiles — uses API status when present.
   String displayStatusForSegment(OrderSegment segment) {
+    final deliveryStatus = status.trim();
+    if (deliveryStatus.isNotEmpty) {
+      return deliveryStatus;
+    }
+
     switch (segment) {
       case OrderSegment.willDeliver:
         return 'Processing';
       case OrderSegment.delivered:
         return 'Completed';
       case OrderSegment.cancelledOrUnpaid:
-        return isCancelled ? 'Cancelled' : 'Pending';
+        if (isCancelled) return 'Cancelled';
+        final pay = paymentStatus.trim();
+        if (pay.isNotEmpty) return pay;
+        return 'Pending';
     }
   }
 }

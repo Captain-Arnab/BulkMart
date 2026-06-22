@@ -61,6 +61,7 @@ class APIClass {
   // ── MODULE 8 — ORDERS (user base) ────────────────────────────────
   static const codOrder = '/orders/cod_order.php';
   static const onlineOrder = '/orders/paywith_online_order.php';
+  static const walletOrder = '/orders/wallet_order.php';
   static const ordersList = '/orders/list.php';
   static const orderDetail = '/orders/detail.php';
   static const orderTracking = '/orders/tracking.php';

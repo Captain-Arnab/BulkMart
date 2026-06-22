@@ -66,6 +66,18 @@ class OrdersController extends GetxController {
     orders.assignAll(parseOrders(data));
   }
 
+  /// Keeps order history in sync when detail API returns fresher data.
+  void upsertOrder(Order order) {
+    final index = orders.indexWhere(
+      (existing) =>
+          (order.orderId > 0 && existing.orderId == order.orderId) ||
+          (order.txnId.isNotEmpty && existing.txnId == order.txnId),
+    );
+    if (index >= 0) {
+      orders[index] = order;
+    }
+  }
+
   Future<Order?> loadOrderDetail({int? orderId, String? txnId}) async {
     final hasTxn = txnId != null && txnId.trim().isNotEmpty;
     final hasOrderId = orderId != null && orderId > 0;

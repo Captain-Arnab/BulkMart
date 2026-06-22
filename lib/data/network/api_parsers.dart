@@ -10,16 +10,17 @@ List<dynamic> extractList(dynamic data, {String key = 'data'}) {
   if (data is List) return data;
   if (data is Map) {
     final map = Map<String, dynamic>.from(data);
-    final value = map[key];
-    if (value is List) return value;
-    if (value is Map) return [value];
+
+    for (final listKey in [key, 'products', 'items', 'list']) {
+      final value = map[listKey];
+      final resolved = _unwrapListValue(value, key: key);
+      if (resolved != null) return resolved;
+    }
 
     for (final altKey in [
       'transactions',
       'payments',
       'history',
-      'list',
-      'items',
       'records',
       'orders',
       'order_list',
@@ -30,25 +31,36 @@ List<dynamic> extractList(dynamic data, {String key = 'data'}) {
     }
 
     final inner = map['data'];
-    if (inner is List) return inner;
-    if (inner is Map) {
-      final nested = Map<String, dynamic>.from(inner);
-      for (final nestedKey in [
-        key,
-        'transactions',
-        'payments',
-        'list',
-        'items',
-        'data',
-        'orders',
-        'order_list',
-      ]) {
-        final nestedValue = nested[nestedKey];
-        if (nestedValue is List) return nestedValue;
-      }
-    }
+    final innerResolved = _unwrapListValue(inner, key: key);
+    if (innerResolved != null) return innerResolved;
   }
   return [];
+}
+
+List<dynamic>? _unwrapListValue(dynamic value, {String key = 'data'}) {
+  if (value is List) return value;
+  if (value is! Map) return null;
+
+  final nested = Map<String, dynamic>.from(value);
+  for (final nestedKey in [
+    'products',
+    'items',
+    'list',
+    key,
+    'data',
+    'transactions',
+    'payments',
+    'orders',
+    'order_list',
+  ]) {
+    final nestedValue = nested[nestedKey];
+    if (nestedValue is List) return nestedValue;
+    if (nestedValue is Map) {
+      final deeper = _unwrapListValue(nestedValue, key: key);
+      if (deeper != null) return deeper;
+    }
+  }
+  return null;
 }
 
 List<Product> parseProducts(dynamic raw) {
@@ -65,8 +77,14 @@ List<Category> parseCategories(dynamic raw) {
       .map((e) {
         final m = Map<String, dynamic>.from(e);
         return Category(
-          id: m['category_id']?.toString() ?? m['id']?.toString() ?? '',
-          name: m['category_name']?.toString() ?? m['name']?.toString() ?? '',
+          id: m['categ_id']?.toString() ??
+              m['category_id']?.toString() ??
+              m['id']?.toString() ??
+              '',
+          name: m['categ_name']?.toString() ??
+              m['category_name']?.toString() ??
+              m['name']?.toString() ??
+              '',
           image: pickImageUrl(m),
           status: m['status']?.toString() ?? '0',
         );
@@ -812,6 +830,7 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
 
   final status = order['status']?.toString() ??
       order['order_status']?.toString() ??
+      order['delivery_status']?.toString() ??
       '';
 
   final paymentStatus = order['payment_status']?.toString() ??

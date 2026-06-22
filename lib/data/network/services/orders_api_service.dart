@@ -80,6 +80,38 @@ class OrdersApiService {
         ),
       );
 
+  Future<ApiResult<Map<String, dynamic>>> placeWalletOrder({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phone,
+    required String state,
+    required String city,
+    required String address,
+    required String pincode,
+    required String landmark,
+    required String addressType,
+    required List<Map<String, dynamic>> products,
+    String? orderId,
+  }) =>
+      _client.post(
+        APIClass.walletOrder,
+        body: _orderBody(
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: phone,
+          state: state,
+          city: city,
+          address: address,
+          pincode: pincode,
+          landmark: landmark,
+          addressType: addressType,
+          products: products,
+          orderId: orderId,
+        ),
+      );
+
   Future<ApiResult<Map<String, dynamic>>> placeOnlineOrder({
     required String firstName,
     required String lastName,

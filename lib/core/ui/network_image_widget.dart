@@ -22,6 +22,7 @@ String pickImageUrl(Map<String, dynamic> json) {
     'product_image',
     'image',
     'banner_image',
+    'categ_image',
     'category_image',
     'photo',
     'thumbnail',
@@ -48,14 +49,18 @@ String pickImageUrl(Map<String, dynamic> json) {
   return '';
 }
 
+/// Default placeholder when a product has no image or the image fails to load.
+const String kProductPlaceholderAsset = 'assets/logo.png';
+
 class NetworkOrAssetImage extends StatelessWidget {
   const NetworkOrAssetImage({
     super.key,
     required this.url,
-    this.assetFallback = 'assets/sample.png',
+    this.assetFallback = kProductPlaceholderAsset,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.fallbackFit = BoxFit.contain,
     this.borderRadius,
   });
 
@@ -64,7 +69,17 @@ class NetworkOrAssetImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final BoxFit fallbackFit;
   final BorderRadius? borderRadius;
+
+  Widget _assetImage() {
+    return Image.asset(
+      assetFallback,
+      width: width,
+      height: height,
+      fit: fallbackFit,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,12 +91,7 @@ class NetworkOrAssetImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
-          assetFallback,
-          width: width,
-          height: height,
-          fit: fit,
-        ),
+        errorBuilder: (_, __, ___) => _assetImage(),
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return SizedBox(
@@ -94,12 +104,7 @@ class NetworkOrAssetImage extends StatelessWidget {
         },
       );
     } else {
-      image = Image.asset(
-        assetFallback,
-        width: width,
-        height: height,
-        fit: fit,
-      );
+      image = _assetImage();
     }
 
     if (borderRadius != null) {

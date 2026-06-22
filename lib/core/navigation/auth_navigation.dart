@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:urban_roots/Utils/Strings.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
+import 'package:urban_roots/core/navigation/root_navigator.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
@@ -38,12 +39,20 @@ Future<void> showLoginSuccessAndNavigate(
   );
 }
 
-Future<void> showLogoutSuccessAndNavigate(BuildContext context) {
+Future<void> showLogoutSuccessAndNavigate([BuildContext? context]) {
+  final ctx = context ?? rootNavigatorKey.currentContext;
+  if (ctx == null || !ctx.mounted) {
+    return Future.value();
+  }
   return SweetAlert.success(
-    context,
+    ctx,
+    title: 'Logged out',
     message: Strings.logoutSuccess,
     onConfirm: () {
-      if (context.mounted) navigateToLogin(context);
+      final loginCtx = rootNavigatorKey.currentContext;
+      if (loginCtx != null && loginCtx.mounted) {
+        navigateToLogin(loginCtx);
+      }
     },
   );
 }

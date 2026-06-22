@@ -7,7 +7,6 @@ import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/image_slider.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/products_slider.dart';
-import 'package:urban_roots/features/home/delivery_location_controller.dart';
 import 'package:urban_roots/features/notifications/notifications_controller.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/navigation/product_navigation.dart';
@@ -22,8 +21,6 @@ class ProductScreenNew extends StatefulWidget {
 
 class _ProductScreenNewState extends State<ProductScreenNew> {
   final ProductsController _productsController = Get.put(ProductsController());
-  final DeliveryLocationController _locationController =
-      DeliveryLocationController.findOrPut();
   final NotificationsController _notificationsController =
       NotificationsController.findOrPut();
 
@@ -35,7 +32,6 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
 
   Future<void> _bootstrapHome() async {
     await Future.wait([
-      _locationController.resolve(),
       _notificationsController.refreshUnreadCount(),
       _productsController.fetchAllProducts(context: context),
       _productsController.fetchCategories(),

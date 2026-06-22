@@ -31,6 +31,27 @@ String? extractOrderId(Map<String, dynamic> data) {
   return null;
 }
 
+double? extractWalletBalance(Map<String, dynamic> data) {
+  for (final key in ['wallet_balance', 'walletBalance', 'balance']) {
+    final value = data[key];
+    if (value != null) {
+      final parsed = double.tryParse(value.toString());
+      if (parsed != null) return parsed;
+    }
+  }
+  final inner = data['data'];
+  if (inner is Map) {
+    for (final key in ['wallet_balance', 'walletBalance', 'balance']) {
+      final value = inner[key];
+      if (value != null) {
+        final parsed = double.tryParse(value.toString());
+        if (parsed != null) return parsed;
+      }
+    }
+  }
+  return null;
+}
+
 String? extractTxnId(Map<String, dynamic> data) {
   for (final key in ['txn_id', 'txnId', 'transaction_id']) {
     final value = data[key]?.toString();

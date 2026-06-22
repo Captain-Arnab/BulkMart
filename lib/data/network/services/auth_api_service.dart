@@ -51,7 +51,10 @@ class AuthApiService {
   }
 
   Future<ApiResult<Map<String, dynamic>>> logout() async {
-    final result = await _client.post(APIClass.userLogout);
+    final result = await _client.post(
+      APIClass.userLogout,
+      skipSessionClear: true,
+    );
     // Contract: clear local token on any response.
     await AuthSession.instance.clearUserToken();
     return result;

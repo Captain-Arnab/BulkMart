@@ -7,6 +7,7 @@ import 'package:urban_roots/features/support/presentation/support_screen.dart';
 import 'package:urban_roots/features/userProfile/presentation/edit_profile_screen.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
+import 'package:urban_roots/core/navigation/root_navigator.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/features/subscription/presentation/SubscriptionScreen.dart';
@@ -57,8 +58,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _handleLogout() async {
     await PushNotificationService.instance.unregisterFromBackend();
     await userProfileController.logout();
-    if (!mounted) return;
-    await showLogoutSuccessAndNavigate(context);
+
+    final navContext = rootNavigatorKey.currentContext ?? context;
+    if (!navContext.mounted) return;
+    await showLogoutSuccessAndNavigate(navContext);
   }
 
   @override

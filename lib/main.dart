@@ -2,12 +2,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
+import 'package:urban_roots/core/navigation/root_navigator.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/data/network/api_client.dart';
 import 'package:urban_roots/core/theme/app_theme.dart';
 import 'package:urban_roots/features/splash/Splashscreen.dart';
-
-final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

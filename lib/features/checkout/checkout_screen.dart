@@ -5,8 +5,9 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/data/network/api_result.dart';
-import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/core/ui/ui_state.dart';
+import 'package:urban_roots/features/wallet/wallet_controller.dart';
+import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/checkout/checkout_summary.dart';
 import 'package:urban_roots/features/checkout/checkout_price_breakdown.dart';
@@ -18,8 +19,8 @@ import 'package:urban_roots/features/userProfile/address_controller.dart';
 import 'package:urban_roots/features/userProfile/user_profile_controller.dart';
 import 'package:urban_roots/features/userProfile/model/Address.dart';
 import 'package:urban_roots/features/userProfile/presentation/widgets/AddressFormWidget.dart';
-import 'package:urban_roots/features/wallet/wallet_controller.dart';
-import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
+import 'package:urban_roots/features/checkout/checkout_view_model.dart';
+import 'package:urban_roots/features/wallet/wallet_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({
@@ -37,22 +38,33 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = AddressController.findOrPut();
+  final _wallet = WalletController.findOrPut();
+  late final CheckoutViewModel _checkoutVm;
   String? _selectedAddressId;
   String _payment = 'cod';
   String _customerEmail = '';
-  ApiViewStatus _status = ApiViewStatus.idle;
-  double _walletBalance = 0;
 
   @override
   void initState() {
     super.initState();
+    _checkoutVm = CheckoutViewModel();
+    _checkoutVm.addListener(_onCheckoutVmChanged);
     _bootstrap();
   }
+
+  @override
+  void dispose() {
+    _checkoutVm.removeListener(_onCheckoutVmChanged);
+    _checkoutVm.dispose();
+    super.dispose();
+  }
+
+  void _onCheckoutVmChanged() => setState(() {});
 
   Future<void> _bootstrap() async {
     await Future.wait([
       _addressController.loadAddresses(),
-      _loadWalletBalance(),
+      _wallet.loadBalance(),
       _loadProfileEmail(),
     ]);
     if (!mounted) return;
@@ -69,12 +81,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             '';
       });
     } catch (_) {}
-  }
-
-  Future<void> _loadWalletBalance() async {
-    final wallet = WalletController.findOrPut();
-    await wallet.loadBalance();
-    if (mounted) setState(() => _walletBalance = wallet.balance.value);
   }
 
   void _pickDefaultAddress() {
@@ -126,6 +132,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Future<void> _openTopUp() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const WalletScreen()),
+    );
+    if (mounted) await _wallet.loadBalance();
+  }
+
   Future<void> _finishSuccessfulOrder(
     CartController cart,
     String orderId, {
@@ -164,26 +178,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cart = CartController.findOrPut();
     final summary = buildCheckoutSummary(cart);
     final payable = summary.grandTotal > 0 ? summary.grandTotal : widget.amount;
-
-    setState(() => _status = ApiViewStatus.loading);
     final products = cartItemsToProducts(cart.items);
     if (products.isEmpty) {
-      setState(() => _status = ApiViewStatus.idle);
       showApiSnackBar(context, 'Cart is empty', isError: true);
       return;
-    }
-
-    if (_payment == 'wallet') {
-      await _loadWalletBalance();
-      if (_walletBalance < payable) {
-        setState(() => _status = ApiViewStatus.idle);
-        showApiSnackBar(
-          context,
-          'Insufficient wallet balance. Available: ₹${_walletBalance.toStringAsFixed(0)}',
-          isError: true,
-        );
-        return;
-      }
     }
 
     final address = checkoutFieldsFromAddress(
@@ -198,105 +196,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       email: _customerEmail,
     );
 
-    ApiResult<Map<String, dynamic>> result;
-    final cartCheckout = await cart.checkoutCart(
-      firstName: address['firstName']!,
-      lastName: address['lastName']!,
-      email: address['email']!,
-      phone: address['phone']!,
-      state: address['state']!,
-      city: address['city']!,
-      address: address['address']!,
-      pincode: address['pincode']!,
-      landmark: address['landmark']!,
-      addressType: address['addressType']!,
-      paymentMethod: _payment,
-      amount: payable,
-    );
+    _checkoutVm.resetPlaceOrderState();
 
-    if (cartCheckout is ApiSuccess<Map<String, dynamic>>) {
-      result = cartCheckout;
-    } else if (_payment == 'wallet') {
-      result = await UrbanRootsApi.instance.orders.placeCodOrder(
-        firstName: address['firstName']!,
-        lastName: address['lastName']!,
-        email: address['email']!,
-        phone: address['phone']!,
-        state: address['state']!,
-        city: address['city']!,
-        address: address['address']!,
-        pincode: address['pincode']!,
-        landmark: address['landmark']!,
-        addressType: address['addressType']!,
+    CheckoutOrderResult? result;
+    if (_payment == 'wallet') {
+      result = await _checkoutVm.placeOrderWithWallet(
+        cart: cart,
+        address: address,
         products: products,
-        paymentMethod: 'wallet',
+        payable: payable,
       );
     } else if (_payment == 'cod') {
-      result = await UrbanRootsApi.instance.orders.placeCodOrder(
-        firstName: address['firstName']!,
-        lastName: address['lastName']!,
-        email: address['email']!,
-        phone: address['phone']!,
-        state: address['state']!,
-        city: address['city']!,
-        address: address['address']!,
-        pincode: address['pincode']!,
-        landmark: address['landmark']!,
-        addressType: address['addressType']!,
+      result = await _checkoutVm.placeOrderWithCod(
+        cart: cart,
+        address: address,
         products: products,
-        paymentMethod: 'cod',
+        payable: payable,
       );
     } else {
-      result = await UrbanRootsApi.instance.orders.placeOnlineOrder(
-        firstName: address['firstName']!,
-        lastName: address['lastName']!,
-        email: address['email']!,
-        phone: address['phone']!,
-        state: address['state']!,
-        city: address['city']!,
-        address: address['address']!,
-        pincode: address['pincode']!,
-        landmark: address['landmark']!,
-        addressType: address['addressType']!,
+      result = await _checkoutVm.placeOrderWithOnline(
+        cart: cart,
+        address: address,
         products: products,
+        payable: payable,
       );
     }
 
     if (!mounted) return;
 
-    if (result is ApiFailure<Map<String, dynamic>>) {
-      setState(() => _status = ApiViewStatus.idle);
-      showApiSnackBar(context, result.message, isError: true);
+    final state = _checkoutVm.placeOrderState;
+    if (state is UiError<CheckoutOrderResult>) {
+      showApiSnackBar(context, state.message, isError: true);
+      _checkoutVm.resetPlaceOrderState();
       return;
     }
 
-    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
-    final orderId = extractOrderId(data) ?? '';
-    final txnId = extractTxnId(data);
-
-    if (_payment == 'wallet' && orderId.isNotEmpty) {
-      final deduct = await UrbanRootsApi.instance.wallet.deduct(
-        amount: payable,
-        orderId: orderId,
-      );
-      if (deduct is ApiFailure<Map<String, dynamic>>) {
-        setState(() => _status = ApiViewStatus.idle);
-        showApiSnackBar(
-          context,
-          deduct.message.isNotEmpty
-              ? deduct.message
-              : 'Order placed but wallet deduction failed. Contact support.',
-          isError: true,
-        );
-        return;
-      }
-      await WalletController.findOrPut().loadBalance();
+    if (result == null) {
+      _checkoutVm.resetPlaceOrderState();
+      return;
     }
 
+    final orderId = result.orderId;
+    final txnId = result.txnId;
+
     if (_payment == 'online') {
-      final paymentUrl = extractPaymentUrl(data);
+      final paymentUrl = result.paymentUrl;
       if (paymentUrl == null || paymentUrl.isEmpty) {
-        setState(() => _status = ApiViewStatus.idle);
+        _checkoutVm.resetPlaceOrderState();
         await SweetAlert.error(
           context,
           message:
@@ -323,7 +269,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
 
       if (!mounted) return;
-      setState(() => _status = ApiViewStatus.idle);
+      _checkoutVm.resetPlaceOrderState();
 
       if (paid != true) {
         await SweetAlert.warning(
@@ -350,7 +296,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
     } else {
-      setState(() => _status = ApiViewStatus.idle);
+      _checkoutVm.resetPlaceOrderState();
     }
 
     await _finishSuccessfulOrder(cart, orderId, txnId: txnId);
@@ -547,6 +493,51 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  Widget _walletPaymentOption({
+    required double payable,
+    required double walletBalance,
+  }) {
+    final walletEnabled = walletBalance >= payable;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _paymentTile(
+          value: 'wallet',
+          title: 'Pay with Wallet',
+          subtitle: 'Balance: ₹${walletBalance.toStringAsFixed(0)}',
+          icon: Icons.account_balance_wallet_outlined,
+          enabled: walletEnabled,
+        ),
+        if (!walletEnabled)
+          Padding(
+            padding: const EdgeInsets.only(left: 14, right: 14, bottom: 10),
+            child: Row(
+              children: [
+                Text(
+                  'Insufficient balance',
+                  style: GoogleFonts.rubik(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _openTopUp,
+                  child: Text(
+                    'Top up',
+                    style: GoogleFonts.rubik(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = CartController.findOrPut();
@@ -563,13 +554,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final summary = buildCheckoutSummary(cart);
         final payable =
             summary.grandTotal > 0 ? summary.grandTotal : widget.amount;
-        final walletEnabled = _walletBalance >= payable;
+        final walletBalance = _wallet.balance.value;
+        final isLoading = _checkoutVm.isPlacingOrder;
 
         return Column(
           children: [
             Expanded(
               child: ApiStateView(
-                status: _status,
+                status: isLoading ? ApiViewStatus.loading : ApiViewStatus.idle,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   children: [
@@ -645,14 +637,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       subtitle: 'UPI, card, or net banking',
                       icon: Icons.credit_card_rounded,
                     ),
-                    _paymentTile(
-                      value: 'wallet',
-                      title: 'Pay with Wallet',
-                      subtitle: walletEnabled
-                          ? 'Balance: ₹${_walletBalance.toStringAsFixed(0)}'
-                          : 'Balance: ₹${_walletBalance.toStringAsFixed(0)} — insufficient',
-                      icon: Icons.account_balance_wallet_outlined,
-                      enabled: walletEnabled,
+                    _walletPaymentOption(
+                      payable: payable,
+                      walletBalance: walletBalance,
                     ),
                   ],
                 ),
@@ -703,9 +690,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       child: SizedBox(
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _status == ApiViewStatus.loading
-                              ? null
-                              : _placeOrder,
+                          onPressed: isLoading ? null : _placeOrder,
                           child: Text(
                             _payment == 'online'
                                 ? 'Pay & Place Order'

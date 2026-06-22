@@ -59,8 +59,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (!mounted) return;
 
     if (detail != null) {
+      final merged = _mergeWithSummary(detail, widget.summary);
+      OrdersController.findOrPut().upsertOrder(merged);
       setState(() {
-        _order = _mergeWithSummary(detail, widget.summary);
+        _order = merged;
         _status = ApiViewStatus.success;
       });
       return;
