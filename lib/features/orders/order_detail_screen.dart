@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/order/order_status.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
@@ -88,27 +89,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
   }
 
-  Color _statusColor(String status) {
-    final lower = status.toLowerCase();
-    if (lower.contains('deliver') || lower.contains('complete')) {
-      return Colors.green.shade700;
-    }
-    if (lower.contains('cancel') || lower.contains('fail')) {
-      return Colors.red.shade700;
-    }
-    return Colors.orange.shade800;
-  }
+  Color _statusColor(String status) =>
+      OrderStatus.fromString(status).color;
 
-  Color _statusBg(String status) {
-    final lower = status.toLowerCase();
-    if (lower.contains('deliver') || lower.contains('complete')) {
-      return Colors.green.shade50;
-    }
-    if (lower.contains('cancel') || lower.contains('fail')) {
-      return Colors.red.shade50;
-    }
-    return Colors.orange.shade50;
-  }
+  Color _statusBg(String status) =>
+      OrderStatus.fromString(status).backgroundColor;
 
   Widget _infoTile(String label, String value) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
@@ -485,8 +470,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               ),
                               child: Text(
                                 order.status.isEmpty
-                                    ? 'Processing'
-                                    : order.status,
+                                    ? OrderStatus.processing.label
+                                    : OrderStatus.fromString(order.status).label,
                                 style: GoogleFonts.rubik(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

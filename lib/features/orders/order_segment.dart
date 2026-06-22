@@ -1,3 +1,4 @@
+import 'package:urban_roots/core/order/order_status.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
 
 enum OrderSegment {
@@ -53,16 +54,16 @@ extension OrderSegmentX on Order {
   String displayStatusForSegment(OrderSegment segment) {
     final deliveryStatus = status.trim();
     if (deliveryStatus.isNotEmpty) {
-      return deliveryStatus;
+      return OrderStatus.fromString(deliveryStatus).label;
     }
 
     switch (segment) {
       case OrderSegment.willDeliver:
-        return 'Processing';
+        return OrderStatus.processing.label;
       case OrderSegment.delivered:
-        return 'Completed';
+        return OrderStatus.delivered.label;
       case OrderSegment.cancelledOrUnpaid:
-        if (isCancelled) return 'Cancelled';
+        if (isCancelled) return OrderStatus.cancelled.label;
         final pay = paymentStatus.trim();
         if (pay.isNotEmpty) return pay;
         return 'Pending';

@@ -215,8 +215,7 @@ class OrdersApiService {
     final body = <String, dynamic>{};
     if (txnId != null && txnId.trim().isNotEmpty) {
       body['txn_id'] = txnId.trim();
-    }
-    if (orderId != null && orderId.trim().isNotEmpty) {
+    } else if (orderId != null && orderId.trim().isNotEmpty) {
       body['order_id'] = orderId.trim();
     }
     return _client.post(

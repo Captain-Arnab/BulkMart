@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:urban_roots/core/order/order_status.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/orders/order_tracking_models.dart';
 import 'package:urban_roots/features/orders/orders_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   const OrderTrackingScreen({super.key, required this.order});
@@ -18,246 +20,211 @@ class OrderTrackingScreen extends StatefulWidget {
   State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
-class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+class _OrderTrackingScreenState extends State<OrderTrackingScreen>
+    with SingleTickerProviderStateMixin {
   final _controller = OrdersController.findOrPut();
   GoogleMapController? _mapController;
+  late AnimationController _pulseController;
 
   ApiViewStatus _status = ApiViewStatus.loading;
   String? _errorMessage;
   OrderTrackingData? _tracking;
   OrderLiveTrackingData? _liveTracking;
-  Timer? _liveRefreshTimer;
-  bool _liveTrackingUnavailable = false;
+  Timer? _trackingTimer;
+  Timer? _liveTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadTracking(refreshLiveOnly: false);
-    _liveRefreshTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        if (!_liveTrackingUnavailable) {
-          _loadTracking(refreshLiveOnly: true);
-        }
-      },
-    );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _loadAll(showLoading: true);
   }
 
   @override
   void dispose() {
-    _liveRefreshTimer?.cancel();
+    _trackingTimer?.cancel();
+    _liveTimer?.cancel();
+    _pulseController.dispose();
     _mapController?.dispose();
     super.dispose();
   }
 
-  String get _rawStatusValue =>
-      _tracking?.statusCode ??
-      _liveTracking?.statusCode ??
-      _tracking?.status ??
-      _liveTracking?.status ??
-      widget.order.status;
+  OrderStatus get _orderStatus {
+    final fromTracking = _tracking?.orderStatus ?? '';
+    if (fromTracking.isNotEmpty) {
+      return OrderStatus.fromString(fromTracking);
+    }
+    return OrderStatus.fromString(widget.order.status);
+  }
 
-  List<OrderTrackingStep> get _rawTimelineSteps {
+  String get _headlineStatus {
+    final fromApi = _tracking?.orderStatus.trim() ?? '';
+    if (fromApi.isNotEmpty) return fromApi;
+    return _orderStatus.label;
+  }
+
+  bool get _isCompleted => _tracking?.completed ?? _orderStatus.isTerminal;
+
+  int get _statusCode =>
+      _tracking?.statusCode ?? _orderStatus.trackingCode;
+
+  bool get _showLiveMap => _tracking?.showLiveMap ?? (_statusCode >= 3 && !_isCompleted);
+
+  List<OrderTrackingStep> get _steps {
     if (_tracking != null && _tracking!.steps.isNotEmpty) {
       return _tracking!.steps;
     }
-    return buildFallbackTrackingSteps(widget.order.status);
+    return buildFallbackTrackingSteps(_headlineStatus);
   }
 
-  String get _effectiveStatusCode => reconcileStatusCode(
-        apiCode: _tracking?.statusCode ?? _liveTracking?.statusCode,
-        orderStatus: widget.order.status,
-        steps: _rawTimelineSteps,
-      );
+  void _configurePolling() {
+    _trackingTimer?.cancel();
+    _liveTimer?.cancel();
 
-  List<OrderTrackingStep> get _timelineSteps => normalizeTrackingSteps(
-        steps: _rawTimelineSteps,
-        statusCode: _effectiveStatusCode,
-        orderStatus: widget.order.status,
-      );
+    if (_isCompleted) return;
 
-  String get _displayStatus {
-    return resolveTrackingDisplayStatus(
-      rawStatus: _effectiveStatusCode.isNotEmpty
-          ? _effectiveStatusCode
-          : _rawStatusValue,
-      steps: _timelineSteps,
-      orderStatusFallback: widget.order.status,
+    _trackingTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _loadTracking(showLoading: false),
     );
+
+    if (_showLiveMap) {
+      _liveTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _loadLiveTracking(),
+      );
+    }
   }
 
-  TrackingCoordinate? get _destination =>
-      _liveTracking?.destination ?? _tracking?.destination;
-
-  TrackingCoordinate? get _agent => _liveTracking?.agent;
-
-  String get _agentName {
-    final live = _liveTracking?.agentName.trim() ?? '';
-    if (live.isNotEmpty) return live;
-    return _tracking?.agentName.trim() ?? '';
+  Future<void> _loadAll({required bool showLoading}) async {
+    await _loadTracking(showLoading: showLoading);
+    if (_showLiveMap) {
+      await _loadLiveTracking();
+    }
+    _configurePolling();
   }
 
-  String get _agentPhone {
-    final live = _liveTracking?.agentPhone.trim() ?? '';
-    if (live.isNotEmpty) return live;
-    return _tracking?.agentPhone.trim() ?? '';
-  }
-
-  String get _eta {
-    final live = _liveTracking?.eta.trim() ?? '';
-    if (live.isNotEmpty) return live;
-    return _tracking?.eta.trim() ?? '';
-  }
-
-  Future<void> _loadTracking({required bool refreshLiveOnly}) async {
-    if (!refreshLiveOnly) {
+  Future<void> _loadTracking({required bool showLoading}) async {
+    if (showLoading) {
       setState(() {
         _status = ApiViewStatus.loading;
         _errorMessage = null;
       });
     }
 
-    OrderTrackingData? tracking = _tracking;
-    OrderLiveTrackingData? live = _liveTracking;
-    String? trackingError;
-
-    if (!refreshLiveOnly) {
-      final trackingResult = await _controller.loadOrderTracking(
-        orderId: widget.order.orderId,
-        txnId: widget.order.txnId,
-      );
-      tracking = trackingResult.data;
-      trackingError = trackingResult.userMessage;
-    }
-
-    if (widget.order.orderId > 0 && !_liveTrackingUnavailable) {
-      final liveResult = await _controller.loadLiveTracking(
-        orderId: widget.order.orderId,
-      );
-      live = liveResult.data;
-      if (liveResult.data == null && liveResult.unavailable) {
-        _liveTrackingUnavailable = true;
-      }
-    }
+    final result = await _controller.loadOrderTracking(
+      orderId: widget.order.orderId,
+      txnId: widget.order.txnId,
+    );
 
     if (!mounted) return;
 
-    final trackingFailed =
-        !refreshLiveOnly && tracking == null && trackingError != null;
-    final canShowFallback = widget.order.status.trim().isNotEmpty ||
-        (_tracking?.steps.isNotEmpty ?? false);
-
-    setState(() {
-      if (tracking != null) _tracking = tracking;
-      if (live != null) _liveTracking = live;
-      if (trackingFailed && !canShowFallback) {
-        _status = ApiViewStatus.error;
-        _errorMessage = trackingError;
-      } else {
+    if (result.data != null) {
+      setState(() {
+        _tracking = result.data;
         _status = ApiViewStatus.success;
         _errorMessage = null;
+      });
+      if (_isCompleted) {
+        _trackingTimer?.cancel();
+        _liveTimer?.cancel();
       }
-    });
-
-    if (_destination != null || _agent != null) {
-      _fitMapToMarkers();
+      return;
     }
+
+    if (showLoading && widget.order.status.trim().isEmpty) {
+      setState(() {
+        _status = ApiViewStatus.error;
+        _errorMessage = result.userMessage ?? 'Unable to load tracking';
+      });
+    } else if (showLoading) {
+      setState(() => _status = ApiViewStatus.success);
+    }
+  }
+
+  Future<void> _loadLiveTracking() async {
+    if (widget.order.orderId <= 0 || !_showLiveMap || _isCompleted) return;
+
+    final result = await _controller.loadLiveTracking(
+      orderId: widget.order.orderId,
+    );
+
+    if (!mounted || result.data == null) return;
+
+    setState(() => _liveTracking = result.data);
+    _moveMapToLocation();
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    _fitMapToMarkers();
+    _moveMapToLocation();
   }
 
-  Future<void> _fitMapToMarkers() async {
+  Future<void> _moveMapToLocation() async {
     final controller = _mapController;
-    if (controller == null) return;
+    final location = _liveTracking?.location;
+    if (controller == null || location == null) return;
 
-    final points = <LatLng>[];
-    final destination = _destination;
-    final agent = _agent;
-    if (destination != null) {
-      points.add(LatLng(destination.latitude, destination.longitude));
-    }
-    if (agent != null) {
-      points.add(LatLng(agent.latitude, agent.longitude));
-    }
-    if (points.isEmpty) return;
-
-    if (points.length == 1) {
-      await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(points.first, 14),
-      );
-      return;
-    }
-
-    var bounds = LatLngBounds(southwest: points.first, northeast: points.first);
-    for (final point in points.skip(1)) {
-      bounds = LatLngBounds(
-        southwest: LatLng(
-          point.latitude < bounds.southwest.latitude
-              ? point.latitude
-              : bounds.southwest.latitude,
-          point.longitude < bounds.southwest.longitude
-              ? point.longitude
-              : bounds.southwest.longitude,
-        ),
-        northeast: LatLng(
-          point.latitude > bounds.northeast.latitude
-              ? point.latitude
-              : bounds.northeast.latitude,
-          point.longitude > bounds.northeast.longitude
-              ? point.longitude
-              : bounds.northeast.longitude,
-        ),
-      );
-    }
-
-    await controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 72));
+    await controller.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        LatLng(location.latitude, location.longitude),
+        15,
+      ),
+    );
   }
 
-  Set<Marker> _buildMarkers() {
-    final markers = <Marker>{};
-    final destination = _destination;
-    final agent = _agent;
-
-    if (destination != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: LatLng(destination.latitude, destination.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          infoWindow: InfoWindow(
-            title: 'Delivery Address',
-            snippet: widget.order.formattedAddress,
-          ),
-        ),
-      );
+  Future<void> _callDeliveryPartner() async {
+    final phone = _liveTracking?.agentPhone.trim() ?? '';
+    if (phone.isEmpty) return;
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
-
-    if (agent != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('agent'),
-          position: LatLng(agent.latitude, agent.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          infoWindow: InfoWindow(
-            title: _agentName.isNotEmpty ? _agentName : 'Delivery Agent',
-            snippet: _eta.isNotEmpty ? 'ETA: $_eta' : 'On the way',
-          ),
-        ),
-      );
-    }
-
-    return markers;
   }
 
-  Widget _mapSection() {
-    final destination = _destination;
-    final agent = _agent;
-    final hasMap = destination != null || agent != null;
+  Widget _terminalBanner() {
+    if (!_isCompleted) return const SizedBox.shrink();
 
-    if (!hasMap) {
+    final isCancelled = _orderStatus == OrderStatus.cancelled;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isCancelled ? Colors.red.shade50 : Colors.green.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isCancelled ? Colors.red.shade200 : Colors.green.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isCancelled ? Icons.cancel_outlined : Icons.check_circle_outline,
+            color: isCancelled ? Colors.red.shade700 : Colors.green.shade700,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isCancelled ? 'Order Cancelled' : 'Order Completed',
+              style: GoogleFonts.rubik(
+                fontWeight: FontWeight.w700,
+                color: isCancelled ? Colors.red.shade800 : Colors.green.shade800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _liveMapSection() {
+    if (!_showLiveMap) return const SizedBox.shrink();
+
+    final location = _liveTracking?.location;
+    if (location == null) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -271,7 +238,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Live map will appear once your delivery location is shared.',
+                'Live location will appear when the delivery partner is on the way.',
                 style: GoogleFonts.rubik(
                   fontSize: 13,
                   color: Colors.grey.shade600,
@@ -284,271 +251,314 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       );
     }
 
-    final initialTarget = agent != null
-        ? LatLng(agent.latitude, agent.longitude)
-        : LatLng(destination!.latitude, destination.longitude);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        height: 260,
-        child: GoogleMap(
-          onMapCreated: _onMapCreated,
-          initialCameraPosition: CameraPosition(
-            target: initialTarget,
-            zoom: 14,
-          ),
-          markers: _buildMarkers(),
-          myLocationEnabled: false,
-          zoomControlsEnabled: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _agentInfoCard() {
-    if (_agentName.isEmpty && _agentPhone.isEmpty && _eta.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Delivery Partner',
-            style: GoogleFonts.rubik(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (_agentName.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              _agentName,
-              style: GoogleFonts.rubik(fontSize: 14),
-            ),
-          ],
-          if (_agentPhone.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              _agentPhone,
-              style: GoogleFonts.rubik(
-                fontSize: 13,
-                color: Colors.grey.shade600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(
+            height: 240,
+            child: GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: LatLng(location.latitude, location.longitude),
+                zoom: 15,
               ),
-            ),
-          ],
-          if (_eta.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'ETA: $_eta',
-              style: GoogleFonts.rubik(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Track Order #${widget.order.orderId}',
-          style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: _status == ApiViewStatus.loading
-                ? null
-                : () => _loadTracking(refreshLiveOnly: false),
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: ApiStateView(
-        status: _status,
-        errorMessage: _errorMessage,
-        onRetry: () => _loadTracking(refreshLiveOnly: false),
-        child: RefreshIndicator(
-          color: AppColors.primary,
-          onRefresh: () => _loadTracking(refreshLiveOnly: false),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            children: [
-              _mapSection(),
-              const SizedBox(height: 16),
-              _agentInfoCard(),
-              if (_agentName.isNotEmpty ||
-                  _agentPhone.isNotEmpty ||
-                  _eta.isNotEmpty)
-                const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Status',
-                      style: GoogleFonts.rubik(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _displayStatus,
-                      style: GoogleFonts.rubik(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Order Status',
-                style: GoogleFonts.rubik(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...List.generate(_timelineSteps.length, (index) {
-                final step = _timelineSteps[index];
-                final isLast = index == _timelineSteps.length - 1;
-                final isActive = step.isCurrent;
-                final isComplete = step.completed;
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: isComplete || isActive
-                                ? AppColors.primary
-                                : Colors.grey.shade300,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isComplete
-                                ? Icons.check
-                                : isActive
-                                    ? Icons.radio_button_checked
-                                    : Icons.circle,
-                            size: isComplete || isActive ? 16 : 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (!isLast)
-                          Container(
-                            width: 2,
-                            height: 36,
-                            color: isComplete
-                                ? AppColors.primary
-                                : Colors.grey.shade300,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              step.label,
-                              style: GoogleFonts.rubik(
-                                fontSize: 15,
-                                fontWeight: isComplete || isActive
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: isComplete || isActive
-                                    ? Colors.black87
-                                    : Colors.grey.shade500,
-                              ),
-                            ),
-                            if (step.timestamp.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                step.timestamp,
-                                style: GoogleFonts.rubik(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }),
-              if (widget.order.formattedAddress.isNotEmpty) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+              markers: {
+                Marker(
+                  markerId: const MarkerId('delivery'),
+                  position: LatLng(location.latitude, location.longitude),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueAzure,
                   ),
+                  infoWindow: const InfoWindow(title: 'Delivery partner'),
+                ),
+              },
+              myLocationEnabled: false,
+              zoomControlsEnabled: true,
+            ),
+          ),
+        ),
+        if (_liveTracking?.eta.isNotEmpty ?? false) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Chip(
+              avatar: const Icon(Icons.schedule, size: 18, color: AppColors.primary),
+              label: Text(
+                'ETA: ${_liveTracking!.eta}',
+                style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+            ),
+          ),
+        ],
+        if ((_liveTracking?.agentName.isNotEmpty ?? false) ||
+            (_liveTracking?.agentPhone.isNotEmpty ?? false)) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Delivering to',
+                        'Delivery Partner',
                         style: GoogleFonts.rubik(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        widget.order.formattedAddress,
+                        _liveTracking!.agentName.isNotEmpty
+                            ? _liveTracking!.agentName
+                            : 'Assigned',
                         style: GoogleFonts.rubik(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                          height: 1.4,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (_liveTracking!.agentPhone.isNotEmpty)
+                  IconButton.filled(
+                    onPressed: _callDeliveryPartner,
+                    icon: const Icon(Icons.call),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
               ],
-              const SizedBox(height: 12),
-            ],
+            ),
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
+
+  Widget _stepRow(OrderTrackingStep step, bool isLast) {
+    final scale = step.isCurrent
+        ? 1.0 + (_pulseController.value * 0.08)
+        : 1.0;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: step.completed
+                      ? AppColors.primary
+                      : step.isCurrent
+                          ? AppColors.primary.withValues(alpha: 0.15)
+                          : Colors.grey.shade300,
+                  shape: BoxShape.circle,
+                  border: step.isCurrent
+                      ? Border.all(color: AppColors.primary, width: 2)
+                      : null,
+                ),
+                child: Icon(
+                  step.completed
+                      ? Icons.check
+                      : step.isCurrent
+                          ? Icons.radio_button_checked
+                          : Icons.circle,
+                  size: step.completed || step.isCurrent ? 16 : 10,
+                  color: step.completed
+                      ? Colors.white
+                      : step.isCurrent
+                          ? AppColors.primary
+                          : Colors.white,
+                ),
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 40,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: step.completed
+                    ? ColoredBox(color: AppColors.primary)
+                    : CustomPaint(
+                        painter: _DashedLinePainter(color: Colors.grey.shade300),
+                      ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step.label,
+                  style: GoogleFonts.rubik(
+                    fontSize: 15,
+                    fontWeight: step.isCurrent || step.completed
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                    color: step.completed || step.isCurrent
+                        ? Colors.black87
+                        : Colors.grey.shade500,
+                  ),
+                ),
+                if (step.timestamp.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    step.timestamp,
+                    style: GoogleFonts.rubik(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Track Order #${widget.order.orderId}',
+              style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            elevation: 0,
+            actions: [
+              IconButton(
+                onPressed: _status == ApiViewStatus.loading
+                    ? null
+                    : () => _loadAll(showLoading: true),
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          body: ApiStateView(
+            status: _status,
+            errorMessage: _errorMessage,
+            onRetry: () => _loadAll(showLoading: true),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () => _loadAll(showLoading: false),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _terminalBanner(),
+                  if (_isCompleted) const SizedBox(height: 12),
+                  Text(
+                    _headlineStatus,
+                    style: GoogleFonts.rubik(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: _orderStatus.color,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _liveMapSection(),
+                  if (_showLiveMap) const SizedBox(height: 16),
+                  Text(
+                    'Order Status',
+                    style: GoogleFonts.rubik(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...List.generate(_steps.length, (index) {
+                    return _stepRow(
+                      _steps[index],
+                      index == _steps.length - 1,
+                    );
+                  }),
+                  if (widget.order.formattedAddress.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delivering to',
+                            style: GoogleFonts.rubik(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.order.formattedAddress,
+                            style: GoogleFonts.rubik(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  _DashedLinePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2;
+    const dashHeight = 4.0;
+    const gap = 4.0;
+    var y = 0.0;
+    while (y < size.height) {
+      canvas.drawLine(
+        Offset(size.width / 2, y),
+        Offset(size.width / 2, y + dashHeight),
+        paint,
+      );
+      y += dashHeight + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

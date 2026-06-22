@@ -4,6 +4,7 @@ import 'package:urban_roots/data/network/services/cart_api_service.dart';
 import 'package:urban_roots/data/network/services/catalog_api_service.dart';
 import 'package:urban_roots/data/network/services/coupons_api_service.dart';
 import 'package:urban_roots/data/network/services/notifications_api_service.dart';
+import 'package:urban_roots/data/network/services/offers_api_service.dart';
 import 'package:urban_roots/data/network/services/orders_api_service.dart';
 import 'package:urban_roots/data/network/services/profile_api_service.dart';
 import 'package:urban_roots/data/network/services/reviews_api_service.dart';
@@ -26,6 +27,7 @@ class UrbanRootsApi {
   final cart = CartApiService();
   final wishlist = WishlistApiService();
   final coupons = CouponsApiService();
+  final offers = OffersApiService();
   final orders = OrdersApiService();
   final wallet = WalletApiService();
   final subscription = SubscriptionApiService();

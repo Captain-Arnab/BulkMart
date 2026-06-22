@@ -54,6 +54,9 @@ class ApiClient {
   /// Vendor API — https://urbunroots.com/api/vendor
   static final ApiClient vendor = ApiClient._(ApiConfig.vendorBaseUrl);
 
+  /// Site API — https://urbunroots.com/api (offers, etc.)
+  static final ApiClient site = ApiClient._(ApiConfig.apiBaseUrl);
+
   /// Back-compat alias for user client.
   static ApiClient get instance => user;
 

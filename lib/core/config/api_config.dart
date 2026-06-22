@@ -35,6 +35,9 @@ class ApiConfig {
 
   static String get vendorBaseUrl => '$siteRoot/api/vendor';
 
+  /// Site-level APIs e.g. /api/offers/list.php
+  static String get apiBaseUrl => '$siteRoot/api';
+
   /// Legacy alias — returns site root.
   static String get baseUrl => siteRoot;
 

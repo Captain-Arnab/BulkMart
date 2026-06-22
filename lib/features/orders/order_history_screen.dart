@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/core/order/order_status.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
@@ -17,35 +18,38 @@ class OrderHistory extends StatefulWidget {
 }
 
 class _OrderHistoryState extends State<OrderHistory> {
+  bool _hasLoadedOnce = false;
+
   @override
   void initState() {
     super.initState();
+    _loadOrders();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    if (_hasLoadedOnce) {
+      OrdersController.findOrPut().loadOrders();
+    }
+  }
+
+  void _loadOrders() {
+    _hasLoadedOnce = true;
     OrdersController.findOrPut().loadOrders();
   }
 
-  Color _statusColor(String status) {
-    final lower = status.toLowerCase();
-    if (lower.contains('deliver') || lower.contains('complete')) {
-      return Colors.green.shade700;
-    }
-    if (lower.contains('cancel') || lower.contains('fail')) {
-      return Colors.red.shade700;
-    }
-    return Colors.orange.shade800;
-  }
+  Color _statusColor(String status) =>
+      OrderStatus.fromString(status).color;
 
-  Color _statusBg(String status) {
-    final lower = status.toLowerCase();
-    if (lower.contains('deliver') || lower.contains('complete')) {
-      return Colors.green.shade50;
-    }
-    if (lower.contains('cancel') || lower.contains('fail')) {
-      return Colors.red.shade50;
-    }
-    return Colors.orange.shade50;
-  }
+  Color _statusBg(String status) =>
+      OrderStatus.fromString(status).backgroundColor;
 
   String _displayStatus(Order order, OrderSegment segment) {
+    final apiStatus = order.status.trim();
+    if (apiStatus.isNotEmpty) {
+      return OrderStatus.fromString(apiStatus).label;
+    }
     return order.displayStatusForSegment(segment);
   }
 

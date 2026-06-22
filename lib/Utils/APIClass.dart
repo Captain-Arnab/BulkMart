@@ -94,6 +94,9 @@ class APIClass {
   static const supportTickets = '/support/tickets.php';
   static const referral = '/referral.php';
 
+  // ── OFFERS (site base: /api) ─────────────────────────────────────
+  static const offersList = '/offers/list.php';
+
   // ── MODULE 14 — VENDOR AUTH ────────────────────────────────────────
   /// Registration OTP — user base
   static const vendorSendOtp = '/vendor/send-otp.php';

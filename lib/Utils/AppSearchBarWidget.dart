@@ -145,6 +145,7 @@ class _AppSearchBarWidgetState extends State<AppSearchBarWidget>
     final pinController = TextEditingController(text: _location.pincode.value);
     final formKey = GlobalKey<FormState>();
     var isSubmitting = false;
+    var isDetecting = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -162,6 +163,13 @@ class _AppSearchBarWidgetState extends State<AppSearchBarWidget>
           ),
           child: StatefulBuilder(
             builder: (context, setSheetState) {
+              Future<void> showMessage(String message) {
+                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+                return Future.value();
+              }
+
               return Form(
                 key: formKey,
                 child: Column(
@@ -177,17 +185,53 @@ class _AppSearchBarWidgetState extends State<AppSearchBarWidget>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter pincode to check delivery availability.',
+                      'Enter pincode or use your current location.',
                       style: GoogleFonts.rubik(
                         fontSize: 13,
                         color: Colors.grey.shade700,
                       ),
                     ),
                     const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: (isSubmitting || isDetecting)
+                          ? null
+                          : () async {
+                              setSheetState(() => isDetecting = true);
+                              final error =
+                                  await _location.detectAndSetFromGps();
+                              if (!sheetContext.mounted) return;
+                              setSheetState(() => isDetecting = false);
+                              if (error != null) {
+                                await showMessage(error);
+                                return;
+                              }
+                              if (pinController.text.trim().isEmpty &&
+                                  _location.pincode.value.isNotEmpty) {
+                                pinController.text = _location.pincode.value;
+                              }
+                              setState(() {});
+                              Navigator.pop(sheetContext);
+                            },
+                      icon: isDetecting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location_outlined, size: 18),
+                      label: Text(
+                        isDetecting
+                            ? 'Detecting location...'
+                            : 'Use current location',
+                        style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: pinController,
                       keyboardType: TextInputType.number,
                       maxLength: 6,
+                      enabled: !isSubmitting && !isDetecting,
                       decoration: const InputDecoration(
                         labelText: 'Pincode',
                         counterText: '',
@@ -202,7 +246,7 @@ class _AppSearchBarWidgetState extends State<AppSearchBarWidget>
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
-                      onPressed: isSubmitting
+                      onPressed: (isSubmitting || isDetecting)
                           ? null
                           : () async {
                               if (!formKey.currentState!.validate()) return;
@@ -210,16 +254,14 @@ class _AppSearchBarWidgetState extends State<AppSearchBarWidget>
                               final error = await _location.checkAndSetPincode(
                                 pinController.text.trim(),
                               );
-                              if (!context.mounted) return;
+                              if (!sheetContext.mounted) return;
                               setSheetState(() => isSubmitting = false);
                               if (error != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(error)),
-                                );
+                                await showMessage(error);
                                 return;
                               }
                               setState(() {});
-                              Navigator.pop(context);
+                              Navigator.pop(sheetContext);
                             },
                       child: isSubmitting
                           ? const SizedBox(

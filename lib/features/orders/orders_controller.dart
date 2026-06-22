@@ -39,17 +39,10 @@ class OrderPaymentResult {
 }
 
 class TrackingFetchResult<T> {
-  const TrackingFetchResult({
-    this.data,
-    this.userMessage,
-    this.unavailable = false,
-  });
+  const TrackingFetchResult({this.data, this.userMessage});
 
   final T? data;
   final String? userMessage;
-
-  /// True when the endpoint is missing or permanently unavailable (e.g. HTTP 404).
-  final bool unavailable;
 }
 
 String _friendlyTrackingMessage(String? technical) {
@@ -167,9 +160,7 @@ class OrdersController extends GetxController {
 
     final result = await _api.orders.liveTracking(orderId: orderId.toString());
     if (result is ApiFailure<Map<String, dynamic>>) {
-      final unavailable = result.statusCode == 404 ||
-          result.message.toLowerCase().contains('not found');
-      return TrackingFetchResult(unavailable: unavailable);
+      return const TrackingFetchResult();
     }
 
     final parsed = parseLiveTracking(
