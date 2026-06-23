@@ -99,6 +99,22 @@ class AuthSession {
 
   Future<void> clearUserToken() => _storage.delete(key: _keyUserToken);
 
+  /// Clears only vendor session keys — does not touch user token.
+  Future<void> clearVendorSession() async {
+    await _storage.delete(key: _keyVendorToken);
+    await _storage.delete(key: _keyVendorId);
+    final role = await getRole();
+    if (role == AuthRole.vendor) {
+      await _storage.delete(key: _keyRole);
+      await _storage.delete(key: _keyDisplayName);
+    }
+  }
+
+  Future<bool> hasVendorSession() async {
+    final token = await getVendorToken();
+    return token != null && token.isNotEmpty;
+  }
+
   Future<void> clear() async {
     await _storage.delete(key: _keyUserToken);
     await _storage.delete(key: _keyVendorToken);

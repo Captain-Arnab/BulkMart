@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/features/login/presentation/Login.dart';
 import 'package:urban_roots/features/registration/presentation/Registration.dart';
+import 'package:urban_roots/features/vendor/auth/vendor_login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -111,7 +112,28 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 14),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const VendorLoginScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Vendor Portal',
+                    style: GoogleFonts.rubik(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white70,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
               ],
             ),
           ),

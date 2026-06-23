@@ -6,6 +6,7 @@ import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
 import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/auth/presentation/welcome_screen.dart';
+import 'package:urban_roots/features/vendor/auth/vendor_login_screen.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 
@@ -39,6 +40,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   Future<void> _routeFromSession() async {
     if (!mounted) return;
+
+    if (await AuthSession.instance.hasVendorSession()) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const VendorShell()),
+      );
+      return;
+    }
+
     final loggedIn = await AuthSession.instance.isLoggedIn();
     if (!mounted) return;
 

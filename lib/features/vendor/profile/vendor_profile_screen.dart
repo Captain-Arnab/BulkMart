@@ -1,66 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:urban_roots/core/theme/app_colors.dart';
-import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/core/auth/auth_session.dart';
-import 'package:urban_roots/core/notifications/push_notification_service.dart';
-import 'package:urban_roots/core/navigation/auth_navigation.dart';
-import 'package:urban_roots/core/navigation/root_navigator.dart';
-import 'package:urban_roots/core/ui/ui_state.dart';
-import 'package:urban_roots/data/vendor_mock_data.dart';
-import 'package:urban_roots/features/vendor/profile/vendor_profile_view_model.dart';
+import 'package:urban_roots/core/theme/app_colors.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_profile_controller.dart';
 
-class VendorProfileScreen extends StatefulWidget {
+class VendorProfileScreen extends StatelessWidget {
   const VendorProfileScreen({super.key});
 
   @override
-  State<VendorProfileScreen> createState() => _VendorProfileScreenState();
-}
-
-class _VendorProfileScreenState extends State<VendorProfileScreen> {
-  late final VendorProfileViewModel _vm;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = VendorProfileViewModel();
-    _vm.addListener(() => setState(() {}));
-    _vm.load();
-  }
-
-  @override
-  void dispose() {
-    _vm.dispose();
-    super.dispose();
-  }
-
-  Future<void> _logout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Logout?', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
-        content: Text('You will need to sign in again.', style: GoogleFonts.rubik()),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Logout', style: GoogleFonts.rubik(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      await PushNotificationService.instance.unregisterFromBackend();
-      await AuthSession.instance.clear();
-      if (!mounted) return;
-      final navContext = rootNavigatorKey.currentContext ?? context;
-      if (!navContext.mounted) return;
-      await showLogoutSuccessAndNavigate(navContext);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final c = Get.find<VendorProfileController>();
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
@@ -69,101 +18,90 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    final state = _vm.state;
-    if (state is UiLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-    }
-    if (state is UiError<VendorProfile>) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(state.message),
-            ElevatedButton(onPressed: _vm.load, child: const Text('Retry')),
-          ],
-        ),
-      );
-    }
-    final p = (state as UiSuccess<VendorProfile>).data;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+      body: Obx(() {
+        if (c.isLoading.value && c.profile.value == null) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        }
+        if (c.errorMessage.value.isNotEmpty && c.profile.value == null) {
+          return Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(p.name, style: GoogleFonts.rubik(fontSize: 20, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                _infoRow(Icons.email_outlined, p.email),
-                _infoRow(Icons.phone_outlined, p.phone),
+                Text(c.errorMessage.value),
+                ElevatedButton(onPressed: c.load, child: const Text('Retry')),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
+          );
+        }
+        final fields = c.profile.value?.fields ?? {};
+        return RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: c.load,
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Business Info', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                _infoRow(Icons.receipt_outlined, 'GST: ${p.gstNo}'),
-                _infoRow(Icons.badge_outlined, 'PAN: ${p.panNo}'),
-                _infoRow(Icons.verified_outlined, 'FSSAI: ${p.fssai}'),
-              ],
-            ),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: fields.entries
+                        .map(
+                          (e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    e.key,
+                                    style: GoogleFonts.rubik(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(e.value, style: GoogleFonts.rubik(fontSize: 13)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade400,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Logout?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Logout')),
+                        ],
+                      ),
+                    );
+                    if (ok == true) await c.logout();
+                  },
+                  child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () {
-              SweetAlert.info(context, message: 'Edit profile form — wire when API is ready');
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF019934),
-              side: const BorderSide(color: Color(0xFF019934)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: Text('Edit Profile', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _logout,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: Text('Logout', style: GoogleFonts.rubik(fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: GoogleFonts.rubik(fontSize: 14, color: Colors.grey.shade800))),
-        ],
-      ),
+        );
+      }),
     );
   }
 }

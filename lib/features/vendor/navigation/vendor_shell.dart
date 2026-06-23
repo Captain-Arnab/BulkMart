@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_dashboard_controller.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_earnings_controller.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_orders_controller.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_products_controller.dart';
+import 'package:urban_roots/features/vendor/controllers/vendor_profile_controller.dart';
 import 'package:urban_roots/features/vendor/dashboard/vendor_dashboard_screen.dart';
-import 'package:urban_roots/features/vendor/navigation/vendor_products_navigator.dart';
-import 'package:urban_roots/features/vendor/orders/orders_placeholder_screen.dart';
+import 'package:urban_roots/features/vendor/earnings/vendor_earnings_screen.dart';
+import 'package:urban_roots/features/vendor/orders/vendor_orders_screen.dart';
+import 'package:urban_roots/features/vendor/products/vendor_products_screen.dart';
 import 'package:urban_roots/features/vendor/profile/vendor_profile_screen.dart';
 
-/// Vendor bottom navigation shell (equivalent to VendorNavGraph).
+/// Vendor bottom navigation — isolated from user app flow.
 class VendorShell extends StatefulWidget {
   const VendorShell({super.key});
+
+  static void Function(int index)? switchTab;
 
   @override
   State<VendorShell> createState() => _VendorShellState();
@@ -16,13 +25,21 @@ class VendorShell extends StatefulWidget {
 class _VendorShellState extends State<VendorShell> {
   int _selectedIndex = 0;
 
-  final _productNavKey = GlobalKey<NavigatorState>();
+  @override
+  void initState() {
+    super.initState();
+    Get.put(VendorDashboardController());
+    Get.put(VendorProductsController());
+    Get.put(VendorOrdersController());
+    Get.put(VendorEarningsController());
+    Get.put(VendorProfileController());
+    VendorShell.switchTab = (index) => setState(() => _selectedIndex = index);
+  }
 
-  void _onTabSelected(int index) {
-    if (index == 1 && _selectedIndex != 1) {
-      _productNavKey.currentState?.popUntil((route) => route.isFirst);
-    }
-    setState(() => _selectedIndex = index);
+  @override
+  void dispose() {
+    VendorShell.switchTab = null;
+    super.dispose();
   }
 
   @override
@@ -30,31 +47,41 @@ class _VendorShellState extends State<VendorShell> {
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: [
-          const VendorDashboardScreen(),
-          VendorProductsNavigator(navigatorKey: _productNavKey),
-          const OrdersPlaceholderScreen(),
-          const VendorProfileScreen(),
+        children: const [
+          VendorDashboardScreen(),
+          VendorProductsScreen(),
+          VendorOrdersScreen(),
+          VendorEarningsScreen(),
+          VendorProfileScreen(),
         ],
       ),
       bottomNavigationBar: ModernBottomNav(
         currentIndex: _selectedIndex,
-        onTap: _onTabSelected,
-        items: [
+        onTap: (i) => setState(() => _selectedIndex = i),
+        items: const [
           BottomNavigationBarItem(
-            icon: Icon(_selectedIndex == 0 ? Icons.dashboard_rounded : Icons.dashboard_outlined),
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard_rounded),
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(_selectedIndex == 1 ? Icons.inventory_2_rounded : Icons.inventory_2_outlined),
+            icon: Icon(Icons.inventory_2_outlined),
+            activeIcon: Icon(Icons.inventory_2_rounded),
             label: 'Products',
           ),
           BottomNavigationBarItem(
-            icon: Icon(_selectedIndex == 2 ? Icons.receipt_long_rounded : Icons.receipt_long_outlined),
+            icon: Icon(Icons.receipt_long_outlined),
+            activeIcon: Icon(Icons.receipt_long_rounded),
             label: 'Orders',
           ),
           BottomNavigationBarItem(
-            icon: Icon(_selectedIndex == 3 ? Icons.person_rounded : Icons.person_outline_rounded),
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            activeIcon: Icon(Icons.account_balance_wallet_rounded),
+            label: 'Earnings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded),
+            activeIcon: Icon(Icons.person_rounded),
             label: 'Profile',
           ),
         ],

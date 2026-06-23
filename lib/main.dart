@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
+import 'package:urban_roots/core/navigation/vendor_navigation.dart';
 import 'package:urban_roots/core/navigation/root_navigator.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/data/network/api_client.dart';
@@ -10,14 +11,20 @@ import 'package:urban_roots/features/splash/Splashscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  void onUnauthorized() {
+  try {
+    await Firebase.initializeApp();
+    await PushNotificationService.instance.initialize();
+  } catch (e, stack) {
+    debugPrint('[Startup] Firebase init failed: $e\n$stack');
+  }
+  ApiClient.user.onUnauthorized = () {
     final context = rootNavigatorKey.currentContext;
     if (context != null) navigateToLogin(context);
-  }
-  ApiClient.user.onUnauthorized = onUnauthorized;
-  ApiClient.vendor.onUnauthorized = onUnauthorized;
-  await PushNotificationService.instance.initialize();
+  };
+  ApiClient.vendor.onUnauthorized = () {
+    final context = rootNavigatorKey.currentContext;
+    if (context != null) navigateToVendorLogin(context);
+  };
   runApp(const MyApp());
 }
 

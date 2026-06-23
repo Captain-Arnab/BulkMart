@@ -13,7 +13,7 @@ const String kSkipSessionClear = 'skipSessionClear';
 
 /// Dio client for Urban Roots API — one instance per base URL.
 class ApiClient {
-  ApiClient._(String baseUrl) {
+  ApiClient._(String baseUrl, {this.isVendorClient = false}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -52,13 +52,16 @@ class ApiClient {
   static final ApiClient user = ApiClient._(ApiConfig.userBaseUrl);
 
   /// Vendor API — https://urbunroots.com/api/vendor
-  static final ApiClient vendor = ApiClient._(ApiConfig.vendorBaseUrl);
+  static final ApiClient vendor =
+      ApiClient._(ApiConfig.vendorBaseUrl, isVendorClient: true);
 
   /// Site API — https://urbunroots.com/api (offers, etc.)
   static final ApiClient site = ApiClient._(ApiConfig.apiBaseUrl);
 
   /// Back-compat alias for user client.
   static ApiClient get instance => user;
+
+  final bool isVendorClient;
 
   late final Dio _dio;
 
@@ -254,8 +257,10 @@ class ApiClient {
   }
 
   void _logApiError(String? requestUri, String rawBody) {
-    final preview = rawBody.length > 500 ? '${rawBody.substring(0, 500)}...' : rawBody;
-    debugPrint('[API_ERROR] uri=${requestUri ?? 'unknown'} body=$preview');
+    final tag = isVendorClient ? '[VENDOR_API_ERROR]' : '[API_ERROR]';
+    final preview =
+        rawBody.length > 500 ? '${rawBody.substring(0, 500)}...' : rawBody;
+    debugPrint('$tag uri=${requestUri ?? 'unknown'} body=$preview');
   }
 
   Map<String, dynamic>? _parseResponseBody(
@@ -333,7 +338,11 @@ class ApiClient {
   }
 
   Future<void> _handleUnauthorized() async {
-    await AuthSession.instance.clear();
+    if (isVendorClient) {
+      await AuthSession.instance.clearVendorSession();
+    } else {
+      await AuthSession.instance.clear();
+    }
     onUnauthorized?.call();
   }
 

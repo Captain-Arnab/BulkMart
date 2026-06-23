@@ -2,7 +2,7 @@ name: urban_roots
 description: "Urban Roots App"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.2.3 <4.0.0'
@@ -59,10 +59,12 @@ dev_dependencies:
   flutter_lints: ^2.0.0
   flutter_launcher_icons: ^0.13.1
 
-flutter_icons:
-  image_path: "assets/logo_new.png"
+flutter_launcher_icons:
   android: true
   ios: true
+  image_path: "assets/logo_new.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/logo_new.png"
 
 flutter:
   uses-material-design: true

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:urban_roots/Utils/APIClass.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/data/network/api_client.dart';
@@ -90,40 +89,28 @@ class VendorPanelApiService {
 
   Future<ApiResult<Map<String, dynamic>>> addProduct({
     required String name,
-    required double price,
+    required String price,
     required String category,
-    required int stock,
-    required double gst,
+    required String stock,
+    required String gst,
     required String descriptions,
-    required List<MultipartFile> images,
-  }) async {
-    final vendorId = await AuthSession.instance.getVendorId();
-    final formData = FormData.fromMap({
-      'name': name,
-      'price': price,
-      'category': category,
-      'stock': stock,
-      'gst': gst,
-      'descriptions': descriptions,
-      'images': images,
-      if (vendorId != null) 'vendor_id': vendorId,
-    });
-    try {
-      final response = await _client.dio.post<Map<String, dynamic>>(
+    required String images,
+    required String vendorId,
+  }) =>
+      _client.post(
         APIClass.vendorAddProduct,
-        data: formData,
-        options: Options(extra: {'tokenMode': TokenMode.vendor}),
+        token: TokenMode.vendor,
+        body: {
+          'name': name,
+          'price': price,
+          'category': category,
+          'stock': stock,
+          'gst': gst,
+          'descriptions': descriptions,
+          'images': images,
+          'vendor_id': vendorId,
+        },
       );
-      final data = response.data;
-      if (data == null) return const ApiFailure('Empty response');
-      if (data['status'] != true) {
-        return ApiFailure(data['message'] as String? ?? 'Request failed');
-      }
-      return ApiSuccess(data);
-    } on DioException catch (e) {
-      return ApiFailure(e.message ?? 'Network error');
-    }
-  }
 
   Future<ApiResult<Map<String, dynamic>>> updateProduct(
     Map<String, dynamic> fields,
@@ -166,7 +153,7 @@ class VendorPanelApiService {
       _client.post(
         APIClass.vendorAvailability,
         token: TokenMode.vendor,
-        body: {'is_open': isOpen},
+        body: {'is_open': isOpen.toString()},
       );
 
   Future<ApiResult<Map<String, dynamic>>> earnings() => _client.get(
