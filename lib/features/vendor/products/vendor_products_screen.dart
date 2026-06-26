@@ -17,7 +17,8 @@ class VendorProductsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
-        title: Text('Products', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+        title: Text('Products',
+            style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -56,7 +57,8 @@ class VendorProductsScreen extends StatelessWidget {
       ),
       body: Obx(() {
         if (c.isLoading.value && c.products.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (c.errorMessage.value.isNotEmpty && c.products.isEmpty) {
           return Center(
@@ -64,7 +66,8 @@ class VendorProductsScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(c.errorMessage.value, textAlign: TextAlign.center),
-                ElevatedButton(onPressed: c.loadProducts, child: const Text('Retry')),
+                ElevatedButton(
+                    onPressed: c.loadProducts, child: const Text('Retry')),
               ],
             ),
           );
@@ -84,7 +87,8 @@ class VendorProductsScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  title: Text(p.name, style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+                  title: Text(p.name,
+                      style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
                   subtitle: Text(
                     '₹${p.price} · Stock ${p.stock} · ${p.category}',
                     style: GoogleFonts.rubik(fontSize: 13),
@@ -98,14 +102,16 @@ class VendorProductsScreen extends StatelessWidget {
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => VendorEditProductScreen(product: p),
+                              builder: (_) =>
+                                  VendorEditProductScreen(product: p),
                             ),
                           );
                           await c.loadProducts();
                         },
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+                        icon: Icon(Icons.delete_outline,
+                            color: Colors.red.shade400),
                         onPressed: () async {
                           final ok = await showDialog<bool>(
                             context: context,
@@ -113,8 +119,12 @@ class VendorProductsScreen extends StatelessWidget {
                               title: const Text('Delete product?'),
                               content: Text('Remove "${p.name}"?'),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel')),
+                                TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Delete')),
                               ],
                             ),
                           );

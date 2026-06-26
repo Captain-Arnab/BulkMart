@@ -85,9 +85,8 @@ class VendorOrderItem {
           json['total']?.toString() ??
           json['order_total']?.toString() ??
           '0',
-      status: json['status']?.toString() ??
-          json['order_status']?.toString() ??
-          '',
+      status:
+          json['status']?.toString() ?? json['order_status']?.toString() ?? '',
     );
   }
 

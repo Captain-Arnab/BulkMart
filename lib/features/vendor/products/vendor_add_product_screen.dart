@@ -60,9 +60,11 @@ class _VendorAddProductScreenState extends State<VendorAddProductScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _field(_name, 'Name', required: true),
-            _field(_price, 'Price', required: true, keyboard: TextInputType.number),
+            _field(_price, 'Price',
+                required: true, keyboard: TextInputType.number),
             _field(_category, 'Category', required: true),
-            _field(_stock, 'Stock', required: true, keyboard: TextInputType.number),
+            _field(_stock, 'Stock',
+                required: true, keyboard: TextInputType.number),
             _field(_gst, 'GST', keyboard: TextInputType.number),
             _field(_descriptions, 'Descriptions', maxLines: 3),
             _field(_images, 'Images (URL or path)'),

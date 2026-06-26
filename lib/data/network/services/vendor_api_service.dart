@@ -42,7 +42,10 @@ class VendorApiService {
     if (result is ApiFailure<Map<String, dynamic>>) {
       return (data: null, error: result.message);
     }
-    return (data: VendorDashboardData.fromJson((result as ApiSuccess).data), error: null);
+    return (
+      data: VendorDashboardData.fromJson((result as ApiSuccess).data),
+      error: null
+    );
   }
 
   Future<String?> setAvailability({required bool isOpen}) async {
@@ -50,7 +53,8 @@ class VendorApiService {
     return _errorOrNull(result);
   }
 
-  Future<({List<VendorProductItem> products, String? error})> listProducts() async {
+  Future<({List<VendorProductItem> products, String? error})>
+      listProducts() async {
     final result = await _panel.listProducts();
     if (result is ApiFailure<Map<String, dynamic>>) {
       return (products: <VendorProductItem>[], error: result.message);
@@ -155,7 +159,8 @@ class VendorApiService {
     );
   }
 
-  Future<({List<VendorDirectoryItem> vendors, String? error})> vendorList() async {
+  Future<({List<VendorDirectoryItem> vendors, String? error})>
+      vendorList() async {
     final result = await _panel.vendorList();
     if (result is ApiFailure<Map<String, dynamic>>) {
       return (vendors: <VendorDirectoryItem>[], error: result.message);

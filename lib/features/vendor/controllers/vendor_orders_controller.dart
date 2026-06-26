@@ -25,12 +25,6 @@ class VendorOrdersController extends GetxController {
     }
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    loadOrders();
-  }
-
   Future<void> loadOrders() async {
     isLoading.value = true;
     errorMessage.value = '';

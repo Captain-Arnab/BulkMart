@@ -22,12 +22,6 @@ class VendorProductsController extends GetxController {
         .toList();
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    loadProducts();
-  }
-
   Future<void> loadProducts() async {
     isLoading.value = true;
     errorMessage.value = '';

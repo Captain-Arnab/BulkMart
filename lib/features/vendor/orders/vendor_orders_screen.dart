@@ -15,7 +15,8 @@ class VendorOrdersScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.scaffold,
         appBar: AppBar(
-          title: Text('Orders', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+          title: Text('Orders',
+              style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
           elevation: 0,
@@ -27,7 +28,8 @@ class VendorOrdersScreen extends StatelessWidget {
         ),
         body: Obx(() {
           if (c.isLoading.value && c.orders.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary));
           }
           if (c.errorMessage.value.isNotEmpty && c.orders.isEmpty) {
             return Center(
@@ -35,7 +37,8 @@ class VendorOrdersScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(c.errorMessage.value),
-                  ElevatedButton(onPressed: c.loadOrders, child: const Text('Retry')),
+                  ElevatedButton(
+                      onPressed: c.loadOrders, child: const Text('Retry')),
                 ],
               ),
             );
@@ -59,7 +62,8 @@ class VendorOrdersScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Order #${order.orderId}',
-                            style: GoogleFonts.rubik(fontWeight: FontWeight.w700)),
+                            style:
+                                GoogleFonts.rubik(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Text('${order.customerName} · ₹${order.amount}'),
                         const SizedBox(height: 4),

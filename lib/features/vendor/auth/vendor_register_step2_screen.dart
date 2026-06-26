@@ -58,7 +58,8 @@ class _VendorRegisterStep2ScreenState extends State<VendorRegisterStep2Screen> {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
-        title: Text('Verify OTP', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+        title: Text('Verify OTP',
+            style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -91,7 +92,8 @@ class _VendorRegisterStep2ScreenState extends State<VendorRegisterStep2Screen> {
                 ),
                 if (_auth.errorMessage.value.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Text(_auth.errorMessage.value, style: const TextStyle(color: Colors.red)),
+                  Text(_auth.errorMessage.value,
+                      style: const TextStyle(color: Colors.red)),
                 ],
                 const SizedBox(height: 24),
                 FilledButton(

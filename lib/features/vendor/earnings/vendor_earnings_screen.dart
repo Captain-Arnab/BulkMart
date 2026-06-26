@@ -13,14 +13,16 @@ class VendorEarningsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
-        title: Text('Earnings', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+        title: Text('Earnings',
+            style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
       body: Obx(() {
         if (c.isLoading.value && c.earnings.value == null) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (c.errorMessage.value.isNotEmpty && c.earnings.value == null) {
           return Center(
@@ -46,7 +48,8 @@ class VendorEarningsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total Earnings', style: GoogleFonts.rubik(fontSize: 14)),
+                      Text('Total Earnings',
+                          style: GoogleFonts.rubik(fontSize: 14)),
                       const SizedBox(height: 8),
                       Text(
                         '₹${data?.earnings ?? '0'}',
@@ -61,7 +64,8 @@ class VendorEarningsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Payout History', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+              Text('Payout History',
+                  style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               if (data == null || data.payouts.isEmpty)
                 const Text('No payouts yet')

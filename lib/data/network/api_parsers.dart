@@ -74,26 +74,23 @@ List<Product> parseProducts(dynamic raw) {
 }
 
 List<Category> parseCategories(dynamic raw) {
-  return extractList(raw)
-      .whereType<Map>()
-      .map((e) {
-        final m = Map<String, dynamic>.from(e);
-        return Category(
-          id: m['categ_id']?.toString() ??
-              m['category_id']?.toString() ??
-              m['id']?.toString() ??
-              '',
-          name: formatCategoryDisplayName(
-            m['categ_name']?.toString() ??
-                m['category_name']?.toString() ??
-                m['name']?.toString() ??
-                '',
-          ),
-          image: pickImageUrl(m),
-          status: m['status']?.toString() ?? '0',
-        );
-      })
-      .toList();
+  return extractList(raw).whereType<Map>().map((e) {
+    final m = Map<String, dynamic>.from(e);
+    return Category(
+      id: m['categ_id']?.toString() ??
+          m['category_id']?.toString() ??
+          m['id']?.toString() ??
+          '',
+      name: formatCategoryDisplayName(
+        m['categ_name']?.toString() ??
+            m['category_name']?.toString() ??
+            m['name']?.toString() ??
+            '',
+      ),
+      image: pickImageUrl(m),
+      status: m['status']?.toString() ?? '0',
+    );
+  }).toList();
 }
 
 Map<String, dynamic> parseProfile(Map<String, dynamic> envelope) {
@@ -105,10 +102,12 @@ Map<String, dynamic> parseProfile(Map<String, dynamic> envelope) {
     profile = Map<String, dynamic>.from(envelope);
   }
 
-  final firstName = _profilePick(profile, ['cust_fname', 'fname', 'first_name']);
+  final firstName =
+      _profilePick(profile, ['cust_fname', 'fname', 'first_name']);
   final lastName = _profilePick(profile, ['cust_lname', 'lname', 'last_name']);
   final email = _profilePick(profile, ['cust_email', 'email']);
-  final mobile = _profilePick(profile, ['cust_mobile', 'mobile', 'phone', 'phone_number']);
+  final mobile =
+      _profilePick(profile, ['cust_mobile', 'mobile', 'phone', 'phone_number']);
   final city = _profilePick(profile, ['city']);
   final state = _profilePick(profile, ['state']);
   final address = _profilePickAddress(profile);
@@ -150,7 +149,8 @@ String _profilePickAddress(Map<String, dynamic> profile) {
   }
   if (address is Map) {
     final map = Map<String, dynamic>.from(address);
-    final line = _profilePick(map, ['address', 'full_address', 'street', 'line1']);
+    final line =
+        _profilePick(map, ['address', 'full_address', 'street', 'line1']);
     if (line.isNotEmpty) return line;
 
     final parts = <String>[
@@ -161,10 +161,12 @@ String _profilePickAddress(Map<String, dynamic> profile) {
     ].where((part) => part.isNotEmpty).toList();
     if (parts.isNotEmpty) return parts.join(', ');
   }
-  return _profilePick(profile, ['address_line', 'street_address', 'full_address']);
+  return _profilePick(
+      profile, ['address_line', 'street_address', 'full_address']);
 }
 
-List<Map<String, dynamic>> parseSubscriptionPlans(Map<String, dynamic> envelope) {
+List<Map<String, dynamic>> parseSubscriptionPlans(
+    Map<String, dynamic> envelope) {
   List<dynamic> raw = const [];
   if (envelope['plans'] is List) {
     raw = envelope['plans'] as List;
@@ -187,7 +189,11 @@ List<Map<String, dynamic>> parseSubscriptionPlans(Map<String, dynamic> envelope)
     if (featuresRaw is List) {
       features = featuresRaw.map((e) => e.toString()).toList();
     } else if (featuresRaw is String && featuresRaw.isNotEmpty) {
-      features = featuresRaw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      features = featuresRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     } else {
       features = _defaultSubscriptionFeatures(map);
     }
@@ -204,7 +210,8 @@ List<Map<String, dynamic>> parseSubscriptionPlans(Map<String, dynamic> envelope)
 
     return {
       'id': map['plan_id']?.toString() ?? map['id']?.toString() ?? '',
-      'product_id': map['product_id']?.toString() ?? map['pd_id']?.toString() ?? '0',
+      'product_id':
+          map['product_id']?.toString() ?? map['pd_id']?.toString() ?? '0',
       'name': map['name']?.toString() ?? map['plan_name']?.toString() ?? '',
       'price': _parseSubscriptionPrice(map),
       'duration': _parseSubscriptionDuration(map),
@@ -365,7 +372,9 @@ Map<String, dynamic>? parseSubscriptionStatus(Map<String, dynamic> envelope) {
 
   final sub = Map<String, dynamic>.from(raw);
   final status = sub['status']?.toString().toLowerCase() ?? '';
-  if (status.contains('inactive') || status.contains('cancel') || status == '0') {
+  if (status.contains('inactive') ||
+      status.contains('cancel') ||
+      status == '0') {
     return null;
   }
 
@@ -482,7 +491,8 @@ Map<String, dynamic> _flattenOrderListRow(Map<String, dynamic> raw) {
   if (addressFields.city.isNotEmpty) flat['city'] = addressFields.city;
   if (addressFields.state.isNotEmpty) flat['state'] = addressFields.state;
   if (addressFields.pincode.isNotEmpty) flat['pincode'] = addressFields.pincode;
-  if (addressFields.landmark.isNotEmpty) flat['landmark'] = addressFields.landmark;
+  if (addressFields.landmark.isNotEmpty)
+    flat['landmark'] = addressFields.landmark;
 
   return flat;
 }
@@ -499,10 +509,8 @@ List<Map<String, dynamic>> _extractOrderRows(dynamic raw) {
 Order? parseOrderDetail(Map<String, dynamic> envelope) {
   dynamic raw = envelope['data'] ?? envelope['order'] ?? envelope;
   if (raw is List && raw.isNotEmpty) {
-    final rows = raw
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
+    final rows =
+        raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
     if (rows.isNotEmpty) {
       return _applyPaymentUrl(_mergeOrderRows(rows), envelope);
     }
@@ -676,9 +684,8 @@ List<OrderItem> _parseOrderItems(Map<String, dynamic> order) {
         ) ??
         0;
     final subtotal = _parseLineAmount(item, qty);
-    final resolvedUnitPrice = unitPrice > 0
-        ? unitPrice
-        : (qty > 0 ? subtotal / qty : 0.0);
+    final resolvedUnitPrice =
+        unitPrice > 0 ? unitPrice : (qty > 0 ? subtotal / qty : 0.0);
 
     return OrderItem(
       productId: item['product_id']?.toString() ??
@@ -747,9 +754,8 @@ _OrderAddressFields _parseOrderAddressFields(Map<String, dynamic> order) {
     final mapPin = map['pincode']?.toString() ?? map['zip']?.toString() ?? '';
     if (mapPin.isNotEmpty) pincode = mapPin;
 
-    final mapLandmark = map['landmark']?.toString() ??
-        map['address_line2']?.toString() ??
-        '';
+    final mapLandmark =
+        map['landmark']?.toString() ?? map['address_line2']?.toString() ?? '';
     if (mapLandmark.isNotEmpty && mapLandmark != '-') landmark = mapLandmark;
   }
 
@@ -829,8 +835,7 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
       ) ??
       0;
 
-  final txnId =
-      order['txn_id']?.toString() ?? order['txnId']?.toString() ?? '';
+  final txnId = order['txn_id']?.toString() ?? order['txnId']?.toString() ?? '';
 
   final status = order['status']?.toString() ??
       order['order_status']?.toString() ??
@@ -884,7 +889,8 @@ Order parseOrderFromMap(Map<String, dynamic> order) {
       paymentStatus: paymentStatus,
       pendingPaymentUrl: extractPaymentUrl(order) ?? '',
       customerName: customerName,
-      email: order['email']?.toString() ?? order['cust_email']?.toString() ?? '',
+      email:
+          order['email']?.toString() ?? order['cust_email']?.toString() ?? '',
       phone: order['phone']?.toString() ?? order['mobile']?.toString() ?? '',
       address: addressFields.address,
       city: addressFields.city,
@@ -902,12 +908,11 @@ List<Address> parseAddresses(dynamic raw) {
         map['address_line1']?.toString() ??
         map['addressLine1']?.toString() ??
         '';
-    final landmark = map['landmark']?.toString() ?? map['address_line2']?.toString() ?? '';
+    final landmark =
+        map['landmark']?.toString() ?? map['address_line2']?.toString() ?? '';
 
     return Address(
-      id: map['address_id']?.toString() ??
-          map['id']?.toString() ??
-          '',
+      id: map['address_id']?.toString() ?? map['id']?.toString() ?? '',
       fullName: map['full_name']?.toString() ?? map['name']?.toString() ?? '',
       phone: map['phone']?.toString() ?? map['mobile']?.toString() ?? '',
       addressLine1: addressLine,
@@ -1038,9 +1043,8 @@ String resolveOrderPaymentStatus(Order order) {
 
 List<Map<String, dynamic>> paymentRecordsFromOrders(List<Order> orders) {
   return orders.where((order) => !order.isCodLike).map((order) {
-    final method = order.paymentMethod.trim().isNotEmpty
-        ? order.paymentMethod
-        : 'Online';
+    final method =
+        order.paymentMethod.trim().isNotEmpty ? order.paymentMethod : 'Online';
     final gateway = method.toLowerCase().contains('wallet')
         ? 'Wallet'
         : method.toLowerCase().contains('cod') ||
@@ -1426,8 +1430,7 @@ Map<String, dynamic> _unwrapTrackingEnvelope(Map<String, dynamic> envelope) {
 OrderTrackingData? parseOrderTracking(Map<String, dynamic> envelope) {
   final map = _unwrapTrackingEnvelope(envelope);
   final orderStatus = map['order_status']?.toString().trim() ?? '';
-  final statusCode =
-      int.tryParse(map['status_code']?.toString() ?? '') ?? 0;
+  final statusCode = int.tryParse(map['status_code']?.toString() ?? '') ?? 0;
   final completed = _parseBoolField(map['completed']);
   final steps = _parseTrackingSteps(map);
   final destination = _findTrackingCoordinate(map);

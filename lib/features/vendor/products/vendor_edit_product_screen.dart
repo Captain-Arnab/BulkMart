@@ -10,7 +10,8 @@ class VendorEditProductScreen extends StatefulWidget {
   final VendorProductItem product;
 
   @override
-  State<VendorEditProductScreen> createState() => _VendorEditProductScreenState();
+  State<VendorEditProductScreen> createState() =>
+      _VendorEditProductScreenState();
 }
 
 class _VendorEditProductScreenState extends State<VendorEditProductScreen> {
@@ -75,13 +76,28 @@ class _VendorEditProductScreenState extends State<VendorEditProductScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
-            TextFormField(controller: _price, decoration: const InputDecoration(labelText: 'Price')),
-            TextFormField(controller: _category, decoration: const InputDecoration(labelText: 'Category')),
-            TextFormField(controller: _stock, decoration: const InputDecoration(labelText: 'Stock')),
-            TextFormField(controller: _gst, decoration: const InputDecoration(labelText: 'GST')),
-            TextFormField(controller: _descriptions, maxLines: 3, decoration: const InputDecoration(labelText: 'Descriptions')),
-            TextFormField(controller: _images, decoration: const InputDecoration(labelText: 'Images')),
+            TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: 'Name')),
+            TextFormField(
+                controller: _price,
+                decoration: const InputDecoration(labelText: 'Price')),
+            TextFormField(
+                controller: _category,
+                decoration: const InputDecoration(labelText: 'Category')),
+            TextFormField(
+                controller: _stock,
+                decoration: const InputDecoration(labelText: 'Stock')),
+            TextFormField(
+                controller: _gst,
+                decoration: const InputDecoration(labelText: 'GST')),
+            TextFormField(
+                controller: _descriptions,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Descriptions')),
+            TextFormField(
+                controller: _images,
+                decoration: const InputDecoration(labelText: 'Images')),
             const SizedBox(height: 20),
             Obx(() => FilledButton(
                   onPressed: c.isLoading.value ? null : _save,

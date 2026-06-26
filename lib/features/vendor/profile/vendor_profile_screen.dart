@@ -13,14 +13,16 @@ class VendorProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
-        title: Text('Profile', style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
+        title: Text('Profile',
+            style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
       body: Obx(() {
         if (c.isLoading.value && c.profile.value == null) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (c.errorMessage.value.isNotEmpty && c.profile.value == null) {
           return Center(
@@ -64,7 +66,8 @@ class VendorProfileScreen extends StatelessWidget {
                                 ),
                                 Expanded(
                                   flex: 3,
-                                  child: Text(e.value, style: GoogleFonts.rubik(fontSize: 13)),
+                                  child: Text(e.value,
+                                      style: GoogleFonts.rubik(fontSize: 13)),
                                 ),
                               ],
                             ),
@@ -88,14 +91,19 @@ class VendorProfileScreen extends StatelessWidget {
                       builder: (ctx) => AlertDialog(
                         title: const Text('Logout?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Logout')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Logout')),
                         ],
                       ),
                     );
                     if (ok == true) await c.logout();
                   },
-                  child: const Text('Logout', style: TextStyle(color: Colors.white)),
+                  child: const Text('Logout',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ),
             ],

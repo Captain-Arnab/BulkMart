@@ -11,12 +11,6 @@ class VendorProfileController extends GetxController {
   final errorMessage = ''.obs;
   final profile = Rxn<VendorProfileData>();
 
-  @override
-  void onInit() {
-    super.onInit();
-    load();
-  }
-
   Future<void> load() async {
     isLoading.value = true;
     errorMessage.value = '';

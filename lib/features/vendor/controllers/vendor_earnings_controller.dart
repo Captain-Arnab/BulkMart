@@ -9,12 +9,6 @@ class VendorEarningsController extends GetxController {
   final errorMessage = ''.obs;
   final earnings = Rxn<VendorEarningsData>();
 
-  @override
-  void onInit() {
-    super.onInit();
-    load();
-  }
-
   Future<void> load() async {
     isLoading.value = true;
     errorMessage.value = '';

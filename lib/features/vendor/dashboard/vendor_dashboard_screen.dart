@@ -33,7 +33,8 @@ class VendorDashboardScreen extends StatelessWidget {
               }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'directory', child: Text('Vendor Directory')),
+              PopupMenuItem(
+                  value: 'directory', child: Text('Vendor Directory')),
             ],
           ),
         ],

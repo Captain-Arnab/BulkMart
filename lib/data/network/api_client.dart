@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/config/api_config.dart';
 import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/data/network/vendor_request_gate.dart';
 
 enum TokenMode { none, user, vendor }
 
@@ -28,6 +31,13 @@ class ApiClient {
         // Plain text + manual JSON decode — PHP endpoints sometimes return HTML/errors that break Dio's JSON parser.
         responseType: ResponseType.plain,
       ),
+    );
+    // Reuse a single TLS connection per host. Opening several handshakes at
+    // once (e.g. 5 vendor tabs loading together) made the server abort the
+    // burst with TLSV1_ALERT_INTERNAL_ERROR; serialising over one kept-alive
+    // connection does a single handshake and reuses it for the rest.
+    _dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () => SharedHttpClient.instance.client,
     );
     _dio.interceptors.add(_UrbanRootsInterceptor(this));
     if (kDebugMode) {
@@ -95,7 +105,8 @@ class ApiClient {
         () => _dio.post(
           path,
           data: body,
-          options: _options(token, extraHeaders, skipSessionClear: skipSessionClear),
+          options:
+              _options(token, extraHeaders, skipSessionClear: skipSessionClear),
         ),
         authenticated: token != TokenMode.none,
         skipSessionClear: skipSessionClear,
@@ -173,72 +184,134 @@ class ApiClient {
     );
   }
 
+  /// Re-attempt idempotent (GET) calls that fail with a transient network
+  /// error — a dropped/reset connection or timeout. Non-GET calls and
+  /// server-level (badResponse) failures are never retried.
+  static const int _maxTransientRetries = 2;
+
+  bool _isTransient(DioException e) {
+    if (e.error is HandshakeException) return false;
+    switch (e.type) {
+      case DioExceptionType.connectionError:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.unknown:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   Future<ApiResult<Map<String, dynamic>>> _request(
     Future<Response<dynamic>> Function() call, {
     required bool authenticated,
     bool skipSessionClear = false,
+  }) {
+    Future<ApiResult<Map<String, dynamic>>> execute() => _requestWithRetry(
+          call,
+          authenticated: authenticated,
+          skipSessionClear: skipSessionClear,
+        );
+    if (isVendorClient) {
+      return VendorRequestGate.instance.run(execute);
+    }
+    return execute();
+  }
+
+  Future<ApiResult<Map<String, dynamic>>> _requestWithRetry(
+    Future<Response<dynamic>> Function() call, {
+    required bool authenticated,
+    bool skipSessionClear = false,
   }) async {
-    try {
-      final response = await call();
-      final statusCode = response.statusCode;
-      final requestUri = response.requestOptions.uri.toString();
-      final data = _parseResponseBody(
-        response.data,
-        requestUri: requestUri,
+    var attempt = 0;
+    while (true) {
+      try {
+        return await _attempt(
+          call,
+          authenticated: authenticated,
+          skipSessionClear: skipSessionClear,
+        );
+      } on DioException catch (e) {
+        final isGet = e.requestOptions.method.toUpperCase() == 'GET';
+        if (isGet && _isTransient(e) && attempt < _maxTransientRetries) {
+          attempt++;
+          if (kDebugMode) {
+            debugPrint(
+              '[ApiClient] Transient ${e.type} on ${e.requestOptions.uri} — '
+              'retry $attempt/$_maxTransientRetries',
+            );
+          }
+          await Future<void>.delayed(Duration(milliseconds: 400 * attempt));
+          continue;
+        }
+        final skipClear = skipSessionClear ||
+            (e.requestOptions.extra[kSkipSessionClear] == true);
+        if (e.response?.statusCode == 401 && authenticated && !skipClear) {
+          await _handleUnauthorized();
+        }
+        return ApiFailure(
+          _dioErrorMessage(e),
+          statusCode: e.response?.statusCode,
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('[ApiClient] Unexpected error: $e');
+        return ApiFailure(e.toString());
+      }
+    }
+  }
+
+  Future<ApiResult<Map<String, dynamic>>> _attempt(
+    Future<Response<dynamic>> Function() call, {
+    required bool authenticated,
+    bool skipSessionClear = false,
+  }) async {
+    final response = await call();
+    final statusCode = response.statusCode;
+    final requestUri = response.requestOptions.uri.toString();
+    final data = _parseResponseBody(
+      response.data,
+      requestUri: requestUri,
+    );
+
+    if (data == null) {
+      return ApiFailure(
+        'Empty response from server',
+        statusCode: statusCode,
       );
+    }
 
-      if (data == null) {
-        return ApiFailure(
-          'Empty response from server',
-          statusCode: statusCode,
-        );
-      }
+    if (data['_nonJsonResponse'] == true) {
+      return ApiFailure(
+        _extractMessage(data) ?? 'Server error: non-JSON response received',
+        statusCode: statusCode,
+      );
+    }
 
-      if (data['_nonJsonResponse'] == true) {
-        return ApiFailure(
-          _extractMessage(data) ?? 'Server error: non-JSON response received',
-          statusCode: statusCode,
-        );
-      }
-
-      if (statusCode != null && statusCode >= 400) {
-        final message =
-            _extractMessage(data) ?? 'Server error (HTTP $statusCode)';
-        if (authenticated &&
-            !skipSessionClear &&
-            (statusCode == 401 || _isSessionExpired(message))) {
-          await _handleUnauthorized();
-        }
-        return ApiFailure(message, statusCode: statusCode);
-      }
-
-      final apiSuccess = ApiStatus.fromMap(data);
-      if (apiSuccess == false ||
-          (apiSuccess == null && _messageIndicatesFailure(data))) {
-        final message = _extractMessage(data) ?? 'Request failed';
-        if (authenticated &&
-            !skipSessionClear &&
-            (statusCode == 401 || _isSessionExpired(message))) {
-          await _handleUnauthorized();
-        }
-        return ApiFailure(message, statusCode: statusCode);
-      }
-
-      return ApiSuccess(data);
-    } on DioException catch (e) {
-      final skipClear = skipSessionClear ||
-          (e.requestOptions.extra[kSkipSessionClear] == true);
-      if (e.response?.statusCode == 401 && authenticated && !skipClear) {
+    if (statusCode != null && statusCode >= 400) {
+      final message =
+          _extractMessage(data) ?? 'Server error (HTTP $statusCode)';
+      if (authenticated &&
+          !skipSessionClear &&
+          (statusCode == 401 || _isSessionExpired(message))) {
         await _handleUnauthorized();
       }
-      return ApiFailure(
-        _dioErrorMessage(e),
-        statusCode: e.response?.statusCode,
-      );
-    } catch (e) {
-      if (kDebugMode) debugPrint('[ApiClient] Unexpected error: $e');
-      return ApiFailure(e.toString());
+      return ApiFailure(message, statusCode: statusCode);
     }
+
+    final apiSuccess = ApiStatus.fromMap(data);
+    if (apiSuccess == false ||
+        (apiSuccess == null && _messageIndicatesFailure(data))) {
+      final message = _extractMessage(data) ?? 'Request failed';
+      if (authenticated &&
+          !skipSessionClear &&
+          (statusCode == 401 || _isSessionExpired(message))) {
+        await _handleUnauthorized();
+      }
+      return ApiFailure(message, statusCode: statusCode);
+    }
+
+    return ApiSuccess(data);
   }
 
   bool _looksLikeHtml(String raw) {
@@ -400,17 +473,28 @@ class ApiClient {
           return 'Server error ($code). Please try again later.';
         }
         return e.message ?? 'Server returned an error';
-      default:
-        break;
+      case DioExceptionType.cancel:
+        return 'Request was cancelled. Please try again.';
+      case DioExceptionType.unknown:
+        if (e.error is HandshakeException) {
+          return 'Secure connection failed. Please wait a moment and tap Retry, '
+              'or try on a physical device if you are on an emulator.';
+        }
+        // Usually a dropped/reset connection (server closed the socket, e.g.
+        // a PHP fatal mid-output) or transient emulator network loss. Surface
+        // the underlying cause so it is actionable instead of generic.
+        final cause = e.error?.toString() ?? e.message;
+        if (kDebugMode) {
+          debugPrint(
+            '[ApiClient] Unknown DioException: error=${e.error}, '
+            'message=${e.message}, uri=${e.requestOptions.uri}',
+          );
+        }
+        if (cause != null && cause.isNotEmpty) {
+          return 'Could not complete the request ($cause). Please try again.';
+        }
+        return 'Could not reach the server. Please check your connection and try again.';
     }
-
-    if (kDebugMode) {
-      debugPrint(
-        '[ApiClient] DioException: type=${e.type}, message=${e.message}, '
-        'uri=${e.requestOptions.uri}',
-      );
-    }
-    return e.message ?? 'Request failed. Please try again.';
   }
 }
 

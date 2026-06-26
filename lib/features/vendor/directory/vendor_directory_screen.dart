@@ -30,9 +30,8 @@ class _VendorDirectoryScreenState extends State<VendorDirectoryScreen> {
     setState(() {
       _loading = false;
       _error = result.error;
-      _vendors = result.vendors
-          .map((v) => (name: v.name, status: v.status))
-          .toList();
+      _vendors =
+          result.vendors.map((v) => (name: v.name, status: v.status)).toList();
     });
   }
 
@@ -48,7 +47,8 @@ class _VendorDirectoryScreenState extends State<VendorDirectoryScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(_error!),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                      ElevatedButton(
+                          onPressed: _load, child: const Text('Retry')),
                     ],
                   ),
                 )

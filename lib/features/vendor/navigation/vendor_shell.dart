@@ -24,6 +24,7 @@ class VendorShell extends StatefulWidget {
 
 class _VendorShellState extends State<VendorShell> {
   int _selectedIndex = 0;
+  final Set<int> _visitedTabs = {0};
 
   @override
   void initState() {
@@ -33,7 +34,26 @@ class _VendorShellState extends State<VendorShell> {
     Get.put(VendorOrdersController());
     Get.put(VendorEarningsController());
     Get.put(VendorProfileController());
-    VendorShell.switchTab = (index) => setState(() => _selectedIndex = index);
+    VendorShell.switchTab = _selectTab;
+  }
+
+  void _selectTab(int index) {
+    setState(() => _selectedIndex = index);
+    _loadTabIfNeeded(index);
+  }
+
+  void _loadTabIfNeeded(int index) {
+    if (!_visitedTabs.add(index)) return;
+    switch (index) {
+      case 1:
+        Get.find<VendorProductsController>().loadProducts();
+      case 2:
+        Get.find<VendorOrdersController>().loadOrders();
+      case 3:
+        Get.find<VendorEarningsController>().load();
+      case 4:
+        Get.find<VendorProfileController>().load();
+    }
   }
 
   @override
@@ -57,7 +77,7 @@ class _VendorShellState extends State<VendorShell> {
       ),
       bottomNavigationBar: ModernBottomNav(
         currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
+        onTap: _selectTab,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),

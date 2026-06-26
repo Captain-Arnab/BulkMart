@@ -59,7 +59,8 @@ class VendorAuthApiService {
 }
 
 class VendorPanelApiService {
-  VendorPanelApiService({ApiClient? client}) : _client = client ?? ApiClient.vendor;
+  VendorPanelApiService({ApiClient? client})
+      : _client = client ?? ApiClient.vendor;
   final ApiClient _client;
 
   Future<ApiResult<Map<String, dynamic>>> dashboard() => _client.get(
