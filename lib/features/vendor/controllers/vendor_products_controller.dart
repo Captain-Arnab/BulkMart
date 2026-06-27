@@ -10,17 +10,36 @@ class VendorProductsController extends GetxController {
   final products = <VendorProductItem>[].obs;
   final searchQuery = ''.obs;
 
+  /// Active category filter. Empty string = "All".
+  final selectedCategory = ''.obs;
+
+  /// Distinct, sorted categories present in the loaded products.
+  List<String> get categories {
+    final set = <String>{};
+    for (final p in products) {
+      final c = p.category.trim();
+      if (c.isNotEmpty) set.add(c);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
   List<VendorProductItem> get filteredProducts {
     final q = searchQuery.value.trim().toLowerCase();
-    if (q.isEmpty) return products;
-    return products
-        .where(
-          (p) =>
-              p.name.toLowerCase().contains(q) ||
-              p.category.toLowerCase().contains(q),
-        )
-        .toList();
+    final cat = selectedCategory.value.trim().toLowerCase();
+    return products.where((p) {
+      final matchesQuery = q.isEmpty ||
+          p.name.toLowerCase().contains(q) ||
+          p.category.toLowerCase().contains(q);
+      final matchesCategory =
+          cat.isEmpty || p.category.trim().toLowerCase() == cat;
+      return matchesQuery && matchesCategory;
+    }).toList();
   }
+
+  void setSearch(String value) => searchQuery.value = value;
+
+  void setCategory(String category) => selectedCategory.value = category;
 
   Future<void> loadProducts() async {
     isLoading.value = true;
