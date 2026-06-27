@@ -74,6 +74,7 @@ class VendorApiService {
     required String gst,
     required String descriptions,
     String images = '',
+    String? imagePath,
   }) async {
     final vendorId = await AuthSession.instance.getVendorId();
     final result = await _panel.addProduct(
@@ -85,6 +86,7 @@ class VendorApiService {
       descriptions: descriptions,
       images: images,
       vendorId: vendorId ?? '',
+      imagePath: imagePath,
     );
     return _errorOrNull(result);
   }
@@ -175,6 +177,56 @@ class VendorApiService {
           )
         : parseList(envelope, 'vendors', VendorDirectoryItem.fromJson);
     return (vendors: vendors, error: null);
+  }
+
+  Future<({VendorAnalyticsData? data, String? error})> analytics() async {
+    final result = await _panel.analytics();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (data: null, error: result.message);
+    }
+    return (
+      data: VendorAnalyticsData.fromJson((result as ApiSuccess).data),
+      error: null,
+    );
+  }
+
+  Future<({List<PayoutHistoryItem> payouts, String? error})>
+      payoutHistory() async {
+    final result = await _panel.payoutHistory();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (payouts: <PayoutHistoryItem>[], error: result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    return (
+      payouts: parseList(data, 'payouts', PayoutHistoryItem.fromJson),
+      error: null,
+    );
+  }
+
+  Future<({List<SupportTicket> tickets, String? error})>
+      supportTickets() async {
+    final result = await _panel.supportTickets();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (tickets: <SupportTicket>[], error: result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    return (
+      tickets: parseList(data, 'tickets', SupportTicket.fromJson),
+      error: null,
+    );
+  }
+
+  Future<String?> raiseTicket({
+    required String subject,
+    required String message,
+    String? payoutId,
+  }) async {
+    final result = await _panel.raiseTicket(
+      subject: subject,
+      message: message,
+      payoutId: payoutId,
+    );
+    return _errorOrNull(result);
   }
 
   String? _errorOrNull(ApiResult<Map<String, dynamic>> result) {

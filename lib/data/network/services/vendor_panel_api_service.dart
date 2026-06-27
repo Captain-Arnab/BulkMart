@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:urban_roots/Utils/APIClass.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/data/network/api_client.dart';
@@ -97,21 +98,40 @@ class VendorPanelApiService {
     required String descriptions,
     required String images,
     required String vendorId,
-  }) =>
-      _client.post(
+    String? imagePath,
+  }) async {
+    final fields = {
+      'name': name,
+      'price': price,
+      'category': category,
+      'stock': stock,
+      'gst': gst,
+      'descriptions': descriptions,
+      'images': images,
+      'vendor_id': vendorId,
+    };
+
+    // No file picked → keep the original JSON request (URL/path in `images`).
+    if (imagePath == null || imagePath.isEmpty) {
+      return _client.post(
         APIClass.vendorAddProduct,
         token: TokenMode.vendor,
-        body: {
-          'name': name,
-          'price': price,
-          'category': category,
-          'stock': stock,
-          'gst': gst,
-          'descriptions': descriptions,
-          'images': images,
-          'vendor_id': vendorId,
-        },
+        body: fields,
       );
+    }
+
+    // File picked → send everything as multipart so PHP can read $_FILES['image'].
+    final fileName = imagePath.split(RegExp(r'[\\/]+')).last;
+    final form = FormData.fromMap({
+      ...fields,
+      'image': await MultipartFile.fromFile(imagePath, filename: fileName),
+    });
+    return _client.post(
+      APIClass.vendorAddProduct,
+      token: TokenMode.vendor,
+      body: form,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> updateProduct(
     Map<String, dynamic> fields,
@@ -170,5 +190,35 @@ class VendorPanelApiService {
   Future<ApiResult<Map<String, dynamic>>> vendorList() => _client.get(
         APIClass.vendorList,
         token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> analytics() => _client.get(
+        APIClass.vendorAnalytics,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> payoutHistory() => _client.get(
+        APIClass.vendorPayoutHistory,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> supportTickets() => _client.get(
+        APIClass.vendorSupportTickets,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> raiseTicket({
+    required String subject,
+    required String message,
+    String? payoutId,
+  }) =>
+      _client.post(
+        APIClass.vendorRaiseTicket,
+        token: TokenMode.vendor,
+        body: {
+          'subject': subject,
+          'message': message,
+          if (payoutId != null && payoutId.isNotEmpty) 'payout_id': payoutId,
+        },
       );
 }

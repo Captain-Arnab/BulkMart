@@ -8,6 +8,7 @@ class AuthSession {
 
   static const _keyUserToken = 'api_token';
   static const _keyVendorToken = 'vendor_api_token';
+  static const _keyDeliveryToken = 'delivery_api_token';
   static const _keyRole = 'auth_role';
   static const _keyVendorId = 'vendor_id';
   static const _keyUserId = 'user_id';
@@ -70,9 +71,16 @@ class AuthSession {
     }
   }
 
+  Future<void> saveDeliveryToken(String token) =>
+      _storage.write(key: _keyDeliveryToken, value: token);
+
   Future<String?> getUserToken() => _storage.read(key: _keyUserToken);
 
   Future<String?> getVendorToken() => _storage.read(key: _keyVendorToken);
+
+  Future<String?> getDeliveryToken() => _storage.read(key: _keyDeliveryToken);
+
+  Future<void> clearDeliveryToken() => _storage.delete(key: _keyDeliveryToken);
 
   /// Active session token based on stored role.
   Future<String?> getToken() async {
@@ -118,6 +126,7 @@ class AuthSession {
   Future<void> clear() async {
     await _storage.delete(key: _keyUserToken);
     await _storage.delete(key: _keyVendorToken);
+    await _storage.delete(key: _keyDeliveryToken);
     await _storage.delete(key: _keyRole);
     await _storage.delete(key: _keyVendorId);
     await _storage.delete(key: _keyUserId);

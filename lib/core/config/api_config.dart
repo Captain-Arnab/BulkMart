@@ -35,6 +35,12 @@ class ApiConfig {
 
   static String get vendorBaseUrl => '$siteRoot/api/vendor';
 
+  /// Admin API: {root}/api/admin
+  static String get adminBaseUrl => '$siteRoot/api/admin';
+
+  /// Delivery boy API: {root}/delivery_boy_api
+  static String get deliveryBaseUrl => '$siteRoot/delivery_boy_api';
+
   /// Site-level APIs e.g. /api/offers/list.php
   static String get apiBaseUrl => '$siteRoot/api';
 

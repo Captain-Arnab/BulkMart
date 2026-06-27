@@ -9,14 +9,18 @@ import 'package:urban_roots/core/config/api_config.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/vendor_request_gate.dart';
 
-enum TokenMode { none, user, vendor }
+enum TokenMode { none, user, vendor, delivery }
 
 /// When true, API failures must not clear session or redirect to login.
 const String kSkipSessionClear = 'skipSessionClear';
 
 /// Dio client for Urban Roots API — one instance per base URL.
 class ApiClient {
-  ApiClient._(String baseUrl, {this.isVendorClient = false}) {
+  ApiClient._(
+    String baseUrl, {
+    this.isVendorClient = false,
+    this.isDeliveryClient = false,
+  }) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -68,10 +72,18 @@ class ApiClient {
   /// Site API — https://urbunroots.com/api (offers, etc.)
   static final ApiClient site = ApiClient._(ApiConfig.apiBaseUrl);
 
+  /// Admin API — https://urbunroots.com/api/admin (no auth token).
+  static final ApiClient admin = ApiClient._(ApiConfig.adminBaseUrl);
+
+  /// Delivery boy API — https://urbunroots.com/delivery_boy_api
+  static final ApiClient delivery =
+      ApiClient._(ApiConfig.deliveryBaseUrl, isDeliveryClient: true);
+
   /// Back-compat alias for user client.
   static ApiClient get instance => user;
 
   final bool isVendorClient;
+  final bool isDeliveryClient;
 
   late final Dio _dio;
 
@@ -413,6 +425,8 @@ class ApiClient {
   Future<void> _handleUnauthorized() async {
     if (isVendorClient) {
       await AuthSession.instance.clearVendorSession();
+    } else if (isDeliveryClient) {
+      await AuthSession.instance.clearDeliveryToken();
     } else {
       await AuthSession.instance.clear();
     }
@@ -507,7 +521,11 @@ class _UrbanRootsInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    options.headers['Content-Type'] = 'application/json';
+    // Let Dio set the multipart boundary for file uploads; forcing JSON here
+    // would corrupt the request body.
+    if (options.data is! FormData) {
+      options.headers['Content-Type'] = 'application/json';
+    }
     options.headers['Accept'] = 'application/json';
     options.headers['x-api-key'] = ApiConfig.apiKey;
 
@@ -515,9 +533,16 @@ class _UrbanRootsInterceptor extends Interceptor {
         options.extra['tokenMode'] as TokenMode? ?? TokenMode.user;
 
     if (tokenMode != TokenMode.none) {
-      final token = tokenMode == TokenMode.vendor
-          ? await AuthSession.instance.getVendorToken()
-          : await AuthSession.instance.getUserToken();
+      final String? token;
+      switch (tokenMode) {
+        case TokenMode.vendor:
+          token = await AuthSession.instance.getVendorToken();
+        case TokenMode.delivery:
+          token = await AuthSession.instance.getDeliveryToken();
+        case TokenMode.user:
+        case TokenMode.none:
+          token = await AuthSession.instance.getUserToken();
+      }
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }

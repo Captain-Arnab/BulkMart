@@ -52,6 +52,7 @@ class VendorProductsController extends GetxController {
     required String gst,
     required String descriptions,
     String images = '',
+    String? imagePath,
   }) async {
     isLoading.value = true;
     final error = await _api.addProduct(
@@ -62,6 +63,7 @@ class VendorProductsController extends GetxController {
       gst: gst,
       descriptions: descriptions,
       images: images,
+      imagePath: imagePath,
     );
     isLoading.value = false;
     if (error != null) {

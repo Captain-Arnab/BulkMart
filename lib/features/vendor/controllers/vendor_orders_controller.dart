@@ -37,6 +37,34 @@ class VendorOrdersController extends GetxController {
     orders.assignAll(result.orders);
   }
 
+  /// Orders for the active tab. The backend does not always honour the
+  /// `status` query param, so filter client-side as a safety net to keep each
+  /// tab accurate.
+  List<VendorOrderItem> get visibleOrders {
+    final filter = _statusFilter;
+    if (filter == null) return orders;
+    return orders.where((o) => _matchesStatus(o, filter)).toList();
+  }
+
+  bool _matchesStatus(VendorOrderItem order, String filter) {
+    final s = order.status.trim().toLowerCase();
+    switch (filter) {
+      case 'pending':
+        return s.contains('pending') || s.contains('placed') || s.isEmpty;
+      case 'accepted':
+        return s.contains('accept') ||
+            s.contains('confirm') ||
+            s.contains('process') ||
+            s.contains('ship') ||
+            s.contains('deliver') ||
+            s.contains('complete');
+      case 'rejected':
+        return s.contains('reject') || s.contains('cancel') || s.contains('declin');
+      default:
+        return true;
+    }
+  }
+
   void changeTab(int index) {
     selectedTab.value = index;
     loadOrders();

@@ -43,17 +43,27 @@ class VendorOrdersScreen extends StatelessWidget {
               ),
             );
           }
-          if (c.orders.isEmpty) {
-            return const Center(child: Text('No orders'));
+          final visible = c.visibleOrders;
+          if (visible.isEmpty) {
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: c.loadOrders,
+              child: ListView(
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('No orders')),
+                ],
+              ),
+            );
           }
           return RefreshIndicator(
             color: AppColors.primary,
             onRefresh: c.loadOrders,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: c.orders.length,
+              itemCount: visible.length,
               itemBuilder: (context, index) {
-                final order = c.orders[index];
+                final order = visible[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: Padding(

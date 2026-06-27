@@ -117,4 +117,19 @@ class APIClass {
   static const vendorEarnings = '/earnings.php';
   static const vendorProfile = '/profile.php';
   static const vendorList = '/vendor_list.php';
+  // New vendor panel endpoints (vendor base)
+  static const vendorAnalytics = '/analytics.php';
+  static const vendorPayoutHistory = '/payouts/history.php';
+  static const vendorRaiseTicket = '/support/raise-ticket.php';
+  static const vendorSupportTickets = '/support/tickets.php';
+
+  // ── MODULE 16 — DELIVERY BOY (delivery_boy_api base) ───────────────
+  static const deliveryClock = '/clock.php';
+  static const deliveryWorkLog = '/work-log.php';
+
+  // ── MODULE 17 — ADMIN (admin base, no token) ───────────────────────
+  static const adminVendorPayoutReport = '/vendor-payout-report.php';
+  static const adminVendorSalesSummary = '/vendor-sales-summary.php';
+  static const adminDeliveryMonitoring = '/delivery-monitoring.php';
+  static const adminDeliveryAttendance = '/delivery-attendance.php';
 }
