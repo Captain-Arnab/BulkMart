@@ -6,8 +6,6 @@ import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
 import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/auth/presentation/welcome_screen.dart';
-import 'package:urban_roots/features/vendor/auth/vendor_login_screen.dart';
-import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,18 +39,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _routeFromSession() async {
     if (!mounted) return;
 
-    if (await AuthSession.instance.hasVendorSession()) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const VendorShell()),
-      );
-      return;
-    }
-
-    final loggedIn = await AuthSession.instance.isLoggedIn();
+    // Cold boot always starts in the user app. The vendor panel is a manual
+    // portal reached from the Welcome screen's "Vendor Portal" link, so we do
+    // NOT auto-resume a vendor session here (a stale/expired vendor token used
+    // to hijack startup into the Vendor Login screen).
+    final userToken = await AuthSession.instance.getUserToken();
     if (!mounted) return;
 
-    if (!loggedIn) {
+    if (userToken == null || userToken.isEmpty) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const WelcomeScreen()),
@@ -60,20 +54,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       return;
     }
 
-    final role = await AuthSession.instance.getRole();
+    await syncDeviceTokenAfterAuth(role: AuthRole.user);
     if (!mounted) return;
-
-    if (role != null) {
-      await syncDeviceTokenAfterAuth(role: role);
-    }
-
-    final destination = role == AuthRole.vendor
-        ? const VendorShell()
-        : const Dashboard();
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => destination),
+      MaterialPageRoute(builder: (_) => const Dashboard()),
     );
   }
 
