@@ -4,8 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/async_views.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_profile_controller.dart';
-import 'package:urban_roots/features/vendor/payments/vendor_payment_history_screen.dart';
-import 'package:urban_roots/features/vendor/support/vendor_support_screen.dart';
 
 class VendorProfileScreen extends StatelessWidget {
   const VendorProfileScreen({super.key});
@@ -67,8 +65,11 @@ class VendorProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _quickActions(context),
-                    const SizedBox(height: 16),
+                    // TODO: Backend pending — do not integrate yet.
+                    // Quick actions for Support (/api/vendor/support/tickets.php,
+                    // /api/vendor/support/raise-ticket.php) and Payments
+                    // (/api/vendor/payouts/history.php) go here once the backend
+                    // endpoints are live.
                     ..._buildSections(lookup, fields),
                     _buildOtherSection(lookup, fields),
                     const SizedBox(height: 8),
@@ -81,35 +82,6 @@ class VendorProfileScreen extends StatelessWidget {
           ),
         );
       }),
-    );
-  }
-
-  Widget _quickActions(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.support_agent_rounded,
-            label: 'Support',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const VendorSupportScreen()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.account_balance_wallet_rounded,
-            label: 'Payments',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const VendorPaymentHistoryScreen()),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -410,55 +382,6 @@ class _Header extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppColors.primary),
-            ),
-            const SizedBox(height: 8),
-            Text(label,
-                style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }

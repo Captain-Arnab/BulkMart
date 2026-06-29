@@ -4,8 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_earnings_controller.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
-import 'package:urban_roots/features/vendor/payments/vendor_payment_history_screen.dart';
-import 'package:urban_roots/features/vendor/support/vendor_support_screen.dart';
 
 class VendorEarningsScreen extends StatelessWidget {
   const VendorEarningsScreen({super.key});
@@ -62,44 +60,21 @@ class VendorEarningsScreen extends StatelessWidget {
                           color: AppColors.primary,
                         ),
                       ),
+                      ..._buildBreakdown(data),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VendorPaymentHistoryScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.history_rounded, size: 18),
-                      label: const Text('View History'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VendorSupportScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.support_agent_rounded, size: 18),
-                      label: const Text('Support'),
-                    ),
-                  ),
-                ],
-              ),
+              // TODO: Backend pending — do not integrate yet.
+              // GET /api/vendor/payouts/history.php → dedicated Payout History.
+              // GET /api/vendor/support/tickets.php, POST /support/raise-ticket.php
+              // → Support entry points. Wire these up once the backend is live.
               const SizedBox(height: 16),
               Text('Payout History',
                   style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
+              // `payouts` is intentionally [] from the backend for now — show an
+              // empty state rather than treating it as an error.
               if (data == null || data.payouts.isEmpty)
                 _buildEmptyPayouts()
               else
@@ -109,6 +84,46 @@ class VendorEarningsScreen extends StatelessWidget {
         );
       }),
     );
+  }
+
+  /// Render any additional key/value figures the backend nests inside the
+  /// `earnings` object (e.g. commission, pending, net). Empty when `earnings`
+  /// is a plain scalar.
+  List<Widget> _buildBreakdown(VendorEarningsData? data) {
+    final breakdown = data?.breakdown ?? const {};
+    if (breakdown.isEmpty) return const [];
+    final rows = <Widget>[];
+    breakdown.forEach((key, value) {
+      if (value.trim().isEmpty) return;
+      rows.add(Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _prettify(key),
+              style: GoogleFonts.rubik(fontSize: 13, color: AppColors.hint),
+            ),
+            Text(
+              value,
+              style: GoogleFonts.rubik(
+                  fontSize: 13.5, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ));
+    });
+    if (rows.isEmpty) return const [];
+    return [const Divider(height: 24), ...rows];
+  }
+
+  String _prettify(String key) {
+    return key
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 
   Widget _buildEmptyPayouts() {
@@ -125,7 +140,7 @@ class VendorEarningsScreen extends StatelessWidget {
               size: 40, color: AppColors.hint),
           const SizedBox(height: 10),
           Text(
-            'No payout history available yet',
+            'No payout records yet',
             textAlign: TextAlign.center,
             style: GoogleFonts.rubik(fontSize: 13, color: AppColors.hint),
           ),

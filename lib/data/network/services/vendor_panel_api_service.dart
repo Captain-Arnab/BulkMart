@@ -89,6 +89,10 @@ class VendorPanelApiService {
         token: TokenMode.vendor,
       );
 
+  /// POST /api/vendor/add_vendor_product.php — multipart/form-data.
+  /// Text fields are sent as form fields and the picked image is sent as the
+  /// `images` file part. [images] is an optional URL/path fallback used only
+  /// when no file was picked.
   Future<ApiResult<Map<String, dynamic>>> addProduct({
     required String name,
     required String price,
@@ -96,40 +100,32 @@ class VendorPanelApiService {
     required String stock,
     required String gst,
     required String descriptions,
-    required String images,
     required String vendorId,
+    String images = '',
     String? imagePath,
   }) async {
-    final fields = {
+    final map = <String, dynamic>{
       'name': name,
       'price': price,
       'category': category,
       'stock': stock,
       'gst': gst,
       'descriptions': descriptions,
-      'images': images,
       'vendor_id': vendorId,
     };
 
-    // No file picked → keep the original JSON request (URL/path in `images`).
-    if (imagePath == null || imagePath.isEmpty) {
-      return _client.post(
-        APIClass.vendorAddProduct,
-        token: TokenMode.vendor,
-        body: fields,
-      );
+    if (imagePath != null && imagePath.isNotEmpty) {
+      final fileName = imagePath.split(RegExp(r'[\\/]+')).last;
+      map['images'] = await MultipartFile.fromFile(imagePath, filename: fileName);
+    } else if (images.isNotEmpty) {
+      // Fallback: send the URL/path as a plain field when no file was picked.
+      map['images'] = images;
     }
 
-    // File picked → send everything as multipart so PHP can read $_FILES['image'].
-    final fileName = imagePath.split(RegExp(r'[\\/]+')).last;
-    final form = FormData.fromMap({
-      ...fields,
-      'image': await MultipartFile.fromFile(imagePath, filename: fileName),
-    });
     return _client.post(
       APIClass.vendorAddProduct,
       token: TokenMode.vendor,
-      body: form,
+      body: FormData.fromMap(map),
     );
   }
 
@@ -192,33 +188,9 @@ class VendorPanelApiService {
         token: TokenMode.vendor,
       );
 
-  Future<ApiResult<Map<String, dynamic>>> analytics() => _client.get(
-        APIClass.vendorAnalytics,
-        token: TokenMode.vendor,
-      );
-
-  Future<ApiResult<Map<String, dynamic>>> payoutHistory() => _client.get(
-        APIClass.vendorPayoutHistory,
-        token: TokenMode.vendor,
-      );
-
-  Future<ApiResult<Map<String, dynamic>>> supportTickets() => _client.get(
-        APIClass.vendorSupportTickets,
-        token: TokenMode.vendor,
-      );
-
-  Future<ApiResult<Map<String, dynamic>>> raiseTicket({
-    required String subject,
-    required String message,
-    String? payoutId,
-  }) =>
-      _client.post(
-        APIClass.vendorRaiseTicket,
-        token: TokenMode.vendor,
-        body: {
-          'subject': subject,
-          'message': message,
-          if (payoutId != null && payoutId.isNotEmpty) 'payout_id': payoutId,
-        },
-      );
+  // TODO: Backend pending — do not integrate yet
+  // analytics()      → GET  /api/vendor/analytics.php
+  // payoutHistory()  → GET  /api/vendor/payouts/history.php
+  // supportTickets() → GET  /api/vendor/support/tickets.php
+  // raiseTicket()    → POST /api/vendor/support/raise-ticket.php
 }

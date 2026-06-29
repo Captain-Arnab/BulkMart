@@ -28,7 +28,11 @@ class VendorOrdersController extends GetxController {
   Future<void> loadOrders() async {
     isLoading.value = true;
     errorMessage.value = '';
-    final result = await _api.listOrders(status: _statusFilter);
+    // TODO: Backend update pending — do not integrate yet.
+    // GET /api/vendor/orders/list.php ?status= filter is not implemented on the
+    // backend side, so we fetch all orders and filter client-side (see
+    // visibleOrders). Pass `status: _statusFilter` once the backend honours it.
+    final result = await _api.listOrders();
     isLoading.value = false;
     if (result.error != null) {
       errorMessage.value = result.error!;
@@ -66,8 +70,8 @@ class VendorOrdersController extends GetxController {
   }
 
   void changeTab(int index) {
+    // Filtering is client-side (visibleOrders), so no refetch is needed.
     selectedTab.value = index;
-    loadOrders();
   }
 
   Future<void> acceptOrder(String orderId) async {

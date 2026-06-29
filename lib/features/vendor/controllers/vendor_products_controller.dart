@@ -89,6 +89,7 @@ class VendorProductsController extends GetxController {
       Get.snackbar('Error', error);
       return false;
     }
+    Get.snackbar('Success', 'Product added successfully');
     await loadProducts();
     return true;
   }
