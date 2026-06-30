@@ -3,9 +3,13 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
+import 'package:urban_roots/features/vendor/analytics/vendor_analytics_screen.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_dashboard_controller.dart';
 import 'package:urban_roots/features/vendor/directory/vendor_directory_screen.dart';
+import 'package:urban_roots/features/vendor/models/vendor_models.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
+import 'package:urban_roots/features/vendor/payments/vendor_payment_history_screen.dart';
+import 'package:urban_roots/features/vendor/support/vendor_ticket_list_screen.dart';
 
 class VendorDashboardScreen extends StatelessWidget {
   const VendorDashboardScreen({super.key});
@@ -23,16 +27,45 @@ class VendorDashboardScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'directory') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const VendorDirectoryScreen(),
-                  ),
-                );
+              switch (value) {
+                case 'directory':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VendorDirectoryScreen(),
+                    ),
+                  );
+                  break;
+                case 'analytics':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VendorAnalyticsScreen(),
+                    ),
+                  );
+                  break;
+                case 'payouts':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VendorPaymentHistoryScreen(),
+                    ),
+                  );
+                  break;
+                case 'support':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VendorTicketListScreen(),
+                    ),
+                  );
+                  break;
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'analytics', child: Text('Analytics')),
+              PopupMenuItem(value: 'payouts', child: Text('Payout History')),
+              PopupMenuItem(value: 'support', child: Text('Support')),
               PopupMenuItem(
                   value: 'directory', child: Text('Vendor Directory')),
             ],
@@ -113,14 +146,63 @@ class VendorDashboardScreen extends StatelessWidget {
                     value: '₹${data?.revenue ?? '0'}',
                     icon: Icons.payments_outlined,
                   ),
+                  VendorStatCard(
+                    label: 'Total Earnings',
+                    value: '₹${data?.totalEarnings ?? '0'}',
+                    icon: Icons.account_balance_wallet_outlined,
+                  ),
+                  VendorStatCard(
+                    label: 'Pending Payout',
+                    value: '₹${data?.pendingPayout ?? '0'}',
+                    icon: Icons.schedule_outlined,
+                  ),
                 ],
               ),
-              // TODO: Backend update pending — do not integrate yet.
-              // dashboard.php will add total_earnings, pending_payout and
-              // best_selling_products[]; surface them here once available.
-              // TODO: Backend pending — do not integrate yet.
-              // GET /api/vendor/analytics.php → add a "View Analytics" entry here.
+              const SizedBox(height: 20),
+              _BestSellingSection(products: data?.bestSelling ?? const []),
               const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VendorAnalyticsScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.insights_rounded),
+                label: const Text('View Analytics'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VendorPaymentHistoryScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.account_balance_wallet_outlined,
+                          size: 18),
+                      label: const Text('Payouts'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VendorTicketListScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.support_agent_rounded, size: 18),
+                      label: const Text('Support'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               FilledButton(
                 onPressed: () => VendorShell.switchTab?.call(2),
                 child: const Text('View Orders'),
@@ -134,6 +216,110 @@ class VendorDashboardScreen extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+class _BestSellingSection extends StatelessWidget {
+  const _BestSellingSection({required this.products});
+
+  final List<BestSellingProduct> products;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Best Selling Products',
+          style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        if (products.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              color: AppColors.cardTint,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              'No sales data yet',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.rubik(color: AppColors.hint),
+            ),
+          )
+        else
+          SizedBox(
+            height: 150,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) => _BestSellingCard(product: products[i]),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BestSellingCard extends StatelessWidget {
+  const _BestSellingCard({required this.product});
+
+  final BestSellingProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.star_rounded,
+                color: AppColors.primary, size: 20),
+          ),
+          const Spacer(),
+          Text(
+            product.name.isEmpty ? 'Product' : product.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.rubik(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${product.totalSold} sold',
+            style: GoogleFonts.rubik(fontSize: 12, color: AppColors.hint),
+          ),
+          Text(
+            '₹${product.revenue}',
+            style: GoogleFonts.rubik(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

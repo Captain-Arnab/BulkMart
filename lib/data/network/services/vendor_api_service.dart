@@ -179,11 +179,64 @@ class VendorApiService {
     return (vendors: vendors, error: null);
   }
 
-  // TODO: Backend pending — do not integrate yet
-  // analytics()      → GET  /api/vendor/analytics.php          (Analytics screen)
-  // payoutHistory()  → GET  /api/vendor/payouts/history.php    (Payout History screen)
-  // supportTickets() → GET  /api/vendor/support/tickets.php    (Support: list)
-  // raiseTicket()    → POST /api/vendor/support/raise-ticket.php (Support: raise)
+  Future<({VendorAnalyticsData? data, String? error})> analytics() async {
+    final result = await _panel.analytics();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (data: null, error: result.message);
+    }
+    return (
+      data: VendorAnalyticsData.fromJson((result as ApiSuccess).data),
+      error: null,
+    );
+  }
+
+  Future<({List<PayoutHistoryItem> payouts, String? error})>
+      payoutHistory() async {
+    final result = await _panel.payoutHistory();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (payouts: <PayoutHistoryItem>[], error: result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    return (
+      payouts: parseList(data, 'payouts', PayoutHistoryItem.fromJson),
+      error: null,
+    );
+  }
+
+  Future<({List<SupportTicket> tickets, String? error})>
+      supportTickets() async {
+    final result = await _panel.supportTickets();
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (tickets: <SupportTicket>[], error: result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    return (
+      tickets: parseList(data, 'tickets', SupportTicket.fromJson),
+      error: null,
+    );
+  }
+
+  /// Returns the new ticket id on success, or an error message on failure.
+  Future<({String? ticketId, String? error})> raiseTicket({
+    required String subject,
+    required String message,
+    String? payoutId,
+  }) async {
+    final result = await _panel.raiseTicket(
+      subject: subject,
+      message: message,
+      payoutId: payoutId,
+    );
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (ticketId: null, error: result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final ticketId = data['ticket_id']?.toString() ??
+        (data['data'] is Map
+            ? (data['data'] as Map)['ticket_id']?.toString()
+            : null);
+    return (ticketId: ticketId, error: null);
+  }
 
   String? _errorOrNull(ApiResult<Map<String, dynamic>> result) {
     if (result is ApiFailure<Map<String, dynamic>>) return result.message;

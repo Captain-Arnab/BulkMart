@@ -117,11 +117,10 @@ class APIClass {
   static const vendorEarnings = '/earnings.php';
   static const vendorProfile = '/profile.php';
   static const vendorList = '/vendor_list.php';
-  // TODO: Backend pending — do not integrate yet
-  // GET  /api/vendor/analytics.php          → Vendor Analytics screen
-  // GET  /api/vendor/payouts/history.php    → Vendor Payout History screen
-  // POST /api/vendor/support/raise-ticket.php → Vendor Support: raise ticket
-  // GET  /api/vendor/support/tickets.php    → Vendor Support: list tickets
+  static const vendorAnalytics = '/analytics.php';
+  static const vendorPayoutHistory = '/payouts/history.php';
+  static const vendorRaiseTicket = '/support/raise-ticket.php';
+  static const vendorSupportTickets = '/support/tickets.php';
 
   // ── MODULE 16 — DELIVERY BOY (delivery_boy_api base) ───────────────
   static const deliveryClock = '/clock.php';

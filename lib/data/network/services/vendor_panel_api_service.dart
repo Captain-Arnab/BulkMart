@@ -188,9 +188,33 @@ class VendorPanelApiService {
         token: TokenMode.vendor,
       );
 
-  // TODO: Backend pending — do not integrate yet
-  // analytics()      → GET  /api/vendor/analytics.php
-  // payoutHistory()  → GET  /api/vendor/payouts/history.php
-  // supportTickets() → GET  /api/vendor/support/tickets.php
-  // raiseTicket()    → POST /api/vendor/support/raise-ticket.php
+  Future<ApiResult<Map<String, dynamic>>> analytics() => _client.get(
+        APIClass.vendorAnalytics,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> payoutHistory() => _client.get(
+        APIClass.vendorPayoutHistory,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> supportTickets() => _client.get(
+        APIClass.vendorSupportTickets,
+        token: TokenMode.vendor,
+      );
+
+  Future<ApiResult<Map<String, dynamic>>> raiseTicket({
+    required String subject,
+    required String message,
+    String? payoutId,
+  }) =>
+      _client.post(
+        APIClass.vendorRaiseTicket,
+        token: TokenMode.vendor,
+        body: {
+          'subject': subject,
+          'message': message,
+          if (payoutId != null && payoutId.isNotEmpty) 'payout_id': payoutId,
+        },
+      );
 }

@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_earnings_controller.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
+import 'package:urban_roots/features/vendor/payments/vendor_payment_history_screen.dart';
+import 'package:urban_roots/features/vendor/support/vendor_ticket_list_screen.dart';
 
 class VendorEarningsScreen extends StatelessWidget {
   const VendorEarningsScreen({super.key});
@@ -65,10 +67,36 @@ class VendorEarningsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // TODO: Backend pending — do not integrate yet.
-              // GET /api/vendor/payouts/history.php → dedicated Payout History.
-              // GET /api/vendor/support/tickets.php, POST /support/raise-ticket.php
-              // → Support entry points. Wire these up once the backend is live.
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VendorPaymentHistoryScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.history_rounded, size: 18),
+                      label: const Text('View History'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const VendorTicketListScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.support_agent_rounded, size: 18),
+                      label: const Text('Support'),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Text('Payout History',
                   style: GoogleFonts.rubik(fontWeight: FontWeight.w600)),
