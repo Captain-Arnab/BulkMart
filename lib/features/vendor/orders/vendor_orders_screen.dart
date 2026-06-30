@@ -84,15 +84,15 @@ class VendorOrdersScreen extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: () => c.rejectOrder(order.orderId),
-                                  child: const Text('Reject'),
+                                  onPressed: () => c.cancelOrder(order.orderId),
+                                  child: const Text('Cancel'),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: () => c.acceptOrder(order.orderId),
-                                  child: const Text('Accept'),
+                                  onPressed: () => c.shipOrder(order.orderId),
+                                  child: const Text('Ship'),
                                 ),
                               ),
                             ],

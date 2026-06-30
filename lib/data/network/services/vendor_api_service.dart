@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/services/vendor_panel_api_service.dart';
@@ -128,15 +129,71 @@ class VendorApiService {
     );
   }
 
-  Future<String?> updateOrderStatus({
+  Future<({String? error, String? newStatus})> updateOrderStatus({
     required String orderId,
     required String action,
+    required String targetStatus,
   }) async {
     final result = await _panel.updateOrderStatus(
       orderId: orderId,
       action: action,
+      targetStatus: targetStatus,
     );
-    return _errorOrNull(result);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      if (kDebugMode) {
+        debugPrint('[VENDOR_ORDER_STATUS] FAIL action=$action '
+            'order=$orderId → ${result.message}');
+      }
+      // The backend's status.php and list.php can disagree: list.php may still
+      // report an order as "Pending" while status.php already has it as
+      // "Shipped"/"Cancelled". In that case status.php fails with a message
+      // like: Order #109 is already marked as 'Shipped'. We treat that as a
+      // success and reconcile the UI to the status the backend reports.
+      final alreadyStatus = _statusFromAlreadyMarked(result.message);
+      if (alreadyStatus != null) {
+        return (error: null, newStatus: alreadyStatus);
+      }
+      return (error: result.message, newStatus: null);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    if (kDebugMode) {
+      debugPrint('[VENDOR_ORDER_STATUS] OK action=$action order=$orderId '
+          'target=$targetStatus → $data');
+    }
+    return (error: null, newStatus: _extractOrderStatusFromResponse(data));
+  }
+
+  /// Detect a backend "already marked as 'X'" message and return X, so the UI
+  /// can self-heal when list.php lags behind status.php.
+  String? _statusFromAlreadyMarked(String? message) {
+    if (message == null) return null;
+    final lower = message.toLowerCase();
+    if (!lower.contains('already')) return null;
+    for (final s in const ['Shipped', 'Cancelled', 'Completed', 'Pending']) {
+      if (lower.contains(s.toLowerCase())) return s;
+    }
+    return null;
+  }
+
+  /// Pull the updated order status from a status.php success envelope.
+  String? _extractOrderStatusFromResponse(Map<String, dynamic> data) {
+    for (final key in ['new_status', 'order_status', 'status']) {
+      final v = data[key];
+      if (v is String && v.trim().isNotEmpty && v.trim().toLowerCase() != 'true') {
+        return v.trim();
+      }
+    }
+    final nested = data['data'];
+    if (nested is Map) {
+      final map = Map<String, dynamic>.from(nested);
+      for (final key in ['new_status', 'order_status', 'status']) {
+        final v = map[key];
+        if (v != null && v.toString().trim().isNotEmpty) {
+          return v.toString().trim();
+        }
+      }
+    }
+    return null;
   }
 
   Future<({VendorEarningsData? data, String? error})> earnings() async {
