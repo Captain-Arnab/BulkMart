@@ -373,55 +373,6 @@ class VendorProfileData {
   }
 }
 
-class VendorDirectoryItem {
-  const VendorDirectoryItem({required this.name, required this.status});
-
-  final String name;
-  final String status;
-
-  factory VendorDirectoryItem.fromJson(Map<String, dynamic> json) {
-    return VendorDirectoryItem(
-      name: json['name']?.toString() ??
-          json['vendor_name']?.toString() ??
-          'Vendor',
-      status: json['status']?.toString() ?? '',
-    );
-  }
-
-  /// Backend sends status as a flag (`1`/`0`) or a word. Map it to whether the
-  /// vendor is currently active/open.
-  bool get isActive {
-    final s = status.trim().toLowerCase();
-    return s == '1' || s == 'active' || s == 'open' || s == 'true';
-  }
-
-  /// Human-readable status label for the UI.
-  String get displayStatus {
-    final s = status.trim().toLowerCase();
-    if (s.isEmpty) return 'Unknown';
-    if (s == '1' || s == 'active' || s == 'open' || s == 'true') {
-      return 'Active';
-    }
-    if (s == '0' || s == 'inactive' || s == 'closed' || s == 'false') {
-      return 'Inactive';
-    }
-    // Unknown non-flag value — show it capitalised as-is.
-    return status[0].toUpperCase() + status.substring(1);
-  }
-
-  /// Uppercase initials for the avatar (max 2 letters).
-  String get initials {
-    final parts =
-        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return 'V';
-    if (parts.length == 1) {
-      final p = parts.first;
-      return (p.length >= 2 ? p.substring(0, 2) : p).toUpperCase();
-    }
-    return (parts.first[0] + parts.last[0]).toUpperCase();
-  }
-}
-
 List<T> parseList<T>(
   Map<String, dynamic> envelope,
   String listKey,

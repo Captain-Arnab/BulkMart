@@ -116,7 +116,6 @@ class APIClass {
   static const vendorAvailability = '/availability.php';
   static const vendorEarnings = '/earnings.php';
   static const vendorProfile = '/profile.php';
-  static const vendorList = '/vendor_list.php';
   static const vendorAnalytics = '/analytics.php';
   static const vendorPayoutHistory = '/payouts/history.php';
   static const vendorRaiseTicket = '/support/raise-ticket.php';

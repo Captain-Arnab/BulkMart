@@ -6,6 +6,7 @@ import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/notifications/post_login_device_sync.dart';
 import 'package:urban_roots/features/dashboard/dashboard.dart';
 import 'package:urban_roots/features/auth/presentation/welcome_screen.dart';
+import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -39,17 +40,27 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _routeFromSession() async {
     if (!mounted) return;
 
-    // Cold boot always starts in the user app. The vendor panel is a manual
-    // portal reached from the Welcome screen's "Vendor Portal" link, so we do
-    // NOT auto-resume a vendor session here (a stale/expired vendor token used
-    // to hijack startup into the Vendor Login screen).
-    final userToken = await AuthSession.instance.getUserToken();
+    // Resume whichever session was last active so the user/vendor does not have
+    // to log in again on every cold boot. Routing is based on the saved role:
+    //   vendor token + role=vendor → Vendor panel
+    //   user token   + role=user   → user Dashboard
+    //   otherwise                  → Welcome screen
+    final role = await AuthSession.instance.getRole();
+    final loggedIn = await AuthSession.instance.isLoggedIn();
     if (!mounted) return;
 
-    if (userToken == null || userToken.isEmpty) {
+    if (!loggedIn) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+      );
+      return;
+    }
+
+    if (role == AuthRole.vendor) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const VendorShell()),
       );
       return;
     }

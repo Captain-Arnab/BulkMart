@@ -1,11 +1,11 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
-import 'package:urban_roots/features/vendor/analytics/vendor_analytics_screen.dart';
+import 'package:urban_roots/core/ui/async_views.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_dashboard_controller.dart';
-import 'package:urban_roots/features/vendor/directory/vendor_directory_screen.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
 import 'package:urban_roots/features/vendor/navigation/vendor_shell.dart';
 import 'package:urban_roots/features/vendor/payments/vendor_payment_history_screen.dart';
@@ -28,22 +28,6 @@ class VendorDashboardScreen extends StatelessWidget {
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
-                case 'directory':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const VendorDirectoryScreen(),
-                    ),
-                  );
-                  break;
-                case 'analytics':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const VendorAnalyticsScreen(),
-                    ),
-                  );
-                  break;
                 case 'payouts':
                   Navigator.push(
                     context,
@@ -63,11 +47,8 @@ class VendorDashboardScreen extends StatelessWidget {
               }
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'analytics', child: Text('Analytics')),
               PopupMenuItem(value: 'payouts', child: Text('Payout History')),
               PopupMenuItem(value: 'support', child: Text('Support')),
-              PopupMenuItem(
-                  value: 'directory', child: Text('Vendor Directory')),
             ],
           ),
         ],
@@ -91,6 +72,7 @@ class VendorDashboardScreen extends StatelessWidget {
           );
         }
         final data = c.dashboard.value;
+        final analytics = c.analytics.value;
         return RefreshIndicator(
           color: AppColors.primary,
           onRefresh: c.load,
@@ -160,49 +142,22 @@ class VendorDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               _BestSellingSection(products: data?.bestSelling ?? const []),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const VendorAnalyticsScreen(),
-                  ),
+              const SizedBox(height: 20),
+              _ChartCard(
+                title: 'Monthly Revenue',
+                child: _MonthlyRevenueChart(
+                  points: analytics?.monthlyRevenue ?? const [],
                 ),
-                icon: const Icon(Icons.insights_rounded),
-                label: const Text('View Analytics'),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VendorPaymentHistoryScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.account_balance_wallet_outlined,
-                          size: 18),
-                      label: const Text('Payouts'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VendorTicketListScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.support_agent_rounded, size: 18),
-                      label: const Text('Support'),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              _ChartCard(
+                title: 'Order Status Breakdown',
+                child: _OrderStatusChart(
+                  breakdown:
+                      analytics?.orderStatus ?? const OrderStatusBreakdown(),
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
               FilledButton(
                 onPressed: () => VendorShell.switchTab?.call(2),
                 child: const Text('View Orders'),
@@ -322,4 +277,210 @@ class _BestSellingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.rubik(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyRevenueChart extends StatelessWidget {
+  const _MonthlyRevenueChart({required this.points});
+
+  final List<MonthlyRevenuePoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.isEmpty) return const ChartEmpty();
+    final maxVal = points.fold<double>(
+        0, (p, e) => e.revenueValue > p ? e.revenueValue : p);
+    final maxY = maxVal <= 0 ? 1.0 : maxVal * 1.2;
+    return SizedBox(
+      height: 220,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxY,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxY / 4,
+          ),
+          borderData: FlBorderData(show: false),
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                '₹${rod.toY.toStringAsFixed(0)}',
+                GoogleFonts.rubik(color: Colors.white, fontSize: 12),
+              ),
+            ),
+          ),
+          titlesData: FlTitlesData(
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 44,
+                getTitlesWidget: (value, _) => Text(
+                  _compact(value),
+                  style: GoogleFonts.rubik(fontSize: 10, color: AppColors.hint),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                getTitlesWidget: (value, _) {
+                  final i = value.toInt();
+                  if (i < 0 || i >= points.length) return const SizedBox();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      points[i].month,
+                      style:
+                          GoogleFonts.rubik(fontSize: 10, color: AppColors.hint),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          barGroups: [
+            for (var i = 0; i < points.length; i++)
+              BarChartGroupData(
+                x: i,
+                barRods: [
+                  BarChartRodData(
+                    toY: points[i].revenueValue,
+                    color: AppColors.primary,
+                    width: 14,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _compact(double v) {
+    if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return v.toStringAsFixed(0);
+  }
+}
+
+class _OrderStatusChart extends StatelessWidget {
+  const _OrderStatusChart({required this.breakdown});
+
+  final OrderStatusBreakdown breakdown;
+
+  @override
+  Widget build(BuildContext context) {
+    if (breakdown.isEmpty) return const ChartEmpty();
+    final segments = <_Seg>[
+      _Seg('Pending', breakdown.pending, const Color(0xFFE08600)),
+      _Seg('Accepted', breakdown.accepted, const Color(0xFF1976D2)),
+      _Seg('Delivered', breakdown.delivered, AppColors.primary),
+      _Seg('Cancelled', breakdown.cancelled, const Color(0xFFD32F2F)),
+    ].where((s) => s.value > 0).toList();
+    final total = breakdown.total;
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 44,
+              sections: [
+                for (final s in segments)
+                  PieChartSectionData(
+                    value: s.value,
+                    color: s.color,
+                    radius: 58,
+                    title: '${(s.value / total * 100).toStringAsFixed(0)}%',
+                    titleStyle: GoogleFonts.rubik(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          children: [
+            for (final s in segments)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: s.color,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${s.label} (${s.value.toStringAsFixed(0)})',
+                    style: GoogleFonts.rubik(fontSize: 12),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _Seg {
+  const _Seg(this.label, this.value, this.color);
+  final String label;
+  final double value;
+  final Color color;
 }

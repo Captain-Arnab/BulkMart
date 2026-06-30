@@ -17,9 +17,25 @@ class HomeViewModel extends ChangeNotifier {
 
   UiState<HomeUiData> state = const UiLoading();
 
-  Future<void> load() async {
-    state = const UiLoading();
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  /// notifyListeners that is safe to call after an in-flight async load
+  /// completes once the widget (and this view model) has been disposed.
+  void _safeNotify() {
+    if (_disposed) return;
     notifyListeners();
+  }
+
+  Future<void> load() async {
+    if (_disposed) return;
+    state = const UiLoading();
+    _safeNotify();
 
     List<Category> categories = [];
     List<Product> featured = [];
@@ -37,11 +53,13 @@ class HomeViewModel extends ChangeNotifier {
           .catchError((_) => featured = <Product>[]),
     ]);
 
+    if (_disposed) return;
+
     if (!categoriesOk && featured.isEmpty) {
       state = const UiError(
         'Unable to load home content. Please check your connection and try again.',
       );
-      notifyListeners();
+      _safeNotify();
       return;
     }
 
@@ -67,12 +85,14 @@ class HomeViewModel extends ChangeNotifier {
       );
     }
 
+    if (_disposed) return;
+
     state = UiSuccess(
       HomeUiData(
         featuredProducts: featured,
         categorySections: sections,
       ),
     );
-    notifyListeners();
+    _safeNotify();
   }
 }

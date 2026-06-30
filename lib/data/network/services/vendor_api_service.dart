@@ -161,24 +161,6 @@ class VendorApiService {
     );
   }
 
-  Future<({List<VendorDirectoryItem> vendors, String? error})>
-      vendorList() async {
-    final result = await _panel.vendorList();
-    if (result is ApiFailure<Map<String, dynamic>>) {
-      return (vendors: <VendorDirectoryItem>[], error: result.message);
-    }
-    final envelope = (result as ApiSuccess<Map<String, dynamic>>).data;
-    final data = envelope['data'];
-    final vendors = data is Map
-        ? parseList(
-            Map<String, dynamic>.from(data),
-            'vendors',
-            VendorDirectoryItem.fromJson,
-          )
-        : parseList(envelope, 'vendors', VendorDirectoryItem.fromJson);
-    return (vendors: vendors, error: null);
-  }
-
   Future<({VendorAnalyticsData? data, String? error})> analytics() async {
     final result = await _panel.analytics();
     if (result is ApiFailure<Map<String, dynamic>>) {

@@ -183,11 +183,6 @@ class VendorPanelApiService {
         token: TokenMode.vendor,
       );
 
-  Future<ApiResult<Map<String, dynamic>>> vendorList() => _client.get(
-        APIClass.vendorList,
-        token: TokenMode.vendor,
-      );
-
   Future<ApiResult<Map<String, dynamic>>> analytics() => _client.get(
         APIClass.vendorAnalytics,
         token: TokenMode.vendor,
