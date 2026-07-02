@@ -43,67 +43,100 @@ class VendorOrdersScreen extends StatelessWidget {
               ),
             );
           }
-          final visible = c.visibleOrders;
-          if (visible.isEmpty) {
-            return RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: c.loadOrders,
-              child: ListView(
-                children: const [
-                  SizedBox(height: 200),
-                  Center(child: Text('No orders')),
-                ],
-              ),
-            );
-          }
-          return RefreshIndicator(
-            color: AppColors.primary,
-            onRefresh: c.loadOrders,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: visible.length,
-              itemBuilder: (context, index) {
-                final order = visible[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Order #${order.orderId}',
-                            style:
-                                GoogleFonts.rubik(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text('${order.customerName} · ₹${order.amount}'),
-                        const SizedBox(height: 4),
-                        Chip(label: Text(order.status)),
-                        if (order.isPending) ...[
-                          const SizedBox(height: 8),
-                          Row(
+          return Stack(
+            children: [
+              if (c.orders.isEmpty)
+                RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: c.loadOrders,
+                  child: ListView(
+                    children: const [
+                      SizedBox(height: 200),
+                      Center(child: Text('No orders')),
+                    ],
+                  ),
+                )
+              else
+                RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: c.loadOrders,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: c.orders.length,
+                    itemBuilder: (context, index) {
+                      final order = c.orders[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => c.cancelOrder(order.orderId),
-                                  child: const Text('Cancel'),
+                              Text('Order #${order.orderId}',
+                                  style: GoogleFonts.rubik(
+                                      fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              Text('${order.customerName} · ₹${order.amount}'),
+                              const SizedBox(height: 4),
+                              Chip(label: Text(order.status)),
+                              if (order.isPending) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            c.cancelOrder(order.orderId),
+                                        child: const Text('Cancel'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: () =>
+                                            c.acceptOrder(order.orderId),
+                                        child: const Text('Accept'),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: FilledButton(
-                                  onPressed: () => c.shipOrder(order.orderId),
-                                  child: const Text('Ship'),
+                              ] else if (order.isAccepted) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () =>
+                                            c.cancelOrder(order.orderId),
+                                        child: const Text('Cancel'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: () =>
+                                            c.shipOrder(order.orderId),
+                                        child: const Text('Ship'),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                              ],
                             ],
                           ),
-                        ],
-                      ],
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+                ),
+              if (c.isLoading.value && c.orders.isNotEmpty)
+                const ColoredBox(
+                  color: Color(0x33FFFFFF),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                ),
+            ],
           );
         }),
       ),

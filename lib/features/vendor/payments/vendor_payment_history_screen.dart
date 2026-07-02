@@ -5,6 +5,7 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/async_views.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_payment_history_controller.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
+import 'package:urban_roots/features/vendor/support/vendor_raise_ticket_screen.dart';
 
 class VendorPaymentHistoryScreen extends StatefulWidget {
   const VendorPaymentHistoryScreen({super.key});
@@ -61,7 +62,19 @@ class _VendorPaymentHistoryScreenState
                   padding: const EdgeInsets.all(16),
                   itemCount: c.payouts.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _PayoutCard(item: c.payouts[i]),
+                  itemBuilder: (_, i) => _PayoutCard(
+                    item: c.payouts[i],
+                    onRaiseTicket: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VendorRaiseTicketScreen(
+                            payoutId: c.payouts[i].payoutId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
         );
       }),
@@ -70,9 +83,10 @@ class _VendorPaymentHistoryScreenState
 }
 
 class _PayoutCard extends StatelessWidget {
-  const _PayoutCard({required this.item});
+  const _PayoutCard({required this.item, this.onRaiseTicket});
 
   final PayoutHistoryItem item;
+  final VoidCallback? onRaiseTicket;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +131,17 @@ class _PayoutCard extends StatelessWidget {
           _row('Commission Deducted', '- ₹${item.commissionDeducted}'),
           const SizedBox(height: 6),
           _row('Net Amount', '₹${item.netAmount}', highlight: true),
+          if (onRaiseTicket != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onRaiseTicket,
+                icon: const Icon(Icons.support_agent_outlined, size: 18),
+                label: const Text('Raise Ticket'),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -154,14 +154,9 @@ class VendorPanelApiService {
         queryParameters: status != null ? {'status': status} : null,
       );
 
-  /// status.php — the backend's exact field name is unconfirmed, so we send
-  /// every plausible shape at once: `action` (accept/ship/cancel), plus the
-  /// target `status`/`order_status` string. The backend uses whichever field
-  /// it reads and ignores the rest.
   Future<ApiResult<Map<String, dynamic>>> updateOrderStatus({
     required String orderId,
     required String action,
-    required String targetStatus,
   }) =>
       _client.post(
         APIClass.vendorOrderStatus,
@@ -169,8 +164,6 @@ class VendorPanelApiService {
         body: {
           'order_id': orderId,
           'action': action,
-          'status': targetStatus,
-          'order_status': targetStatus,
         },
       );
 

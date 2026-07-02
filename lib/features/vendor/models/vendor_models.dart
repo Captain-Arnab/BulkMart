@@ -1,3 +1,19 @@
+class MonthlyEarningsPoint {
+  const MonthlyEarningsPoint({required this.month, required this.amount});
+
+  final String month;
+  final String amount;
+
+  double get amountValue => double.tryParse(amount) ?? 0;
+
+  factory MonthlyEarningsPoint.fromJson(Map<String, dynamic> json) {
+    return MonthlyEarningsPoint(
+      month: json['month']?.toString() ?? '',
+      amount: json['amount']?.toString() ?? '0',
+    );
+  }
+}
+
 class BestSellingProduct {
   const BestSellingProduct({
     required this.productId,
@@ -31,7 +47,16 @@ class VendorDashboardData {
     this.isOpen = true,
     this.totalEarnings = '0',
     this.pendingPayout = '0',
+    this.totalRevenue = '0',
+    this.platformCommission = '0',
+    this.paidOut = '0',
+    this.ordersThisMonth = '0',
+    this.pendingOrders = '0',
+    this.totalProducts = '0',
+    this.openTickets = '0',
     this.bestSelling = const [],
+    this.monthlyEarnings = const [],
+    this.recentPayouts = const [],
   });
 
   final String ordersToday;
@@ -39,7 +64,16 @@ class VendorDashboardData {
   final bool isOpen;
   final String totalEarnings;
   final String pendingPayout;
+  final String totalRevenue;
+  final String platformCommission;
+  final String paidOut;
+  final String ordersThisMonth;
+  final String pendingOrders;
+  final String totalProducts;
+  final String openTickets;
   final List<BestSellingProduct> bestSelling;
+  final List<MonthlyEarningsPoint> monthlyEarnings;
+  final List<VendorPayout> recentPayouts;
 
   factory VendorDashboardData.fromJson(Map<String, dynamic> json) {
     return VendorDashboardData(
@@ -48,8 +82,19 @@ class VendorDashboardData {
       isOpen: json['is_open']?.toString() != '0',
       totalEarnings: json['total_earnings']?.toString() ?? '0',
       pendingPayout: json['pending_payout']?.toString() ?? '0',
+      totalRevenue: json['total_revenue']?.toString() ?? '0',
+      platformCommission: json['platform_commission']?.toString() ?? '0',
+      paidOut: json['paid_out']?.toString() ?? '0',
+      ordersThisMonth: json['orders_this_month']?.toString() ?? '0',
+      pendingOrders: json['pending_orders']?.toString() ?? '0',
+      totalProducts: json['total_products']?.toString() ?? '0',
+      openTickets: json['open_tickets']?.toString() ?? '0',
       bestSelling:
           parseList(json, 'best_selling_products', BestSellingProduct.fromJson),
+      monthlyEarnings:
+          parseList(json, 'monthly_earnings', MonthlyEarningsPoint.fromJson),
+      recentPayouts:
+          parseList(json, 'recent_payouts', VendorPayout.fromJson),
     );
   }
 }
@@ -260,6 +305,11 @@ class VendorOrderItem {
   bool get isPending {
     final s = status.toLowerCase();
     return s.contains('pending') || s.contains('placed');
+  }
+
+  bool get isAccepted {
+    final s = status.toLowerCase();
+    return s.contains('accept') && !s.contains('pending');
   }
 }
 

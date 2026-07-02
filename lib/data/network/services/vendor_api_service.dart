@@ -132,47 +132,23 @@ class VendorApiService {
   Future<({String? error, String? newStatus})> updateOrderStatus({
     required String orderId,
     required String action,
-    required String targetStatus,
   }) async {
     final result = await _panel.updateOrderStatus(
       orderId: orderId,
       action: action,
-      targetStatus: targetStatus,
     );
     if (result is ApiFailure<Map<String, dynamic>>) {
       if (kDebugMode) {
         debugPrint('[VENDOR_ORDER_STATUS] FAIL action=$action '
             'order=$orderId → ${result.message}');
       }
-      // The backend's status.php and list.php can disagree: list.php may still
-      // report an order as "Pending" while status.php already has it as
-      // "Shipped"/"Cancelled". In that case status.php fails with a message
-      // like: Order #109 is already marked as 'Shipped'. We treat that as a
-      // success and reconcile the UI to the status the backend reports.
-      final alreadyStatus = _statusFromAlreadyMarked(result.message);
-      if (alreadyStatus != null) {
-        return (error: null, newStatus: alreadyStatus);
-      }
       return (error: result.message, newStatus: null);
     }
     final data = (result as ApiSuccess<Map<String, dynamic>>).data;
     if (kDebugMode) {
-      debugPrint('[VENDOR_ORDER_STATUS] OK action=$action order=$orderId '
-          'target=$targetStatus → $data');
+      debugPrint('[VENDOR_ORDER_STATUS] OK action=$action order=$orderId → $data');
     }
     return (error: null, newStatus: _extractOrderStatusFromResponse(data));
-  }
-
-  /// Detect a backend "already marked as 'X'" message and return X, so the UI
-  /// can self-heal when list.php lags behind status.php.
-  String? _statusFromAlreadyMarked(String? message) {
-    if (message == null) return null;
-    final lower = message.toLowerCase();
-    if (!lower.contains('already')) return null;
-    for (final s in const ['Shipped', 'Cancelled', 'Completed', 'Pending']) {
-      if (lower.contains(s.toLowerCase())) return s;
-    }
-    return null;
   }
 
   /// Pull the updated order status from a status.php success envelope.
