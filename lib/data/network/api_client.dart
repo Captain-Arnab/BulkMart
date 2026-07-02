@@ -287,8 +287,18 @@ class ApiClient {
     );
 
     if (data == null) {
+      _logApiError(requestUri, '(empty body, HTTP ${statusCode ?? 'unknown'})');
+      if (authenticated &&
+          !skipSessionClear &&
+          (statusCode == 401 || statusCode == 403)) {
+        await _handleUnauthorized();
+      }
+      final codeSuffix =
+          statusCode != null ? ' (HTTP $statusCode)' : '';
       return ApiFailure(
-        'Empty response from server',
+        'Server returned an empty response$codeSuffix. '
+        'This usually means the API endpoint crashed or your vendor session '
+        'expired — try logging out and signing in again.',
         statusCode: statusCode,
       );
     }
@@ -375,6 +385,15 @@ class ApiClient {
         if (decoded is Map) {
           return Map<String, dynamic>.from(decoded);
         }
+        // Valid JSON but not an object (e.g. null, [], a bare string) — the
+        // Urban Roots APIs always return { "status": ..., ... }.
+        _logApiError(requestUri, trimmed);
+        return {
+          'status': false,
+          '_nonJsonResponse': true,
+          'message':
+              'Server returned unexpected JSON (expected an object, got ${decoded.runtimeType})',
+        };
       } catch (_) {
         final embedded = _extractEmbeddedJson(trimmed);
         if (embedded != null) {
@@ -488,6 +507,8 @@ class ApiClient {
         }
         return e.message ?? 'Server returned an error';
       case DioExceptionType.cancel:
+        final cancelMsg = e.message;
+        if (cancelMsg != null && cancelMsg.isNotEmpty) return cancelMsg;
         return 'Request was cancelled. Please try again.';
       case DioExceptionType.unknown:
         if (e.error is HandshakeException) {
@@ -545,6 +566,15 @@ class _UrbanRootsInterceptor extends Interceptor {
       }
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
+      } else if (tokenMode == TokenMode.vendor) {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            message: 'Vendor session expired. Please log in again.',
+          ),
+        );
+        return;
       }
     } else {
       options.headers.remove('Authorization');

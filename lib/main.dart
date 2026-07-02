@@ -2,7 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/core/navigation/auth_navigation.dart';
-import 'package:urban_roots/core/navigation/vendor_navigation.dart';
 import 'package:urban_roots/core/navigation/root_navigator.dart';
 import 'package:urban_roots/core/notifications/push_notification_service.dart';
 import 'package:urban_roots/data/network/api_client.dart';
@@ -23,7 +22,7 @@ Future<void> main() async {
   };
   ApiClient.vendor.onUnauthorized = () {
     final context = rootNavigatorKey.currentContext;
-    if (context != null) navigateToVendorLogin(context);
+    if (context != null) navigateToWelcomeScreen(context);
   };
   runApp(const MyApp());
 }
@@ -38,7 +37,7 @@ class MyApp extends StatelessWidget {
       title: 'Urban Roots',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }

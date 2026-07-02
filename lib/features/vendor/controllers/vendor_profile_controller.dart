@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
-import 'package:urban_roots/core/navigation/vendor_navigation.dart';
+import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/data/network/services/vendor_api_service.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
 
@@ -25,6 +25,6 @@ class VendorProfileController extends GetxController {
 
   Future<void> logout() async {
     await AuthSession.instance.clearVendorSession();
-    navigateToVendorLogin();
+    navigateToWelcomeScreen();
   }
 }

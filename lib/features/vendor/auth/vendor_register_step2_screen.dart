@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urban_roots/core/navigation/vendor_navigation.dart';
+import 'package:urban_roots/core/navigation/auth_navigation.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_auth_controller.dart';
 
@@ -42,7 +42,7 @@ class _VendorRegisterStep2ScreenState extends State<VendorRegisterStep2Screen> {
       otp: _otpController.text.trim(),
     );
     if (!mounted) return;
-    if (ok) navigateToVendorLogin(context);
+    if (ok) navigateToWelcomeScreen(context);
   }
 
   Future<void> _resend() async {
