@@ -109,13 +109,17 @@ class VendorProductsController extends GetxController {
   Future<bool> addCategory({
     required String name,
     required String iconName,
-    required String categoryIcon,
+    String categoryIcon = '',
+    String? iconPath,
   }) async {
+    isLoading.value = true;
     final error = await _api.addCategory(
       name: name,
       iconName: iconName,
       categoryIcon: categoryIcon,
+      iconPath: iconPath,
     );
+    isLoading.value = false;
     if (error != null) {
       Get.snackbar('Error', error);
       return false;

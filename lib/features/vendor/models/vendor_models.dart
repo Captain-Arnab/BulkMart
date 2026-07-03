@@ -309,7 +309,14 @@ class VendorOrderItem {
 
   bool get isAccepted {
     final s = status.toLowerCase();
-    return s.contains('accept') && !s.contains('pending');
+    return s.contains('accept') &&
+        !s.contains('pending') &&
+        !s.contains('ship');
+  }
+
+  bool get isShipped {
+    final s = status.toLowerCase();
+    return s.contains('ship') && !s.contains('pending');
   }
 }
 

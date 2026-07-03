@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
-import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/async_views.dart';
 import 'package:urban_roots/features/vendor/controllers/vendor_analytics_controller.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
@@ -55,27 +54,32 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              SizedBox(
-                height: 130,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: VendorStatCard(
-                        label: 'Total Earnings',
-                        value: '₹${data?.totalEarnings ?? '0'}',
-                        icon: Icons.account_balance_wallet_outlined,
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AnalyticsStatCard(
+                      label: 'Total Earnings',
+                      value: '₹${data?.totalEarnings ?? '0'}',
+                      icon: Icons.account_balance_wallet_outlined,
+                      gradient: const [
+                        AppColors.primaryLight,
+                        AppColors.primary,
+                      ],
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: VendorStatCard(
-                        label: 'Pending Payout',
-                        value: '₹${data?.pendingPayout ?? '0'}',
-                        icon: Icons.schedule_outlined,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AnalyticsStatCard(
+                      label: 'Pending Payout',
+                      value: '₹${data?.pendingPayout ?? '0'}',
+                      icon: Icons.schedule_outlined,
+                      gradient: const [
+                        Color(0xFF2E7D32),
+                        AppColors.primaryDark,
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               _ChartCard(
@@ -367,4 +371,66 @@ class _Seg {
   final String label;
   final double value;
   final Color color;
+}
+
+class _AnalyticsStatCard extends StatelessWidget {
+  const _AnalyticsStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.gradient,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final List<Color> gradient;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 22),
+          const SizedBox(height: 14),
+          Text(
+            label,
+            style: GoogleFonts.rubik(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.rubik(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

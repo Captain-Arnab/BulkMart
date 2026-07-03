@@ -10,7 +10,14 @@ class VendorOrdersController extends GetxController {
   final orders = <VendorOrderItem>[].obs;
   final selectedTab = 0.obs;
 
-  static const tabs = ['All', 'Pending', 'Accepted', 'Delivered', 'Cancelled'];
+  static const tabs = [
+    'All',
+    'Pending',
+    'Accepted',
+    'Shipped',
+    'Delivered',
+    'Cancelled',
+  ];
 
   String? get _statusFilter {
     switch (selectedTab.value) {
@@ -19,8 +26,10 @@ class VendorOrdersController extends GetxController {
       case 2:
         return 'accepted';
       case 3:
-        return 'delivered';
+        return 'shipped';
       case 4:
+        return 'delivered';
+      case 5:
         return 'cancelled';
       default:
         return null;
@@ -70,9 +79,11 @@ class VendorOrdersController extends GetxController {
       return;
     }
     _applyLocalStatus(orderId, result.newStatus ?? 'Shipped');
-    Get.snackbar('Success', 'Order shipped');
+    Get.snackbar('Success', 'Order marked as shipped');
     if (selectedTab.value == 2) {
       orders.removeWhere((o) => o.orderId == orderId);
+    } else if (selectedTab.value != 3) {
+      await changeTab(3);
     }
   }
 

@@ -69,20 +69,36 @@ class VendorPanelApiService {
         token: TokenMode.vendor,
       );
 
+  /// POST add_category — multipart when [iconPath] is set, else JSON/fields.
   Future<ApiResult<Map<String, dynamic>>> addCategory({
     required String name,
     required String iconName,
-    required String categoryIcon,
-  }) =>
-      _client.post(
-        APIClass.vendorAddCategory,
-        token: TokenMode.vendor,
-        body: {
-          'name': name,
-          'icon_name': iconName,
-          'category_icon': categoryIcon,
-        },
-      );
+    String categoryIcon = '',
+    String? iconPath,
+  }) async {
+    final map = <String, dynamic>{
+      'name': name,
+      'icon_name': iconName,
+    };
+
+    if (iconPath != null && iconPath.isNotEmpty) {
+      final fileName = iconPath.split(RegExp(r'[\\/]+')).last;
+      map['category_icon'] =
+          await MultipartFile.fromFile(iconPath, filename: fileName);
+    } else if (categoryIcon.isNotEmpty) {
+      map['category_icon'] = categoryIcon;
+    }
+
+    final body = iconPath != null && iconPath.isNotEmpty
+        ? FormData.fromMap(map)
+        : map;
+
+    return _client.post(
+      APIClass.vendorAddCategory,
+      token: TokenMode.vendor,
+      body: body,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> listProducts() => _client.get(
         APIClass.vendorProductsList,

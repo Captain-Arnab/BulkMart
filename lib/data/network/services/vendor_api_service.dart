@@ -105,12 +105,14 @@ class VendorApiService {
   Future<String?> addCategory({
     required String name,
     required String iconName,
-    required String categoryIcon,
+    String categoryIcon = '',
+    String? iconPath,
   }) async {
     final result = await _panel.addCategory(
       name: name,
       iconName: iconName,
       categoryIcon: categoryIcon,
+      iconPath: iconPath,
     );
     return _errorOrNull(result);
   }

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
 import 'package:urban_roots/core/config/api_config.dart';
 import 'package:urban_roots/data/network/api_result.dart';
+import 'package:urban_roots/data/network/vendor_api_diagnostics.dart';
 import 'package:urban_roots/data/network/vendor_request_gate.dart';
 
 enum TokenMode { none, user, vendor, delivery }
@@ -262,6 +263,7 @@ class ApiClient {
         if (e.response?.statusCode == 401 && authenticated && !skipClear) {
           await _handleUnauthorized();
         }
+        _recordVendorDioError(e);
         return ApiFailure(
           _dioErrorMessage(e),
           statusCode: e.response?.statusCode,
@@ -273,6 +275,25 @@ class ApiClient {
     }
   }
 
+  void _recordVendorDioError(DioException e) {
+    if (!isVendorClient) return;
+    final raw = e.response?.data?.toString() ?? '';
+    _recordVendorDiagnostics(
+      method: e.requestOptions.method,
+      url: e.requestOptions.uri.toString(),
+      statusCode: e.response?.statusCode,
+      requestHeaders: e.requestOptions.headers,
+      responseHeaders: e.response?.headers.map,
+      responseBody: raw.isEmpty ? null : raw,
+      error: e.message,
+    );
+    debugPrint(
+      '[VENDOR_API_TRACE] FAIL ${e.requestOptions.method} '
+      '${e.requestOptions.uri} → ${e.type} HTTP ${e.response?.statusCode} '
+      'body=${_preview(raw)}',
+    );
+  }
+
   Future<ApiResult<Map<String, dynamic>>> _attempt(
     Future<Response<dynamic>> Function() call, {
     required bool authenticated,
@@ -281,6 +302,23 @@ class ApiClient {
     final response = await call();
     final statusCode = response.statusCode;
     final requestUri = response.requestOptions.uri.toString();
+    final rawBody = response.data?.toString() ?? '';
+    if (isVendorClient) {
+      _recordVendorDiagnostics(
+        method: response.requestOptions.method,
+        url: requestUri,
+        statusCode: statusCode,
+        requestHeaders: response.requestOptions.headers,
+        responseHeaders: response.headers.map,
+        responseBody: rawBody,
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[VENDOR_API_TRACE] ${response.requestOptions.method} $requestUri '
+          '→ HTTP $statusCode body=${_preview(rawBody)}',
+        );
+      }
+    }
     final data = _parseResponseBody(
       response.data,
       requestUri: requestUri,
@@ -356,6 +394,31 @@ class ApiClient {
     final preview =
         rawBody.length > 500 ? '${rawBody.substring(0, 500)}...' : rawBody;
     debugPrint('$tag uri=${requestUri ?? 'unknown'} body=$preview');
+  }
+
+  void _recordVendorDiagnostics({
+    required String method,
+    required String url,
+    int? statusCode,
+    Map<String, dynamic>? requestHeaders,
+    Map<String, dynamic>? responseHeaders,
+    String? responseBody,
+    String? error,
+  }) {
+    VendorApiDiagnostics.instance.record(
+      method: method,
+      url: url,
+      statusCode: statusCode,
+      requestHeaders: requestHeaders,
+      responseHeaders: responseHeaders,
+      responseBody: responseBody,
+      error: error,
+    );
+  }
+
+  static String _preview(String raw) {
+    if (raw.isEmpty) return '(empty)';
+    return raw.length > 300 ? '${raw.substring(0, 300)}...' : raw;
   }
 
   Map<String, dynamic>? _parseResponseBody(
