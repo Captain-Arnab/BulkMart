@@ -37,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Urban Roots',
+                  'Urbun Roots',
                   style: GoogleFonts.rubik(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
