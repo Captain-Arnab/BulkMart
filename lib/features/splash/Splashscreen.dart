@@ -104,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(children: [
-                  Text('Urban Roots', style: GoogleFonts.rubik(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1)),
+                  Text('Urbun Roots', style: GoogleFonts.rubik(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1)),
                   const SizedBox(height: 4),
                   Text('Fresh & Natural Groceries', style: GoogleFonts.rubik(fontSize: 14, color: Colors.white70, letterSpacing: 0.5)),
                 ]),
