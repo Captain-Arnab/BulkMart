@@ -122,6 +122,21 @@ class SweetAlert {
   }
 }
 
+/// Lightweight bottom toast — use for cart/API feedback instead of modal dialogs.
+void showAppToast(BuildContext context, String message, {bool isError = false}) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor:
+          isError ? Colors.red.shade600 : const Color(0xFF019934),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
+
 /// Back-compat alias used by API screens.
 void showApiSnackBar(BuildContext context, String message, {bool isError = false}) {
   if (isError) {

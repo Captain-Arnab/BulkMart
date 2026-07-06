@@ -39,10 +39,12 @@ class CategorySection {
 
 class HomeUiData {
   const HomeUiData({
+    required this.categories,
     required this.featuredProducts,
     required this.categorySections,
   });
 
+  final List<Category> categories;
   final List<Product> featuredProducts;
   final List<CategorySection> categorySections;
 }

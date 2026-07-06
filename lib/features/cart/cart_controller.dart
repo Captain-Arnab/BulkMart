@@ -31,6 +31,28 @@ class CartController extends GetxController {
     return Get.put(CartController());
   }
 
+  Map<String, dynamic>? findItemByProductId(String productId) {
+    final id = productId.trim();
+    if (id.isEmpty) return null;
+    for (final item in items) {
+      final pid = item['product_id']?.toString() ??
+          item['pd_id']?.toString() ??
+          '';
+      if (pid == id) return item;
+    }
+    return null;
+  }
+
+  int quantityForProduct(String productId) {
+    final item = findItemByProductId(productId);
+    if (item == null) return 0;
+    return int.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
+  }
+
+  String? cartItemIdForProduct(String productId) {
+    return findItemByProductId(productId)?['cart_item_id']?.toString();
+  }
+
   double get totalValue {
     final summaryTotal = summary['total'] ??
         summary['grand_total'] ??

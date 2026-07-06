@@ -5,7 +5,7 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
-import 'package:urban_roots/core/ui/sweet_alert_util.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart' show showAppToast;
 import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/tabbar.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
@@ -74,17 +74,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (!mounted) return;
     setState(() => _isAddingToCart = false);
 
-    if (success) {
-      await SweetAlert.success(
+    if (!success && mounted) {
+      showAppToast(
         context,
-        message: '${_data?['name']} added to cart',
-      );
-    } else {
-      await SweetAlert.error(
-        context,
-        message: cart.errorMessage.value.isNotEmpty
+        cart.errorMessage.value.isNotEmpty
             ? cart.errorMessage.value
             : 'Could not add to cart',
+        isError: true,
       );
     }
   }

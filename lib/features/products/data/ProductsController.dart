@@ -4,6 +4,11 @@ import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
+import 'package:urban_roots/features/products/models/category.dart';
+import 'package:urban_roots/features/products/utils/packing_filter_utils.dart';
+import 'package:urban_roots/features/products/utils/product_list_filters.dart';
+
+export 'package:urban_roots/features/products/models/category.dart';
 
 class ProductsController extends GetxController {
   RxList<Product> products = RxList<Product>();
@@ -181,35 +186,67 @@ class ProductsController extends GetxController {
           await fetchProductsByCategory(categoryId.toString(), page: page, limit: pageSize);
     }
 
-    productsList = productsList.where((product) {
-      final priceMatch =
-          product.priceValue >= minPrice && product.priceValue <= maxPrice;
-      var gramsMatch = true;
-      if (minGrams != null && maxGrams != null && minGrams > 0 && maxGrams > 0) {
-        gramsMatch = product.gramsValue >= minGrams && product.gramsValue <= maxGrams;
-      }
-      var packingMatch = true;
-      if (packingType != null && packingType.isNotEmpty) {
-        packingMatch =
-            product.packingType.toLowerCase().contains(packingType.toLowerCase());
-      }
-      return priceMatch && gramsMatch && packingMatch;
-    }).toList();
+    final hasPackingFilter =
+        packingType != null && packingType.trim().isNotEmpty;
 
-    return productsList;
+    var filtered = applyCatalogFilters(
+      products: productsList,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      minGrams: minGrams,
+      maxGrams: maxGrams,
+    );
+
+    if (hasPackingFilter) {
+      await enrichProductsPacking(filtered);
+      filtered = applyCatalogFilters(
+        products: filtered,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        minGrams: minGrams,
+        maxGrams: maxGrams,
+        packingType: packingType,
+      );
+    }
+
+    return filtered;
   }
-}
 
-class Category {
-  final String id;
-  final String name;
-  final String image;
-  final String status;
+  Future<void> enrichProductsPacking(List<Product> products) async {
+    final missing = products
+        .where((product) => resolveProductPacking(product).isEmpty)
+        .toList();
+    if (missing.isEmpty) return;
 
-  Category({
-    required this.id,
-    required this.name,
-    required this.image,
-    required this.status,
-  });
+    const batchSize = 8;
+    for (var i = 0; i < missing.length; i += batchSize) {
+      final batch = missing.skip(i).take(batchSize).toList();
+      await Future.wait(batch.map((product) async {
+        final details = await fetchProductById(product.id);
+        if (details == null || details.isEmpty) return;
+
+        final parsed = parseProductDetail(details);
+        final packing = parsed['packingType']?.toString() ?? '';
+        if (packing.trim().isEmpty) return;
+
+        final index = products.indexWhere((p) => p.id == product.id);
+        if (index < 0) return;
+
+        final raw = Map<String, dynamic>.from(products[index].rawJson);
+        raw['packing_type'] = packing;
+        products[index] = Product(
+          id: products[index].id,
+          name: products[index].name,
+          price: products[index].price,
+          grams: products[index].grams,
+          stock: products[index].stock,
+          imageUrl: products[index].imageUrl,
+          packingType: packing,
+          gst: products[index].gst,
+          offerLabel: products[index].offerLabel,
+          rawJson: raw,
+        );
+      }));
+    }
+  }
 }

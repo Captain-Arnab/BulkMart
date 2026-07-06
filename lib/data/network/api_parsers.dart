@@ -5,7 +5,7 @@ import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/orders/order_tracking_models.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/utils/catalog_filters.dart';
-import 'package:urban_roots/features/products/data/ProductsController.dart';
+import 'package:urban_roots/features/products/models/category.dart';
 import 'package:urban_roots/features/userProfile/model/Address.dart';
 
 List<dynamic> extractList(dynamic data, {String key = 'data'}) {

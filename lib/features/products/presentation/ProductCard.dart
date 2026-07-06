@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
-import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
-import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/features/cart/cart_controller.dart';
+import 'package:urban_roots/features/products/presentation/widgets/product_cart_action.dart';
 
 class ProductCard extends StatefulWidget {
   final int id;
@@ -15,6 +13,8 @@ class ProductCard extends StatefulWidget {
   final String imageUrl;
   final String? offerLabel;
   final VoidCallback? onProductTap;
+  final double imageHeight;
+  final bool dense;
 
   const ProductCard({
     super.key,
@@ -26,6 +26,8 @@ class ProductCard extends StatefulWidget {
     required this.id,
     this.offerLabel,
     this.onProductTap,
+    this.imageHeight = 88,
+    this.dense = false,
   });
 
   @override
@@ -33,8 +35,6 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  bool _isCartLoading = false;
-
   String get _productId => widget.id.toString();
 
   String get _displayImageUrl {
@@ -46,199 +46,303 @@ class _ProductCardState extends State<ProductCard> {
 
   bool get _canAddToCart => widget.id > 0 && _productId.isNotEmpty;
 
-  Future<void> addToCart() async {
-    if (_isCartLoading || !_canAddToCart) return;
-    setState(() => _isCartLoading = true);
-
-    final cart = CartController.findOrPut();
-    final success = await cart.addProduct(_productId);
-
-    if (!mounted) return;
-    setState(() => _isCartLoading = false);
-
-    if (success) {
-      await SweetAlert.success(context, message: '${widget.name} added to cart');
-    } else {
-      final message = cart.errorMessage.value;
-      await SweetAlert.error(
-        context,
-        message: message.toLowerCase().contains('not found')
-            ? 'This product is unavailable. Please try another item.'
-            : (message.isNotEmpty ? message : 'Could not add to cart'),
-      );
-    }
-  }
-
   bool get _showGrams {
     final value = widget.grams.trim().toLowerCase();
     return value.isNotEmpty && value != '0' && value != '0g';
   }
 
+  bool get _lowStock {
+    final n = int.tryParse(widget.stock);
+    return n != null && n < 30;
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.dense) return _buildDenseCard();
+    return _buildStandardCard();
+  }
+
+  /// Blinkit-style compact card for 3-column home grids.
+  Widget _buildDenseCard() {
     return Container(
-      decoration: AppDecorations.softCard(radius: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE6ECE6)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: widget.onProductTap,
-              behavior: HitTestBehavior.opaque,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    color: AppColors.cardTint,
-                    child: NetworkOrAssetImage(
-                      url: _displayImageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    ),
-                  ),
-                  if (widget.offerLabel != null &&
-                      widget.offerLabel!.trim().isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade600,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          widget.offerLabel!,
-                          style: GoogleFonts.rubik(
-                            fontSize: 9,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (int.tryParse(widget.stock) != null &&
-                      int.parse(widget.stock) < 30)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade600,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Low Stock',
-                          style: GoogleFonts.rubik(
-                            fontSize: 9,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 GestureDetector(
                   onTap: widget.onProductTap,
                   behavior: HitTestBehavior.opaque,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.rubik(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                          height: 1.2,
-                        ),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.surfaceMint,
+                          AppColors.cardTint,
+                        ],
                       ),
-                      if (_showGrams) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.grams,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.rubik(
-                            fontSize: 10,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: NetworkOrAssetImage(
+                        url: _displayImageUrl,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '\u20B9${widget.price}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.rubik(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                    Material(
-                      color: _canAddToCart
-                          ? AppColors.primary
-                          : Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(12),
-                      elevation: 2,
-                      shadowColor: AppColors.primary.withValues(alpha: 0.3),
-                      child: InkWell(
-                        onTap: _isCartLoading || !_canAddToCart ? null : addToCart,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(7),
-                          child: _isCartLoading
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.add_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
+                if (widget.offerLabel != null &&
+                    widget.offerLabel!.trim().isNotEmpty)
+                  Positioned(
+                    top: 7,
+                    left: 7,
+                    child: _badge(widget.offerLabel!, Colors.red.shade600),
+                  ),
+                if (_lowStock)
+                  Positioned(
+                    top: 7,
+                    right: 7,
+                    child: _badge('Low', Colors.orange.shade700),
+                  ),
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: -12,
+                  child: ProductCartAction(
+                    productId: _productId,
+                    enabled: _canAddToCart,
+                    mini: true,
+                    inline: true,
+                  ),
                 ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 14, 8, 8),
+            child: GestureDetector(
+              onTap: widget.onProductTap,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.rubik(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A1A1A),
+                      height: 1.2,
+                    ),
+                  ),
+                  if (_showGrams) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.grams,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.rubik(
+                        fontSize: 9.5,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 3),
+                  Text(
+                    '\u20B9${widget.price}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.rubik(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStandardCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6ECE6)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GestureDetector(
+                  onTap: widget.onProductTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.surfaceMint,
+                          AppColors.cardTint,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: NetworkOrAssetImage(
+                        url: _displayImageUrl,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                  ),
+                ),
+                if (widget.offerLabel != null &&
+                    widget.offerLabel!.trim().isNotEmpty)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _badge(widget.offerLabel!, Colors.red.shade600),
+                  ),
+                if (_lowStock)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: _badge('Low', Colors.orange.shade700),
+                  ),
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: -13,
+                  child: ProductCartAction(
+                    productId: _productId,
+                    enabled: _canAddToCart,
+                    compact: true,
+                    inline: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 15, 10, 10),
+            child: GestureDetector(
+              onTap: widget.onProductTap,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.rubik(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A1A1A),
+                      height: 1.2,
+                    ),
+                  ),
+                  if (_showGrams) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.grams,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.rubik(
+                        fontSize: 10,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '\u20B9${widget.price}',
+                    style: GoogleFonts.rubik(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _badge(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.dense ? 4 : 6,
+        vertical: widget.dense ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(widget.dense ? 4 : 6),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.35),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.rubik(
+          fontSize: widget.dense ? 6.5 : 8,
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/category_icon_helper.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
-import 'package:urban_roots/features/dashboard/presentation/pages/all_products.dart';
+import 'package:urban_roots/features/home/presentation/category_products_screen.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 
 class CategoryIconsRow extends StatefulWidget {
@@ -48,19 +48,17 @@ class _CategoryIconsRowState extends State<CategoryIconsRow> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           itemCount: categories.length,
           itemBuilder: (context, index) {
-            final cat = categories[index];
-            final categoryId = int.tryParse(cat.id) ?? 0;
-            final hasImage = cat.image.trim().isNotEmpty;
+            final category = categories[index];
+            final hasImage = category.image.trim().isNotEmpty;
 
             return GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProductPage(
-                      category: categoryId,
-                      minPrice: 0,
-                      maxPrice: 2000,
+                    builder: (_) => CategoryProductsScreen(
+                      categoryId: category.id,
+                      categoryName: category.name,
                     ),
                   ),
                 );
@@ -80,13 +78,13 @@ class _CategoryIconsRowState extends State<CategoryIconsRow> {
                       child: ClipOval(
                         child: hasImage
                             ? NetworkOrAssetImage(
-                                url: cat.image,
+                                url: category.image,
                                 width: 64,
                                 height: 64,
                                 fit: BoxFit.cover,
                               )
                             : Icon(
-                                categoryFallbackIcon(cat.name),
+                                categoryFallbackIcon(category.name),
                                 color: AppColors.primary,
                                 size: 28,
                               ),
@@ -94,7 +92,7 @@ class _CategoryIconsRowState extends State<CategoryIconsRow> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      cat.name,
+                      category.name,
                       maxLines: 2,
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,

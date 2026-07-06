@@ -1,5 +1,6 @@
 import 'package:urban_roots/core/ui/category_icon_helper.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
+import 'package:urban_roots/data/network/api_parsers.dart' show stripHtmlTags;
 
 class Product {
   final String id;
@@ -44,7 +45,14 @@ class Product {
           json['stock']?.toString() ??
           '0',
       imageUrl: pickImageUrl(json),
-      packingType: json['packing_type']?.toString() ?? '',
+      packingType: stripHtmlTags(
+        json['packing_type']?.toString() ??
+            json['packingType']?.toString() ??
+            json['packing']?.toString() ??
+            json['package_type']?.toString() ??
+            json['pd_packing_type']?.toString() ??
+            '',
+      ),
       gst: json['gst']?.toString() ?? '0',
       offerLabel: productOfferLabel(map),
       rawJson: map,

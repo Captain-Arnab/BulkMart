@@ -14,7 +14,7 @@ class HomeBannerCarousel extends StatefulWidget {
     'assets/slider5.png',
   ];
 
-  static const double bannerAspectRatio = 2.05;
+  static const double bannerAspectRatio = 3.85;
 
   @override
   State<HomeBannerCarousel> createState() => _HomeBannerCarouselState();
@@ -32,14 +32,23 @@ class _HomeBannerCarouselState extends State<HomeBannerCarousel> {
         CarouselSlider.builder(
           itemCount: itemCount,
           itemBuilder: (context, index, _) {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: ColoredBox(
-                color: AppColors.primary,
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
                 child: Image.asset(
                   HomeBannerCarousel.sliderAssets[index],
                   width: double.infinity,
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                   alignment: Alignment.center,
                 ),
               ),

@@ -23,8 +23,8 @@ class HomeHorizontalProductRow extends StatelessWidget {
   final bool showSeeAll;
   final VoidCallback? onSeeAll;
 
-  static const double _cardWidth = 168;
-  static const double _rowHeight = 260;
+  static const double _cardWidth = 140;
+  static const double _rowHeight = 210;
 
   @override
   Widget build(BuildContext context) {

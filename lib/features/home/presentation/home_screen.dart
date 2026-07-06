@@ -3,10 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/Utils/AppSearchBarWidget.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
+import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/home/home_view_model.dart';
 import 'package:urban_roots/features/home/models/home_models.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_banner_carousel.dart';
+import 'package:urban_roots/features/home/presentation/widgets/home_categories_grid.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_featured_grid.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_horizontal_product_row.dart';
 import 'package:urban_roots/features/notifications/notifications_controller.dart';
@@ -33,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _bootstrap() async {
     await Future.wait([
       _notificationsController.refreshUnreadCount(),
+      CartController.findOrPut().loadCart(),
       _vm.load(),
     ]);
   }
@@ -104,6 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
+    if (data.categories.isNotEmpty) {
+      children.add(HomeCategoriesGrid(categories: data.categories));
+    }
+
     if (data.featuredProducts.isNotEmpty) {
       children.add(
         HomeFeaturedGrid(
@@ -125,7 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (data.featuredProducts.isEmpty && data.categorySections.isEmpty) {
+    if (data.featuredProducts.isEmpty &&
+        data.categorySections.isEmpty &&
+        data.categories.isEmpty) {
       children.add(
         Padding(
           padding: const EdgeInsets.all(32),

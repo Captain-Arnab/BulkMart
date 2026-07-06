@@ -12,7 +12,7 @@ class HomeViewModel extends ChangeNotifier {
 
   final HomeRepository _repository;
 
-  static const int _featuredLimit = 4;
+  static const int _featuredLimit = 6;
   static const int _categoryProductLimit = 10;
 
   UiState<HomeUiData> state = const UiLoading();
@@ -89,6 +89,7 @@ class HomeViewModel extends ChangeNotifier {
 
     state = UiSuccess(
       HomeUiData(
+        categories: categories,
         featuredProducts: featured,
         categorySections: sections,
       ),
