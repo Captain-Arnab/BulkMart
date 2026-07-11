@@ -94,14 +94,35 @@ class VendorProductsController extends GetxController {
     return true;
   }
 
-  Future<bool> updateProduct(Map<String, dynamic> fields) async {
+  Future<bool> updateProduct({
+    required String productId,
+    required String name,
+    required String price,
+    required String category,
+    required String stock,
+    required String gst,
+    required String descriptions,
+    String images = '',
+    String? imagePath,
+  }) async {
     isLoading.value = true;
-    final error = await _api.updateProduct(fields);
+    final error = await _api.updateProduct(
+      productId: productId,
+      name: name,
+      price: price,
+      category: category,
+      stock: stock,
+      gst: gst,
+      descriptions: descriptions,
+      images: images,
+      imagePath: imagePath,
+    );
     isLoading.value = false;
     if (error != null) {
       Get.snackbar('Error', error);
       return false;
     }
+    Get.snackbar('Success', 'Product updated successfully');
     await loadProducts();
     return true;
   }

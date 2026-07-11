@@ -145,14 +145,51 @@ class VendorPanelApiService {
     );
   }
 
-  Future<ApiResult<Map<String, dynamic>>> updateProduct(
-    Map<String, dynamic> fields,
-  ) =>
-      _client.put(
+  /// PUT /api/products/update.php — JSON body by default.
+  /// When [imagePath] is set, sends multipart/form-data via POST so PHP can
+  /// populate `$_FILES` (PUT multipart is not reliably parsed by PHP).
+  Future<ApiResult<Map<String, dynamic>>> updateProduct({
+    required String productId,
+    required String name,
+    required String price,
+    required String category,
+    required String stock,
+    required String gst,
+    required String descriptions,
+    String images = '',
+    String? imagePath,
+  }) async {
+    final map = <String, dynamic>{
+      'product_id': productId,
+      'name': name,
+      'price': price,
+      'category': category,
+      'stock': stock,
+      'gst': gst,
+      'descriptions': descriptions,
+    };
+
+    if (imagePath != null && imagePath.isNotEmpty) {
+      final fileName = imagePath.split(RegExp(r'[\\/]+')).last;
+      map['images'] =
+          await MultipartFile.fromFile(imagePath, filename: fileName);
+      return _client.post(
         APIClass.vendorUpdateProduct,
         token: TokenMode.vendor,
-        body: fields,
+        body: FormData.fromMap(map),
       );
+    }
+
+    if (images.isNotEmpty) {
+      map['images'] = images;
+    }
+
+    return _client.put(
+      APIClass.vendorUpdateProduct,
+      token: TokenMode.vendor,
+      body: map,
+    );
+  }
 
   Future<ApiResult<Map<String, dynamic>>> deleteProduct({
     required String productId,

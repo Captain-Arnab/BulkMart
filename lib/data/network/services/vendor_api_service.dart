@@ -92,8 +92,28 @@ class VendorApiService {
     return _errorOrNull(result);
   }
 
-  Future<String?> updateProduct(Map<String, dynamic> fields) async {
-    final result = await _panel.updateProduct(fields);
+  Future<String?> updateProduct({
+    required String productId,
+    required String name,
+    required String price,
+    required String category,
+    required String stock,
+    required String gst,
+    required String descriptions,
+    String images = '',
+    String? imagePath,
+  }) async {
+    final result = await _panel.updateProduct(
+      productId: productId,
+      name: name,
+      price: price,
+      category: category,
+      stock: stock,
+      gst: gst,
+      descriptions: descriptions,
+      images: images,
+      imagePath: imagePath,
+    );
     return _errorOrNull(result);
   }
 
