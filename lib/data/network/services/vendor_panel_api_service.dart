@@ -145,9 +145,10 @@ class VendorPanelApiService {
     );
   }
 
-  /// PUT /api/products/update.php — JSON body by default.
-  /// When [imagePath] is set, sends multipart/form-data via POST so PHP can
-  /// populate `$_FILES` (PUT multipart is not reliably parsed by PHP).
+  /// POST /api/vendor/products/update.php — always multipart/form-data.
+  /// PHP cannot reliably parse files from PUT/JSON, so every update is POST.
+  /// [imagePath] is sent as `main_image` only when the user picks a new file;
+  /// omit it to leave the existing image unchanged.
   Future<ApiResult<Map<String, dynamic>>> updateProduct({
     required String productId,
     required String name,
@@ -156,7 +157,8 @@ class VendorPanelApiService {
     required String stock,
     required String gst,
     required String descriptions,
-    String images = '',
+    String weight = '',
+    String status = '1',
     String? imagePath,
   }) async {
     final map = <String, dynamic>{
@@ -166,28 +168,21 @@ class VendorPanelApiService {
       'category': category,
       'stock': stock,
       'gst': gst,
-      'descriptions': descriptions,
+      'weight': weight,
+      'description': descriptions,
+      'status': status,
     };
 
     if (imagePath != null && imagePath.isNotEmpty) {
       final fileName = imagePath.split(RegExp(r'[\\/]+')).last;
-      map['images'] =
+      map['main_image'] =
           await MultipartFile.fromFile(imagePath, filename: fileName);
-      return _client.post(
-        APIClass.vendorUpdateProduct,
-        token: TokenMode.vendor,
-        body: FormData.fromMap(map),
-      );
     }
 
-    if (images.isNotEmpty) {
-      map['images'] = images;
-    }
-
-    return _client.put(
+    return _client.post(
       APIClass.vendorUpdateProduct,
       token: TokenMode.vendor,
-      body: map,
+      body: FormData.fromMap(map),
     );
   }
 

@@ -239,6 +239,8 @@ class VendorProductItem {
     required this.stock,
     required this.gst,
     required this.descriptions,
+    this.weight = '',
+    this.status = '1',
     this.imageUrl = '',
   });
 
@@ -249,7 +251,35 @@ class VendorProductItem {
   final String stock;
   final String gst;
   final String descriptions;
+  final String weight;
+  final String status;
   final String imageUrl;
+
+  VendorProductItem copyWith({
+    String? id,
+    String? name,
+    String? price,
+    String? category,
+    String? stock,
+    String? gst,
+    String? descriptions,
+    String? weight,
+    String? status,
+    String? imageUrl,
+  }) {
+    return VendorProductItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      category: category ?? this.category,
+      stock: stock ?? this.stock,
+      gst: gst ?? this.gst,
+      descriptions: descriptions ?? this.descriptions,
+      weight: weight ?? this.weight,
+      status: status ?? this.status,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
+  }
 
   factory VendorProductItem.fromJson(Map<String, dynamic> json) {
     return VendorProductItem(
@@ -265,8 +295,11 @@ class VendorProductItem {
       descriptions: json['descriptions']?.toString() ??
           json['description']?.toString() ??
           '',
+      weight: json['weight']?.toString() ?? '',
+      status: json['status']?.toString() ?? '1',
       imageUrl: json['image']?.toString() ??
           json['images']?.toString() ??
+          json['main_image']?.toString() ??
           json['image_url']?.toString() ??
           '',
     );

@@ -142,7 +142,8 @@ class _VendorEditProductScreenState extends State<VendorEditProductScreen> {
       stock: _stock.text.trim(),
       gst: _gst.text.trim(),
       descriptions: _descriptions.text.trim(),
-      images: _pickedImage == null ? _imageUrl.text.trim() : '',
+      weight: widget.product.weight,
+      status: widget.product.status,
       imagePath: _pickedImage?.path,
     );
     if (!mounted) return;

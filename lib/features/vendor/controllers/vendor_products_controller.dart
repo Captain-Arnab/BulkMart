@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/data/network/services/vendor_api_service.dart';
 import 'package:urban_roots/features/vendor/models/vendor_models.dart';
 
@@ -102,11 +104,12 @@ class VendorProductsController extends GetxController {
     required String stock,
     required String gst,
     required String descriptions,
-    String images = '',
+    String weight = '',
+    String status = '1',
     String? imagePath,
   }) async {
     isLoading.value = true;
-    final error = await _api.updateProduct(
+    final result = await _api.updateProduct(
       productId: productId,
       name: name,
       price: price,
@@ -114,16 +117,45 @@ class VendorProductsController extends GetxController {
       stock: stock,
       gst: gst,
       descriptions: descriptions,
-      images: images,
+      weight: weight,
+      status: status,
       imagePath: imagePath,
     );
     isLoading.value = false;
-    if (error != null) {
-      Get.snackbar('Error', error);
+    if (result.error != null) {
+      Get.snackbar('Error', result.error!);
       return false;
     }
     Get.snackbar('Success', 'Product updated successfully');
+
+    // Evict cached network images so a same-path overwrite still shows the
+    // new file after the list reload.
+    final returnedImage = result.image;
+    if (returnedImage != null && returnedImage.isNotEmpty) {
+      final idx = products.indexWhere((p) => p.id == productId);
+      if (idx >= 0) {
+        final previous = resolveImageUrl(products[idx].imageUrl);
+        if (previous.isNotEmpty) {
+          await NetworkImage(previous).evict();
+        }
+      }
+      final next = resolveImageUrl(returnedImage);
+      if (next.isNotEmpty) {
+        await NetworkImage(next).evict();
+      }
+    }
+
     await loadProducts();
+
+    // Prefer the update response `image` when the list payload is stale.
+    if (returnedImage != null && returnedImage.isNotEmpty) {
+      final idx = products.indexWhere((p) => p.id == productId);
+      if (idx >= 0) {
+        products[idx] = products[idx].copyWith(imageUrl: returnedImage);
+        products.refresh();
+      }
+    }
+
     return true;
   }
 

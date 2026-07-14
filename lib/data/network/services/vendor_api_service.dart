@@ -92,7 +92,9 @@ class VendorApiService {
     return _errorOrNull(result);
   }
 
-  Future<String?> updateProduct({
+  /// Returns `(error, image)` — [image] is the updated product image URL from
+  /// the response when present (used to refresh a cached thumbnail).
+  Future<({String? error, String? image})> updateProduct({
     required String productId,
     required String name,
     required String price,
@@ -100,7 +102,8 @@ class VendorApiService {
     required String stock,
     required String gst,
     required String descriptions,
-    String images = '',
+    String weight = '',
+    String status = '1',
     String? imagePath,
   }) async {
     final result = await _panel.updateProduct(
@@ -111,10 +114,32 @@ class VendorApiService {
       stock: stock,
       gst: gst,
       descriptions: descriptions,
-      images: images,
+      weight: weight,
+      status: status,
       imagePath: imagePath,
     );
-    return _errorOrNull(result);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return (error: result.message, image: null);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final image = _extractUpdatedImage(data);
+    return (error: null, image: image);
+  }
+
+  String? _extractUpdatedImage(Map<String, dynamic> data) {
+    for (final key in ['image', 'main_image', 'images', 'image_url']) {
+      final v = data[key];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+    final nested = data['data'];
+    if (nested is Map) {
+      final map = Map<String, dynamic>.from(nested);
+      for (final key in ['image', 'main_image', 'images', 'image_url']) {
+        final v = map[key];
+        if (v is String && v.trim().isNotEmpty) return v.trim();
+      }
+    }
+    return null;
   }
 
   Future<String?> deleteProduct(String productId) async {
