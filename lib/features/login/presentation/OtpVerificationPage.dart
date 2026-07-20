@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/auth/auth_role.dart';
 import 'package:urban_roots/core/auth/auth_session.dart';
@@ -11,6 +12,7 @@ import 'package:urban_roots/data/models/login_response.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/features/login/data/LoginController.dart';
 
 enum LoginMethod { email, phone }
 
@@ -117,6 +119,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       await syncDeviceTokenAfterAuth(role: response.role);
 
       if (!mounted) return;
+      if (Get.isRegistered<LoginController>()) {
+        Get.find<LoginController>().markLoginSuccess();
+      }
       await showLoginSuccessAndNavigate(context, response.role);
     } catch (e) {
       if (!mounted) return;

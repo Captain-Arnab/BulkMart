@@ -166,6 +166,7 @@ class Login extends StatelessWidget {
                           );
                           await syncDeviceTokenAfterAuth(role: response.role);
                           if (!context.mounted) return;
+                          loginController.markLoginSuccess();
                           await showLoginSuccessAndNavigate(context, response.role);
                         },
                         child: Text('Continue', style: GoogleFonts.rubik(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),

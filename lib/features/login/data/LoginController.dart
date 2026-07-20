@@ -9,11 +9,17 @@ class LoginController extends GetxController {
   RxBool passwordVisible = false.obs;
   RxBool isLoading = false.obs;
   Rx<AuthRole> selectedRole = AuthRole.user.obs;
-  bool isLoginSuccess = false;
+  /// Set once after a successful auth API response. Listeners should navigate
+  /// away / dismiss login UI exactly when this flips to true.
+  final RxBool isLoginSuccess = false.obs;
   String userId = "USR001";
   String userName = "Arnab Som";
   String userEmail = "arnab@urbanroots.com";
   String userMobile = "+91 97385 50132";
+
+  void markLoginSuccess() {
+    isLoginSuccess.value = true;
+  }
 
   Future<void> userLogin(String email, String password) async {
     if (email.isEmpty || password.isEmpty) {
@@ -24,7 +30,7 @@ class LoginController extends GetxController {
 
     await Future.delayed(const Duration(milliseconds: 800));
 
-    isLoginSuccess = true;
+    markLoginSuccess();
     isLoading(false);
   }
 
@@ -37,7 +43,7 @@ class LoginController extends GetxController {
     userName = "";
     userEmail = "";
     userMobile = "";
-    isLoginSuccess = false;
+    isLoginSuccess.value = false;
     clearData();
   }
 

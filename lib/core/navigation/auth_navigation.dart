@@ -13,7 +13,7 @@ void navigateAfterLogin(BuildContext context, AuthRole role) {
       ? const VendorShell()
       : const Dashboard();
 
-  Navigator.of(context).pushAndRemoveUntil(
+  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
     MaterialPageRoute(builder: (_) => destination),
     (_) => false,
   );
@@ -36,18 +36,22 @@ void navigateToWelcomeScreen([BuildContext? context]) {
   );
 }
 
+/// After a successful auth API response, leave the login UI immediately and
+/// land on home/vendor shell. A non-blocking toast replaces the old success
+/// dialog that stayed open until the user tapped OK.
 Future<void> showLoginSuccessAndNavigate(
   BuildContext context,
   AuthRole role,
-) {
-  return SweetAlert.success(
-    context,
-    title: 'Welcome',
-    message: Strings.loginSuccess,
-    onConfirm: () {
-      if (context.mounted) navigateAfterLogin(context, role);
-    },
-  );
+) async {
+  if (!context.mounted) return;
+
+  navigateAfterLogin(context, role);
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    showAppToast(ctx, Strings.loginSuccess);
+  });
 }
 
 Future<void> showLogoutSuccessAndNavigate([BuildContext? context]) {
