@@ -150,6 +150,7 @@ class ProductsController extends GetxController {
     int limit = 20,
   }) async {
     isLoading(true);
+    errorMessage.value = '';
     final result = await _api.catalog.searchProducts(
       keyword: keyword,
       category: category,
@@ -161,10 +162,11 @@ class ProductsController extends GetxController {
       limit: limit,
     );
     isLoading(false);
-    if (result is ApiSuccess<Map<String, dynamic>>) {
-      return parseProducts(result.data);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      errorMessage.value = result.message;
+      throw Exception(result.message);
     }
-    return [];
+    return parseProducts((result as ApiSuccess<Map<String, dynamic>>).data);
   }
 
   Future<List<Product>> listProducts(

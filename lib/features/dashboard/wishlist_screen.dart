@@ -16,7 +16,7 @@ class WishListPage extends StatefulWidget {
 }
 
 class _WishListPageState extends State<WishListPage> {
-  final _wishlist = Get.put(WishlistController());
+  final _wishlist = WishlistController.findOrPut();
 
   @override
   void initState() {

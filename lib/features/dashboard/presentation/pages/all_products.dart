@@ -402,6 +402,7 @@ class _ProductPageState extends State<ProductPage> {
                                 final product = filteredProducts[index];
                                 return ProductCard(
                                   id: int.tryParse(product.id) ?? 0,
+                                  productId: product.id,
                                   name: product.name,
                                   grams: product.grams,
                                   stock: product.stock,

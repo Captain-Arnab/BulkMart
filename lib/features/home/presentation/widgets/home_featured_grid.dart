@@ -98,6 +98,7 @@ class HomeFeaturedGrid extends StatelessWidget {
               return ProductCard(
                 dense: true,
                 id: int.tryParse(product.id) ?? 0,
+                productId: product.id,
                 name: product.name,
                 grams: product.grams,
                 stock: product.stock,

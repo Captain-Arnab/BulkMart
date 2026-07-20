@@ -3,9 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/features/products/presentation/widgets/product_cart_action.dart';
+import 'package:urban_roots/features/wishlist/presentation/wishlist_heart_button.dart';
 
 class ProductCard extends StatefulWidget {
   final int id;
+  /// Prefer this for API calls (wishlist/cart) when the backend id is not a plain int.
+  final String? productId;
   final String name;
   final String grams;
   final String stock;
@@ -15,6 +18,7 @@ class ProductCard extends StatefulWidget {
   final VoidCallback? onProductTap;
   final double imageHeight;
   final bool dense;
+  final bool showWishlist;
 
   const ProductCard({
     super.key,
@@ -24,10 +28,12 @@ class ProductCard extends StatefulWidget {
     required this.price,
     required this.imageUrl,
     required this.id,
+    this.productId,
     this.offerLabel,
     this.onProductTap,
     this.imageHeight = 88,
     this.dense = false,
+    this.showWishlist = true,
   });
 
   @override
@@ -35,7 +41,11 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  String get _productId => widget.id.toString();
+  String get _productId {
+    final explicit = widget.productId?.trim() ?? '';
+    if (explicit.isNotEmpty) return explicit;
+    return widget.id > 0 ? widget.id.toString() : '';
+  }
 
   String get _displayImageUrl {
     if (widget.imageUrl.trim().isNotEmpty) {
@@ -44,7 +54,7 @@ class _ProductCardState extends State<ProductCard> {
     return '';
   }
 
-  bool get _canAddToCart => widget.id > 0 && _productId.isNotEmpty;
+  bool get _canAddToCart => _productId.isNotEmpty;
 
   bool get _showGrams {
     final value = widget.grams.trim().toLowerCase();
@@ -124,8 +134,21 @@ class _ProductCardState extends State<ProductCard> {
                     if (_lowStock)
                       Positioned(
                         top: 7,
-                        right: 7,
+                        left: widget.offerLabel != null &&
+                                widget.offerLabel!.trim().isNotEmpty
+                            ? 52
+                            : 7,
                         child: _badge('Low', Colors.orange.shade700),
+                      ),
+                    if (widget.showWishlist && _productId.isNotEmpty)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: WishlistHeartButton(
+                          productId: _productId,
+                          size: 14,
+                          padding: const EdgeInsets.all(4),
+                        ),
                       ),
                     Positioned(
                       left: 8,
@@ -258,8 +281,21 @@ class _ProductCardState extends State<ProductCard> {
                     if (_lowStock)
                       Positioned(
                         top: 10,
-                        right: 10,
+                        left: widget.offerLabel != null &&
+                                widget.offerLabel!.trim().isNotEmpty
+                            ? 58
+                            : 10,
                         child: _badge('Low', Colors.orange.shade700),
+                      ),
+                    if (widget.showWishlist && _productId.isNotEmpty)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: WishlistHeartButton(
+                          productId: _productId,
+                          size: 18,
+                          padding: const EdgeInsets.all(6),
+                        ),
                       ),
                     Positioned(
                       left: 8,

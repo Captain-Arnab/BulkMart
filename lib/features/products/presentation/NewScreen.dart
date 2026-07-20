@@ -146,6 +146,7 @@ class _ProductScreenNewState extends State<ProductScreenNew> {
                       final product = products[index];
                       return ProductCard(
                         id: int.tryParse(product.id) ?? 0,
+                        productId: product.id,
                         name: product.name,
                         grams: product.grams,
                         stock: product.stock,

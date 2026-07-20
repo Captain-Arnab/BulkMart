@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/core/ui/app_ui_kit.dart';
+import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/cart/cart_screen.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/dashboard/wishlist_screen.dart';
@@ -12,13 +13,30 @@ import 'package:urban_roots/features/subscription/subscription_flow_controller.d
 import 'package:urban_roots/features/subscription/presentation/subscription_products_screen.dart';
 import 'package:urban_roots/features/userProfile/presentation/AddressListScreen.dart';
 import 'package:urban_roots/features/userProfile/presentation/TestProfile.dart';
+import 'package:urban_roots/features/wishlist/wishlist_controller.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});
 
+  Widget _badgeIcon({
+    required IconData active,
+    required IconData inactive,
+    required bool selected,
+    required int count,
+  }) {
+    final icon = Icon(selected ? active : inactive);
+    if (count <= 0) return icon;
+    return Badge(
+      label: Text(count > 99 ? '99+' : '$count'),
+      child: icon,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nav = DashboardController.findOrPut();
+    final wishlist = WishlistController.findOrPut();
+    final cart = CartController.findOrPut();
 
     return Obx(() {
       final route = nav.route.value;
@@ -47,18 +65,20 @@ class Dashboard extends StatelessWidget {
             ),
             BottomNavigationBarItem(
               label: 'Wishlist',
-              icon: Icon(
-                nav.currentTabIndex == 2
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
+              icon: _badgeIcon(
+                active: Icons.favorite_rounded,
+                inactive: Icons.favorite_border_rounded,
+                selected: nav.currentTabIndex == 2,
+                count: wishlist.count.value,
               ),
             ),
             BottomNavigationBarItem(
               label: 'Cart',
-              icon: Icon(
-                nav.currentTabIndex == 3
-                    ? Icons.shopping_cart_rounded
-                    : Icons.shopping_cart_outlined,
+              icon: _badgeIcon(
+                active: Icons.shopping_cart_rounded,
+                inactive: Icons.shopping_cart_outlined,
+                selected: nav.currentTabIndex == 3,
+                count: cart.items.length,
               ),
             ),
             BottomNavigationBarItem(

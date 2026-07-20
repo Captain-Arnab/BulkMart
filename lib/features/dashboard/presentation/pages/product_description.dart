@@ -10,6 +10,8 @@ import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/tabbar.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
+import 'package:urban_roots/features/subscription/presentation/subscribe_sheet.dart';
+import 'package:urban_roots/features/wishlist/presentation/wishlist_heart_button.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String productVal;
@@ -145,6 +147,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: WishlistHeartButton(
+                  productId: widget.productVal,
+                  size: 22,
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
               background: Container(
@@ -276,13 +288,43 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Add to Cart',
+                              label: 'Buy Once',
                               icon: Icons.shopping_cart_outlined,
                               isLoading: _isAddingToCart,
                               onPressed: _addToCart,
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () => showSubscribeSheet(
+                            context,
+                            productId: widget.productVal,
+                            productName: _data?['name']?.toString() ?? '',
+                          ),
+                          icon: const Icon(Icons.autorenew_rounded, size: 20),
+                          label: Text(
+                            'Subscribe',
+                            style: GoogleFonts.rubik(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: BorderSide(
+                              color: AppColors.primary.withValues(alpha: 0.45),
+                              width: 1.4,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 28),
                       SizedBox(

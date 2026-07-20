@@ -374,6 +374,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           final product = _filteredProducts[index];
           return ProductCard(
             id: int.tryParse(product.id) ?? 0,
+            productId: product.id,
             name: product.name,
             grams: product.grams,
             stock: product.stock,

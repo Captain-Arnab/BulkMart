@@ -117,7 +117,7 @@ class CartController extends GetxController {
     await _enrichFromCatalog(parsed);
     items.assignAll(parsed);
     _applySummary(data);
-    finalAmount.value = totalValue - discount.value;
+    await reapplyCouponIfNeeded();
   }
 
   void _applySummary(Map<String, dynamic> envelope) {
@@ -348,20 +348,46 @@ class CartController extends GetxController {
     );
     if (result is ApiSuccess<Map<String, dynamic>>) {
       final d = result.data;
-      appliedCoupon.value = d['coupon_code']?.toString() ?? code;
-      discount.value = double.tryParse(d['discount']?.toString() ?? '0') ?? 0;
-      finalAmount.value =
-          double.tryParse(d['final_amount']?.toString() ?? '') ??
-              (totalValue - discount.value);
+      final inner = d['data'] is Map
+          ? Map<String, dynamic>.from(d['data'] as Map)
+          : d;
+      appliedCoupon.value =
+          inner['coupon_code']?.toString() ?? d['coupon_code']?.toString() ?? code;
+      discount.value = double.tryParse(
+            inner['discount']?.toString() ?? d['discount']?.toString() ?? '0',
+          ) ??
+          0;
+      finalAmount.value = double.tryParse(
+            inner['final_amount']?.toString() ??
+                d['final_amount']?.toString() ??
+                '',
+          ) ??
+          (totalValue - discount.value);
     }
     return result;
   }
 
+  /// Clears coupon locally only — backend coupons/remove.php is a stub.
   Future<void> removeCoupon() async {
-    await _api.coupons.remove();
     appliedCoupon.value = '';
     discount.value = 0;
     finalAmount.value = totalValue;
+  }
+
+  /// Re-sends the applied coupon against the current cart total (stateless API).
+  Future<void> reapplyCouponIfNeeded() async {
+    final code = appliedCoupon.value.trim();
+    if (code.isEmpty) {
+      finalAmount.value = totalValue;
+      return;
+    }
+    final result = await applyCoupon(code);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      // Keep the code visible but fall back to undiscounted total.
+      discount.value = 0;
+      finalAmount.value = totalValue;
+      errorMessage.value = result.message;
+    }
   }
 
   Future<ApiResult<Map<String, dynamic>>> checkout() async {

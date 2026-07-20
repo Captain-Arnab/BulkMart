@@ -43,13 +43,34 @@ class _CartPageState extends State<CartPage> {
   Future<void> _removeItem(String cartItemId) async {
     final ok = await _cart.removeItem(cartItemId);
     if (!ok && mounted) {
-      await SweetAlert.error(
-        context,
-        message: _cart.errorMessage.value.isNotEmpty
-            ? _cart.errorMessage.value
-            : 'Could not remove item',
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _cart.errorMessage.value.isNotEmpty
+                ? _cart.errorMessage.value
+                : 'Could not remove item',
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _removeItem(cartItemId),
+          ),
+        ),
       );
     }
+  }
+
+  Future<void> _confirmRemove(String cartItemId, String name) async {
+    await SweetAlert.confirm(
+      context,
+      title: 'Remove item?',
+      message: 'Remove "$name" from your cart?',
+      confirmText: 'Remove',
+      onConfirm: () async => _removeItem(cartItemId),
+    );
   }
 
   Future<void> _confirmClear() async {
@@ -256,8 +277,18 @@ class _CartPageState extends State<CartPage> {
               ),
               const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  IconButton(
+                    tooltip: 'Remove',
+                    onPressed: isUpdating
+                        ? null
+                        : () => _confirmRemove(cartItemId, name),
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
                   if (isUpdating)
                     const SizedBox(
                       width: 24,
