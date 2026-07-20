@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/order/order_status.dart';
 import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
+import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 import 'package:urban_roots/features/orders/order_detail_screen.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
@@ -201,6 +202,8 @@ class _OrderHistoryState extends State<OrderHistory> {
   ) {
     final orders =
         controller.orders.where((o) => o.segment == segment).toList();
+    // Keep newest-first even after segment filtering.
+    sortOrdersNewestFirst(orders);
 
     if (orders.isEmpty) {
       return ListView(

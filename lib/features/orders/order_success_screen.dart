@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({
@@ -47,8 +48,26 @@ class OrderSuccessScreen extends StatelessWidget {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+                onPressed: () {
+                  Navigator.popUntil(context, (r) => r.isFirst);
+                },
                 child: const Text('Continue Shopping'),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  Navigator.popUntil(context, (r) => r.isFirst);
+                  Future.microtask(() {
+                    DashboardController.findOrPut().openOrderHistory();
+                  });
+                },
+                child: Text(
+                  'View Order History',
+                  style: GoogleFonts.rubik(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF019934),
+                  ),
+                ),
               ),
             ],
           ),

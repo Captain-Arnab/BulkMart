@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
@@ -84,7 +85,17 @@ class OrdersController extends GetxController {
     }
 
     final data = (result as ApiSuccess<Map<String, dynamic>>).data;
-    orders.assignAll(parseOrders(data));
+    final parsed = parseOrders(data);
+    if (kDebugMode) {
+      debugPrint(
+        '[Orders] list.php parsed ${parsed.length} order(s); '
+        'keys=${data.keys.toList()}',
+      );
+      if (parsed.isEmpty) {
+        debugPrint('[Orders] raw preview: ${data.toString().substring(0, data.toString().length.clamp(0, 800))}');
+      }
+    }
+    orders.assignAll(parsed);
   }
 
   /// Keeps order history in sync when detail API returns fresher data.
@@ -96,7 +107,11 @@ class OrdersController extends GetxController {
     );
     if (index >= 0) {
       orders[index] = order;
+    } else {
+      orders.add(order);
     }
+    sortOrdersNewestFirst(orders);
+    orders.refresh();
   }
 
   Future<Order?> loadOrderDetail({int? orderId, String? txnId}) async {

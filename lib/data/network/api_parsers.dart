@@ -405,53 +405,173 @@ List<Order> parseOrders(dynamic raw) {
   final rows = _extractOrderRows(raw);
   if (rows.isEmpty) return [];
 
-  return rows.map(parseOrderFromMap).toList()
-    ..sort((a, b) {
-      final dateCompare = b.date.compareTo(a.date);
-      if (dateCompare != 0) return dateCompare;
-      return b.orderId.compareTo(a.orderId);
-    });
+  final orders = rows.map(parseOrderFromMap).toList();
+  sortOrdersNewestFirst(orders);
+  return orders;
+}
+
+/// Newest orders first (by date, then higher order_id).
+void sortOrdersNewestFirst(List<Order> orders) {
+  orders.sort((a, b) {
+    final aMs = _orderSortMillis(a);
+    final bMs = _orderSortMillis(b);
+    if (aMs != bMs) return bMs.compareTo(aMs);
+    return b.orderId.compareTo(a.orderId);
+  });
+}
+
+int _orderSortMillis(Order order) {
+  final parsed = parseOrderDateTime(order.date);
+  if (parsed != null) return parsed.millisecondsSinceEpoch;
+  // Fallback: higher numeric order ids are usually newer.
+  return order.orderId;
+}
+
+/// Parses common backend date formats for chronological sorting.
+DateTime? parseOrderDateTime(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return null;
+
+  final iso = DateTime.tryParse(value);
+  if (iso != null) return iso;
+
+  final asNum = num.tryParse(value);
+  if (asNum != null) {
+    final ts = asNum.toInt();
+    final ms = ts > 9999999999 ? ts : ts * 1000;
+    return DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  // dd-mm-yyyy / dd/mm/yyyy [/ HH:mm[:ss]]
+  final dmy = RegExp(
+    r'^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?',
+  ).firstMatch(value);
+  if (dmy != null) {
+    var year = int.parse(dmy.group(3)!);
+    if (year < 100) year += 2000;
+    final day = int.parse(dmy.group(1)!);
+    final month = int.parse(dmy.group(2)!);
+    final hour = int.tryParse(dmy.group(4) ?? '0') ?? 0;
+    final minute = int.tryParse(dmy.group(5) ?? '0') ?? 0;
+    final second = int.tryParse(dmy.group(6) ?? '0') ?? 0;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return DateTime(year, month, day, hour, minute, second);
+    }
+  }
+
+  // yyyy-mm-dd already covered by DateTime.tryParse; try "dd MMM yyyy"
+  const months = {
+    'jan': 1,
+    'feb': 2,
+    'mar': 3,
+    'apr': 4,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'aug': 8,
+    'sep': 9,
+    'oct': 10,
+    'nov': 11,
+    'dec': 12,
+  };
+  final named = RegExp(
+    r'^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?',
+  ).firstMatch(value);
+  if (named != null) {
+    final monKey = named.group(2)!.substring(0, 3).toLowerCase();
+    final month = months[monKey];
+    if (month != null) {
+      return DateTime(
+        int.parse(named.group(3)!),
+        month,
+        int.parse(named.group(1)!),
+        int.tryParse(named.group(4) ?? '0') ?? 0,
+        int.tryParse(named.group(5) ?? '0') ?? 0,
+        int.tryParse(named.group(6) ?? '0') ?? 0,
+      );
+    }
+  }
+
+  return null;
 }
 
 bool _isOrderRow(Map<String, dynamic> row) {
   return row.containsKey('order_id') ||
+      row.containsKey('ord_id') ||
       row.containsKey('id') ||
       row.containsKey('products') ||
       row.containsKey('order_items') ||
       row.containsKey('items') ||
       row.containsKey('total_amount') ||
-      row.containsKey('txn_id');
+      row.containsKey('txn_id') ||
+      row.containsKey('order_status') ||
+      row.containsKey('payment_status');
+}
+
+/// Backend list.php often returns orders as a map keyed by txn_id:
+/// `{ "TXN123": { order_id, products, ... }, ... }`.
+List<Map<String, dynamic>> _orderRowsFromKeyedMap(Map raw) {
+  final rows = <Map<String, dynamic>>[];
+  raw.forEach((key, value) {
+    if (value is! Map) return;
+    final row = Map<String, dynamic>.from(value);
+    if (!_isOrderRow(row)) return;
+    final keyStr = key?.toString() ?? '';
+    if (keyStr.isNotEmpty &&
+        keyStr != 'data' &&
+        keyStr != 'orders' &&
+        (row['txn_id'] == null || row['txn_id'].toString().isEmpty)) {
+      row['txn_id'] = keyStr;
+    }
+    rows.add(row);
+  });
+  return rows;
 }
 
 List<dynamic> _findOrderRowList(dynamic raw, [int depth = 0]) {
   if (depth > 6) return const [];
   if (raw is List) {
     if (raw.isEmpty) return raw;
-    final first = raw.first;
-    if (first is Map && _isOrderRow(Map<String, dynamic>.from(first))) {
-      return raw;
-    }
+    final maps = raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final orderLike = maps.where(_isOrderRow).toList();
+    if (orderLike.isNotEmpty) return orderLike;
     return const [];
   }
   if (raw is! Map) return const [];
 
   final map = Map<String, dynamic>.from(raw);
-  for (final key in ['data', 'orders', 'order_list', 'list', 'items']) {
+
+  // Prefer known list keys first.
+  for (final key in [
+    'data',
+    'orders',
+    'order_list',
+    'list',
+    'items',
+    'result',
+  ]) {
     if (!map.containsKey(key)) continue;
     final value = map[key];
     if (value is List) {
-      if (value.isEmpty) return value;
-      final first = value.first;
-      if (first is Map && _isOrderRow(Map<String, dynamic>.from(first))) {
-        return value;
-      }
+      final nested = _findOrderRowList(value, depth + 1);
+      if (nested.isNotEmpty || (value.isEmpty)) return nested;
       continue;
     }
     if (value is Map) {
+      // data: { TXN1: {...}, TXN2: {...} }
+      final keyed = _orderRowsFromKeyedMap(value);
+      if (keyed.isNotEmpty) return keyed;
       final nested = _findOrderRowList(value, depth + 1);
       if (nested.isNotEmpty) return nested;
     }
   }
+
+  // Whole payload itself is a txn_id-keyed map of orders.
+  final keyed = _orderRowsFromKeyedMap(map);
+  if (keyed.isNotEmpty) return keyed;
 
   if (_isOrderRow(map)) return [map];
   return const [];
@@ -812,7 +932,10 @@ _OrderAddressFields _parseOrderAddressFields(Map<String, dynamic> order) {
 
 Order parseOrderFromMap(Map<String, dynamic> order) {
   final orderId = int.tryParse(
-        order['order_id']?.toString() ?? order['id']?.toString() ?? '0',
+        order['order_id']?.toString() ??
+            order['ord_id']?.toString() ??
+            order['id']?.toString() ??
+            '0',
       ) ??
       0;
 

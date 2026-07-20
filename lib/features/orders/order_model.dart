@@ -72,8 +72,9 @@ class Order {
     return value.contains('cancel') || value.contains('reject');
   }
 
-  /// True for cash-on-delivery orders. Online orders have a txn_id; COD often
-  /// only has order_id. Also used when the list API omits payment_method.
+  /// True for cash-on-delivery / pay-later style orders.
+  /// Backend often still assigns a txn_id for COD, so we must not treat
+  /// "has txn_id" as proof of online payment.
   bool get isCodLike {
     final method = paymentMethod.toLowerCase();
     final pay = paymentStatus.toLowerCase();
@@ -94,6 +95,11 @@ class Order {
         hints.contains('razorpay')) {
       return false;
     }
+    // Sparse API fields: prefer COD-like so the order appears under
+    // "Will Deliver" instead of being hidden in "Cancelled / unpaid".
+    if (paymentMethod.trim().isEmpty && paymentStatus.trim().isEmpty) {
+      return true;
+    }
     return txnId.isEmpty && orderId > 0;
   }
 
@@ -111,7 +117,9 @@ class Order {
         s.contains('ship') ||
         s.contains('pack') ||
         s.contains('out for') ||
-        s.contains('active');
+        s.contains('active') ||
+        s.contains('new') ||
+        s.contains('accepted');
   }
 
   /// Delivery finished (order status from API).
@@ -128,12 +136,15 @@ class Order {
     if (isCodLike) return false;
     final pay = paymentStatus.toLowerCase().trim();
     if (pay.isEmpty) {
-      return txnId.isNotEmpty && !isDeliveryCompleted;
+      // Only treat as unpaid when there is an explicit pending payment URL,
+      // not merely because a txn_id exists.
+      return pendingPaymentUrl.trim().isNotEmpty && !isDeliveryCompleted;
     }
     return pay.contains('pending') ||
         pay.contains('unpaid') ||
         pay.contains('initiated') ||
-        pay.contains('due');
+        pay.contains('due') ||
+        pay.contains('failed');
   }
 
   bool get isOnlinePaymentCompleted {

@@ -76,7 +76,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (!mounted) return;
     setState(() => _isAddingToCart = false);
 
-    if (!success && mounted) {
+    if (!mounted) return;
+    if (success) {
+      showAppToast(context, 'Added to cart');
+    } else {
       showAppToast(
         context,
         cart.errorMessage.value.isNotEmpty

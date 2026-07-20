@@ -74,7 +74,7 @@ extension OrderSegmentX on Order {
 String orderSegmentLabel(OrderSegment segment) {
   switch (segment) {
     case OrderSegment.cancelledOrUnpaid:
-      return 'Cancelled';
+      return 'Cancelled / Unpaid';
     case OrderSegment.willDeliver:
       return 'Will Deliver';
     case OrderSegment.delivered:
