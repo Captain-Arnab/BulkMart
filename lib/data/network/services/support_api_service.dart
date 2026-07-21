@@ -10,13 +10,15 @@ class SupportApiService {
     required String subject,
     required String message,
     String? orderId,
+    String? category,
   }) =>
       _client.post(
-        APIClass.supportTickets,
+        APIClass.supportCreate,
         body: {
           'subject': subject,
           'message': message,
           if (orderId != null) 'order_id': orderId,
+          if (category != null && category.isNotEmpty) 'category': category,
         },
       );
 

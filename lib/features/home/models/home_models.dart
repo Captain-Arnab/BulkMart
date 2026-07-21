@@ -1,6 +1,7 @@
 import 'package:urban_roots/features/products/data/ProductsController.dart'
     show Category;
 import 'package:urban_roots/features/products/models/Product.dart';
+import 'package:urban_roots/features/offers/models/offer_model.dart';
 
 class HomeBanner {
   const HomeBanner({
@@ -42,9 +43,11 @@ class HomeUiData {
     required this.categories,
     required this.featuredProducts,
     required this.categorySections,
+    this.offers = const [],
   });
 
   final List<Category> categories;
   final List<Product> featuredProducts;
   final List<CategorySection> categorySections;
+  final List<OfferModel> offers;
 }

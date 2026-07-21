@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
+import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+
+/// Categories accepted by POST /api/user/support/create.php.
+/// Mirrors the vendor raise-ticket pattern; defaults to Other when omitted.
+const List<String> kSupportCategories = [
+  'Payment',
+  'Order',
+  'Product',
+  'Account',
+  'Technical',
+  'Other',
+];
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -18,6 +30,7 @@ class _SupportScreenState extends State<SupportScreen> {
   final _orderId = TextEditingController();
   ApiViewStatus _status = ApiViewStatus.idle;
   bool _submitting = false;
+  String _category = 'Other';
 
   static const Color primaryGreen = Color(0xFF2E7D32);
   static const Color lightGreen = Color(0xFFE8F5E9);
@@ -96,6 +109,18 @@ class _SupportScreenState extends State<SupportScreen> {
     );
   }
 
+  bool _parseMailSent(dynamic raw) {
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    final text = raw?.toString().trim().toLowerCase() ?? '';
+    return text == 'true' || text == '1' || text == 'yes';
+  }
+
+  String _ticketIdFrom(Map<String, dynamic> data) {
+    final raw = data['ticket_id'] ?? data['ticketId'] ?? data['id'];
+    return raw?.toString().trim() ?? '';
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -108,6 +133,7 @@ class _SupportScreenState extends State<SupportScreen> {
       subject: _subject.text.trim(),
       message: _message.text.trim(),
       orderId: _orderId.text.trim().isEmpty ? null : _orderId.text.trim(),
+      category: _category,
     );
 
     if (!mounted) return;
@@ -117,15 +143,34 @@ class _SupportScreenState extends State<SupportScreen> {
       _submitting = false;
     });
 
-    if (result is ApiFailure) {
-      final failure = result as ApiFailure;
-      showApiSnackBar(context, failure.message, isError: true);
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      showApiSnackBar(context, result.message, isError: true);
       return;
     }
 
-    final ticketId = (result as ApiSuccess).data['ticket_id'];
-    showApiSnackBar(context, 'Ticket #$ticketId created');
-    Navigator.pop(context, true);
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final ticketId = _ticketIdFrom(data);
+    final mailSent = _parseMailSent(data['mail_sent']);
+
+    final buffer = StringBuffer();
+    if (ticketId.isNotEmpty) {
+      buffer.write('Ticket #$ticketId raised');
+    } else {
+      buffer.write('Your support ticket has been raised');
+    }
+    if (mailSent) {
+      buffer.write(' — confirmation sent to your email.');
+    } else {
+      buffer.write('.');
+    }
+
+    await SweetAlert.success(
+      context,
+      message: buffer.toString(),
+      onConfirm: () {
+        if (mounted) Navigator.pop(context, true);
+      },
+    );
   }
 
   @override
@@ -173,7 +218,7 @@ class _SupportScreenState extends State<SupportScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -198,6 +243,28 @@ class _SupportScreenState extends State<SupportScreen> {
                         controller: _orderId,
                         label: 'Order ID (optional)',
                         icon: Icons.confirmation_number_outlined,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: DropdownButtonFormField<String>(
+                          value: _category,
+                          decoration: _decoration(
+                            label: 'Category',
+                            icon: Icons.category_outlined,
+                          ),
+                          items: kSupportCategories
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c, style: GoogleFonts.rubik()),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _category = value);
+                          },
+                        ),
                       ),
                       _field(
                         controller: _message,

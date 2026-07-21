@@ -11,6 +11,7 @@ import 'package:urban_roots/features/home/presentation/widgets/home_banner_carou
 import 'package:urban_roots/features/home/presentation/widgets/home_categories_grid.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_featured_grid.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_horizontal_product_row.dart';
+import 'package:urban_roots/features/home/presentation/widgets/home_offers_row.dart';
 import 'package:urban_roots/features/notifications/notifications_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -109,6 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (data.categories.isNotEmpty) {
       children.add(HomeCategoriesGrid(categories: data.categories));
+    }
+
+    if (data.offers.isNotEmpty) {
+      children.add(HomeOffersRow(offers: data.offers));
     }
 
     if (data.featuredProducts.isNotEmpty) {

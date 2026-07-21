@@ -12,6 +12,7 @@ import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/data/repositories/auth_repository.dart';
 import 'package:urban_roots/features/login/data/LoginController.dart';
 import 'package:urban_roots/features/login/presentation/OtpLogin.dart';
+import 'package:urban_roots/features/login/presentation/forgot_password_screen.dart';
 import 'package:urban_roots/features/login/presentation/widgets/role_selector.dart';
 import 'package:urban_roots/features/registration/presentation/Registration.dart';
 
@@ -121,7 +122,36 @@ class Login extends StatelessWidget {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     )),
-                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ForgotPasswordScreen(
+                                initialEmail:
+                                    loginController.emailController.text.trim(),
+                              ),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: GoogleFonts.rubik(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF019934),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       height: 48,

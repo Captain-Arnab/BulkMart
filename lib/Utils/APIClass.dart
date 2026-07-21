@@ -9,6 +9,7 @@ class APIClass {
   static const userLogin = '/login.php';
   static const userLogout = '/logout.php';
   static const changePassword = '/change_password.php';
+  static const forgotPassword = '/forgot_password.php';
   static const otpLogin = '/otp-login.php';
   static const sendLoginOtp = '/send-login-otp.php';
   static const socialLogin = '/social-login.php';
@@ -92,6 +93,7 @@ class APIClass {
 
   // ── MODULE 13 — SUPPORT & REFERRAL (user base) ─────────────────────
   static const supportTickets = '/support/tickets.php';
+  static const supportCreate = '/support/create.php';
   static const referral = '/referral.php';
 
   // ── OFFERS (site base: /api) ─────────────────────────────────────

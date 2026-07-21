@@ -14,6 +14,19 @@ abstract class AuthRepository {
   });
 
   Future<ApiResult<void>> logout();
+
+  Future<ApiResult<void>> forgotPasswordSendOtp(String email);
+
+  Future<ApiResult<void>> forgotPasswordVerifyOtp({
+    required String email,
+    required String otp,
+  });
+
+  Future<ApiResult<void>> forgotPasswordReset({
+    required String email,
+    required String otp,
+    required String newPassword,
+  });
 }
 
 class LiveAuthRepository implements AuthRepository {
@@ -99,6 +112,50 @@ class LiveAuthRepository implements AuthRepository {
     }
     return const ApiSuccess(null);
   }
+
+  @override
+  Future<ApiResult<void>> forgotPasswordSendOtp(String email) =>
+      _mapForgotPassword(
+        _api.auth.forgotPassword(step: 'send_otp', email: email),
+      );
+
+  @override
+  Future<ApiResult<void>> forgotPasswordVerifyOtp({
+    required String email,
+    required String otp,
+  }) =>
+      _mapForgotPassword(
+        _api.auth.forgotPassword(
+          step: 'verify_otp',
+          email: email,
+          otp: otp,
+        ),
+      );
+
+  @override
+  Future<ApiResult<void>> forgotPasswordReset({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) =>
+      _mapForgotPassword(
+        _api.auth.forgotPassword(
+          step: 'reset_password',
+          email: email,
+          otp: otp,
+          newPassword: newPassword,
+        ),
+      );
+
+  Future<ApiResult<void>> _mapForgotPassword(
+    Future<ApiResult<Map<String, dynamic>>> call,
+  ) async {
+    final result = await call;
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      return ApiFailure(result.message, statusCode: result.statusCode);
+    }
+    return const ApiSuccess(null);
+  }
 }
 
 /// Retained for offline / demo flows.
@@ -133,6 +190,40 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<ApiResult<void>> logout() async {
     await AuthSession.instance.clear();
+    return const ApiSuccess(null);
+  }
+
+  @override
+  Future<ApiResult<void>> forgotPasswordSendOtp(String email) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (email.trim().isEmpty) {
+      return const ApiFailure('Email is required');
+    }
+    return const ApiSuccess(null);
+  }
+
+  @override
+  Future<ApiResult<void>> forgotPasswordVerifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (otp.trim().length < 4) {
+      return const ApiFailure('Invalid or expired OTP');
+    }
+    return const ApiSuccess(null);
+  }
+
+  @override
+  Future<ApiResult<void>> forgotPasswordReset({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (newPassword.length < 6) {
+      return const ApiFailure('Password must be at least 6 characters');
+    }
     return const ApiSuccess(null);
   }
 }

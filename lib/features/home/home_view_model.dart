@@ -1,16 +1,22 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/repositories/home_repository.dart';
+import 'package:urban_roots/data/repositories/offers_repository.dart';
 import 'package:urban_roots/features/home/models/home_models.dart';
+import 'package:urban_roots/features/offers/models/offer_model.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart'
     show Category;
 import 'package:urban_roots/features/products/models/Product.dart';
 
 class HomeViewModel extends ChangeNotifier {
-  HomeViewModel({HomeRepository? repository})
-      : _repository = repository ?? ApiHomeRepository();
+  HomeViewModel({
+    HomeRepository? repository,
+    OffersRepository? offersRepository,
+  })  : _repository = repository ?? ApiHomeRepository(),
+        _offersRepository = offersRepository ?? ApiOffersRepository();
 
   final HomeRepository _repository;
+  final OffersRepository _offersRepository;
 
   static const int _featuredLimit = 6;
   static const int _categoryProductLimit = 10;
@@ -39,6 +45,7 @@ class HomeViewModel extends ChangeNotifier {
 
     List<Category> categories = [];
     List<Product> featured = [];
+    List<OfferModel> offers = [];
 
     var categoriesOk = false;
 
@@ -51,6 +58,9 @@ class HomeViewModel extends ChangeNotifier {
           .fetchFeaturedProducts(limit: _featuredLimit)
           .then((value) => featured = value)
           .catchError((_) => featured = <Product>[]),
+      _offersRepository.fetchOffers().then((value) => offers = value).catchError(
+            (_) => offers = <OfferModel>[],
+          ),
     ]);
 
     if (_disposed) return;
@@ -92,6 +102,7 @@ class HomeViewModel extends ChangeNotifier {
         categories: categories,
         featuredProducts: featured,
         categorySections: sections,
+        offers: offers,
       ),
     );
     _safeNotify();

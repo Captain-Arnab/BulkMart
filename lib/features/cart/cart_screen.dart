@@ -6,9 +6,9 @@ import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/api_view_state.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
-import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/features/cart/cart_controller.dart';
 import 'package:urban_roots/features/cart/cart_summary_footer.dart';
+import 'package:urban_roots/features/cart/presentation/apply_coupon_sheet.dart';
 import 'package:urban_roots/features/checkout/checkout_summary.dart';
 import 'package:urban_roots/features/checkout/checkout_screen.dart';
 
@@ -115,7 +115,9 @@ class _CartPageState extends State<CartPage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: applied.isEmpty ? () => _showCouponDialog(context) : null,
+          onTap: applied.isEmpty
+              ? () => showApplyCouponSheet(context: context, cart: _cart)
+              : null,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -441,50 +443,5 @@ class _CartPageState extends State<CartPage> {
         );
       }),
     );
-  }
-
-  Future<void> _showCouponDialog(BuildContext context) async {
-    final code = TextEditingController();
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Apply Coupon',
-          style: GoogleFonts.rubik(fontWeight: FontWeight.w700),
-        ),
-        content: TextField(
-          controller: code,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            hintText: 'Enter coupon code',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final couponCode = code.text.trim();
-              Navigator.pop(ctx);
-              final result = await _cart.applyCoupon(couponCode);
-              if (!context.mounted) return;
-              if (result is ApiFailure<Map<String, dynamic>>) {
-                showApiSnackBar(context, result.message, isError: true);
-              } else {
-                showApiSnackBar(context, 'Coupon applied');
-              }
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    );
-    code.dispose();
   }
 }

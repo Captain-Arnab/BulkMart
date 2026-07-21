@@ -74,6 +74,25 @@ class AuthApiService {
         },
       );
 
+  /// Pre-login OTP reset. [step] is `send_otp`, `verify_otp`, or `reset_password`.
+  Future<ApiResult<Map<String, dynamic>>> forgotPassword({
+    required String step,
+    required String email,
+    String? otp,
+    String? newPassword,
+  }) =>
+      _client.post(
+        APIClass.forgotPassword,
+        token: TokenMode.none,
+        skipSessionClear: true,
+        body: {
+          'step': step,
+          'email': email,
+          if (otp != null) 'otp': otp,
+          if (newPassword != null) 'new_password': newPassword,
+        },
+      );
+
   Future<ApiResult<Map<String, dynamic>>> otpLogin({
     required String phone,
     required String otp,

@@ -3,6 +3,8 @@ import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/features/cart/models/available_coupon.dart';
+import 'package:urban_roots/features/offers/models/offer_model.dart';
 
 class CartController extends GetxController {
   CartController({UrbanRootsApi? api}) : _api = api ?? UrbanRootsApi.instance;
@@ -342,8 +344,13 @@ class CartController extends GetxController {
   }
 
   Future<ApiResult<Map<String, dynamic>>> applyCoupon(String code) async {
+    final trimmed = code.trim();
+    if (trimmed.isEmpty) {
+      return const ApiFailure('Enter a coupon code');
+    }
+
     final result = await _api.coupons.apply(
-      couponCode: code,
+      couponCode: trimmed,
       amount: totalValue,
     );
     if (result is ApiSuccess<Map<String, dynamic>>) {
@@ -352,7 +359,7 @@ class CartController extends GetxController {
           ? Map<String, dynamic>.from(d['data'] as Map)
           : d;
       appliedCoupon.value =
-          inner['coupon_code']?.toString() ?? d['coupon_code']?.toString() ?? code;
+          inner['coupon_code']?.toString() ?? d['coupon_code']?.toString() ?? trimmed;
       discount.value = double.tryParse(
             inner['discount']?.toString() ?? d['discount']?.toString() ?? '0',
           ) ??
@@ -365,6 +372,78 @@ class CartController extends GetxController {
           (totalValue - discount.value);
     }
     return result;
+  }
+
+  /// Coupons from `/coupons/list.php`, plus active offer promo codes when the
+  /// coupons table is empty (common on current backend).
+  Future<List<AvailableCoupon>> fetchAvailableCoupons() async {
+    final byCode = <String, AvailableCoupon>{};
+
+    final couponsResult = await _api.coupons.list();
+    if (couponsResult is ApiSuccess<Map<String, dynamic>>) {
+      final raw = couponsResult.data['coupons'] ??
+          couponsResult.data['data'] ??
+          couponsResult.data['list'];
+      if (raw is List) {
+        for (final entry in raw.whereType<Map>()) {
+          final map = Map<String, dynamic>.from(entry);
+          final code = (map['coupon_code'] ??
+                  map['code'] ??
+                  map['promo_code'] ??
+                  map['coupon'])
+              ?.toString()
+              .trim();
+          if (code == null || code.isEmpty) continue;
+          final key = code.toUpperCase();
+          byCode[key] = AvailableCoupon(
+            code: key,
+            title: (map['title'] ?? map['name'] ?? map['coupon_title'])
+                    ?.toString() ??
+                '',
+            description:
+                (map['description'] ?? map['details'] ?? map['message'])
+                        ?.toString() ??
+                    '',
+            discountPercent: int.tryParse(
+                  (map['discount_percent'] ??
+                          map['discount'] ??
+                          map['percent_off'] ??
+                          '0')
+                      .toString(),
+                ) ??
+                0,
+          );
+        }
+      }
+    }
+
+    // Offers API exposes live promo codes even when coupons/list is empty.
+    final offersResult = await _api.offers.listOffers();
+    if (offersResult is ApiSuccess<Map<String, dynamic>>) {
+      final raw = offersResult.data['offers'] ?? offersResult.data['data'];
+      if (raw is List) {
+        for (final entry in raw.whereType<Map>()) {
+          final offer =
+              OfferModel.fromJson(Map<String, dynamic>.from(entry));
+          final code = offer.couponCode.trim();
+          if (code.isEmpty) continue;
+          final key = code.toUpperCase();
+          byCode.putIfAbsent(
+            key,
+            () => AvailableCoupon(
+              code: key,
+              title: offer.displayTitle,
+              description: offer.displayDescription,
+              discountPercent: offer.discountPercent,
+            ),
+          );
+        }
+      }
+    }
+
+    final list = byCode.values.toList()
+      ..sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+    return list;
   }
 
   /// Clears coupon locally only — backend coupons/remove.php is a stub.
