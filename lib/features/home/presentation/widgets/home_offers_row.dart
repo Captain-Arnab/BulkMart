@@ -6,26 +6,35 @@ import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/features/offers/models/offer_model.dart';
 import 'package:urban_roots/features/offers/presentation/offers_screen.dart';
 
-/// Horizontally scrollable Special Offers / Combos row for Home.
-/// Live `/api/offers/list.php` returns coupon-style offers (no product_id),
-/// so taps open offer details with copy-coupon — not product detail.
+/// Compact chip strip for Special Offers / Combos on Home.
+/// Offers from `/api/offers/list.php` are coupon-only (no banners), so chips
+/// save vertical space vs large cards.
 class HomeOffersRow extends StatelessWidget {
   const HomeOffersRow({super.key, required this.offers});
 
   final List<OfferModel> offers;
 
-  static const double _cardWidth = 220;
-  static const double _rowHeight = 132;
+  static const double _chipHeight = 40;
 
   @override
   Widget build(BuildContext context) {
     if (offers.isEmpty) return const SizedBox.shrink();
 
+    // Deduplicate by coupon code so identical promos don't repeat as chips.
+    final unique = <String, OfferModel>{};
+    for (final offer in offers) {
+      final key = offer.couponCode.trim().isNotEmpty
+          ? offer.couponCode.trim().toUpperCase()
+          : 'offer_${offer.offerId}';
+      unique.putIfAbsent(key, () => offer);
+    }
+    final chips = unique.values.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
           child: SectionHeader(
             title: 'Special Offers / Combos',
             action: 'See All',
@@ -38,24 +47,22 @@ class HomeOffersRow extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: _rowHeight,
+          height: _chipHeight,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: offers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: chips.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
-              final offer = offers[index];
-              return SizedBox(
-                width: _cardWidth,
-                child: _HomeOfferCard(
-                  offer: offer,
-                  onTap: () => _showOfferSheet(context, offer),
-                ),
+              final offer = chips[index];
+              return _OfferChip(
+                offer: offer,
+                onTap: () => _showOfferSheet(context, offer),
               );
             },
           ),
         ),
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -213,97 +220,70 @@ class HomeOffersRow extends StatelessWidget {
   }
 }
 
-class _HomeOfferCard extends StatelessWidget {
-  const _HomeOfferCard({required this.offer, required this.onTap});
+class _OfferChip extends StatelessWidget {
+  const _OfferChip({required this.offer, required this.onTap});
 
   final OfferModel offer;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final discount = offer.discountPercent > 0
+        ? '${offer.discountPercent}% OFF'
+        : 'OFFER';
+    final code = offer.couponCode.trim();
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.primary,
-                AppColors.primary.withValues(alpha: 0.78),
-                const Color(0xFF066A28),
-              ],
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.28),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        offer.discountPercent > 0
-                            ? '${offer.discountPercent}% OFF'
-                            : 'OFFER',
-                        style: GoogleFonts.rubik(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(
-                      Icons.local_offer_rounded,
-                      color: Colors.white70,
-                      size: 18,
-                    ),
-                  ],
+                Icon(
+                  Icons.local_offer_rounded,
+                  size: 16,
+                  color: AppColors.primary,
                 ),
-                const Spacer(),
+                const SizedBox(width: 6),
                 Text(
-                  offer.displayTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  discount,
                   style: GoogleFonts.rubik(
-                    fontSize: 15,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.2,
+                    color: AppColors.primary,
                   ),
                 ),
-                if (offer.couponCode.isNotEmpty) ...[
-                  const SizedBox(height: 6),
+                if (code.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      '·',
+                      style: GoogleFonts.rubik(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
                   Text(
-                    offer.couponCode,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    code,
                     style: GoogleFonts.rubik(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      letterSpacing: 0.4,
+                      color: const Color(0xFF1A1A1A),
                     ),
                   ),
                 ],
