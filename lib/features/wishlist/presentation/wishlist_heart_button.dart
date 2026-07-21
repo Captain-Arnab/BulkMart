@@ -29,23 +29,12 @@ class WishlistHeartButton extends StatefulWidget {
 
 class _WishlistHeartButtonState extends State<WishlistHeartButton> {
   late final WishlistController _wishlist;
-  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _wishlist = WishlistController.findOrPut();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final id = widget.productId.trim();
-    if (id.isEmpty) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    await _wishlist.isInWishlist(id);
-    if (mounted) setState(() => _loading = false);
+    // Membership comes from a single list sync — no per-card loading spinner.
   }
 
   Future<void> _onTap() async {
@@ -71,7 +60,7 @@ class _WishlistHeartButtonState extends State<WishlistHeartButton> {
 
     return Obx(() {
       final inWishlist = _wishlist.isKnownInWishlist(id);
-      final busy = _wishlist.isToggling(id) || _loading;
+      final busy = _wishlist.isToggling(id);
 
       return Material(
         color: widget.backgroundColor ?? Colors.white.withValues(alpha: 0.92),
@@ -83,21 +72,15 @@ class _WishlistHeartButtonState extends State<WishlistHeartButton> {
           onTap: busy ? null : _onTap,
           child: Padding(
             padding: widget.padding,
-            child: busy && _loading
-                ? SizedBox(
-                    width: widget.size,
-                    height: widget.size,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    inWishlist
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: widget.size,
-                    color: inWishlist
-                        ? (widget.filledColor ?? Colors.red.shade500)
-                        : (widget.outlineColor ?? Colors.grey.shade700),
-                  ),
+            child: Icon(
+              inWishlist
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              size: widget.size,
+              color: inWishlist
+                  ? (widget.filledColor ?? Colors.red.shade500)
+                  : (widget.outlineColor ?? Colors.grey.shade700),
+            ),
           ),
         ),
       );

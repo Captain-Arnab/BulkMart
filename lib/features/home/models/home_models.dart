@@ -44,10 +44,13 @@ class HomeUiData {
     required this.featuredProducts,
     required this.categorySections,
     this.offers = const [],
+    this.sectionsLoading = false,
   });
 
   final List<Category> categories;
   final List<Product> featuredProducts;
   final List<CategorySection> categorySections;
   final List<OfferModel> offers;
+  /// True while more category product rows are still loading in the background.
+  final bool sectionsLoading;
 }

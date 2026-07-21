@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_result.dart';
@@ -18,6 +20,9 @@ class WishlistController extends GetxController {
   /// Local optimistic membership keyed by product_id.
   final RxMap<String, bool> membership = <String, bool>{}.obs;
   final Set<String> _toggling = <String>{};
+
+  bool _membershipSynced = false;
+  Future<void>? _membershipSyncFuture;
 
   Future<void> loadWishlist() async {
     isLoading(true);
@@ -41,7 +46,25 @@ class WishlistController extends GetxController {
         membership[productId] = true;
       }
     }
+    _membershipSynced = true;
+    membership.refresh();
     await refreshCount();
+  }
+
+  /// One list fetch for all hearts — avoids N× `/wishlist/check.php` on home.
+  Future<void> syncMembershipFromServer() {
+    if (_membershipSynced) return Future.value();
+    return _membershipSyncFuture ??= () async {
+      try {
+        await loadWishlist();
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint('[Wishlist] membership sync failed: $e\n$st');
+        }
+      } finally {
+        _membershipSyncFuture = null;
+      }
+    }();
   }
 
   Future<void> refreshCount() async {
@@ -51,7 +74,8 @@ class WishlistController extends GetxController {
     }
   }
 
-  /// Checks server membership and caches the result for the heart icon.
+  /// Uses cached membership only. Unknown products are treated as not
+  /// wishlisted; [syncMembershipFromServer] fills the cache in one request.
   Future<bool> isInWishlist(String productId) async {
     final id = productId.trim();
     if (id.isEmpty) return false;
@@ -60,18 +84,9 @@ class WishlistController extends GetxController {
       return membership[id]!;
     }
 
-    final result = await _repo.isInWishlist(id);
-    if (result is ApiSuccess<bool>) {
-      membership[id] = result.data;
-      return result.data;
-    }
-
-    if (result is ApiFailure<bool> && kDebugMode) {
-      debugPrint(
-        '[Wishlist] check failed for product_id=$id: ${result.message}',
-      );
-    }
-    return membership[id] ?? false;
+    // Fire-and-forget single list sync — never N+1 check.php per product card.
+    unawaited(syncMembershipFromServer());
+    return false;
   }
 
   bool isKnownInWishlist(String productId) =>
@@ -142,5 +157,6 @@ class WishlistController extends GetxController {
   void onInit() {
     super.onInit();
     refreshCount();
+    unawaited(syncMembershipFromServer());
   }
 }

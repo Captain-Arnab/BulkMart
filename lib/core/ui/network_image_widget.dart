@@ -86,11 +86,17 @@ class NetworkOrAssetImage extends StatelessWidget {
     final resolved = resolveImageUrl(url);
     Widget image;
     if (resolved.isNotEmpty) {
+      final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;
+      final cacheW = _cachePx(width, dpr);
+      final cacheH = _cachePx(height, dpr);
       image = Image.network(
         resolved,
         width: width,
         height: height,
         fit: fit,
+        cacheWidth: cacheW,
+        cacheHeight: cacheH,
+        filterQuality: FilterQuality.low,
         errorBuilder: (_, __, ___) => _assetImage(),
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
@@ -111,5 +117,12 @@ class NetworkOrAssetImage extends StatelessWidget {
       return ClipRRect(borderRadius: borderRadius!, child: image);
     }
     return image;
+  }
+
+  /// Decode images at display size to avoid full-res decode jank on lists.
+  static int? _cachePx(double? logical, double dpr) {
+    if (logical == null) return null;
+    if (!logical.isFinite || logical <= 0) return null;
+    return (logical * dpr).round().clamp(1, 2000);
   }
 }

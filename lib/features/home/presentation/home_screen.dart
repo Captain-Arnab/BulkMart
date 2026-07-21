@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/Utils/AppSearchBarWidget.dart';
@@ -13,6 +15,7 @@ import 'package:urban_roots/features/home/presentation/widgets/home_featured_gri
 import 'package:urban_roots/features/home/presentation/widgets/home_horizontal_product_row.dart';
 import 'package:urban_roots/features/home/presentation/widgets/home_offers_row.dart';
 import 'package:urban_roots/features/notifications/notifications_controller.dart';
+import 'package:urban_roots/features/wishlist/wishlist_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,11 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _bootstrap() async {
-    await Future.wait([
-      _notificationsController.refreshUnreadCount(),
-      CartController.findOrPut().loadCart(),
-      _vm.load(),
-    ]);
+    // Don't block first home paint on cart / notifications / wishlist.
+    unawaited(_notificationsController.refreshUnreadCount());
+    unawaited(CartController.findOrPut().loadCart());
+    unawaited(WishlistController.findOrPut().syncMembershipFromServer());
+    await _vm.load();
   }
 
   void _onVmChanged() => setState(() {});
@@ -137,9 +140,28 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    if (data.sectionsLoading) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (data.featuredProducts.isEmpty &&
         data.categorySections.isEmpty &&
-        data.categories.isEmpty) {
+        data.categories.isEmpty &&
+        !data.sectionsLoading) {
       children.add(
         Padding(
           padding: const EdgeInsets.all(32),
