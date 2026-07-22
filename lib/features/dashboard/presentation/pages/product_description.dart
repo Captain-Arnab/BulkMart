@@ -7,6 +7,7 @@ import 'package:urban_roots/core/ui/app_ui_kit.dart';
 import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart' show showAppToast;
 import 'package:urban_roots/features/cart/cart_controller.dart';
+import 'package:urban_roots/features/checkout/buy_now_checkout_screen.dart';
 import 'package:urban_roots/features/dashboard/presentation/widgets/tabbar.dart';
 import 'package:urban_roots/features/products/data/ProductsController.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
@@ -61,12 +62,29 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         _data = null;
       } else {
         _data = data;
+        final stock = int.tryParse(data['stock']?.toString() ?? '') ?? 0;
+        if (stock > 0 && _quantity > stock) {
+          _quantity = stock;
+        } else if (stock <= 0) {
+          _quantity = 1;
+        }
       }
     });
   }
 
+  int get _availableStock {
+    final raw = _data?['stock'];
+    final parsed = int.tryParse(raw?.toString() ?? '');
+    if (parsed == null || parsed < 0) return 0;
+    return parsed;
+  }
+
   Future<void> _addToCart() async {
     if (_isAddingToCart) return;
+    if (_availableStock <= 0) {
+      showAppToast(context, 'This product is out of stock', isError: true);
+      return;
+    }
     setState(() => _isAddingToCart = true);
 
     final cart = CartController.findOrPut();
@@ -88,6 +106,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         isError: true,
       );
     }
+  }
+
+  void _openBuyNow() {
+    if (_availableStock <= 0) {
+      showAppToast(context, 'This product is out of stock', isError: true);
+      return;
+    }
+
+    final unitPrice = double.tryParse(_data?['price']?.toString() ?? '');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BuyNowCheckoutScreen(
+          productId: widget.productVal,
+          quantity: _quantity,
+          productName: _data?['name']?.toString() ?? 'Product',
+          unitPrice: unitPrice,
+        ),
+      ),
+    );
   }
 
   @override
@@ -277,24 +314,75 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      QuantityStepper(
+                        quantity: _quantity,
+                        onDecrement: () {
+                          if (_quantity > 1) {
+                            setState(() => _quantity--);
+                          }
+                        },
+                        onIncrement: () {
+                          final stock = _availableStock;
+                          if (stock > 0 && _quantity >= stock) {
+                            showAppToast(
+                              context,
+                              'Only $stock available in stock',
+                              isError: true,
+                            );
+                            return;
+                          }
+                          setState(() => _quantity++);
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
-                          QuantityStepper(
-                            quantity: _quantity,
-                            onDecrement: () {
-                              if (_quantity > 1) {
-                                setState(() => _quantity--);
-                              }
-                            },
-                            onIncrement: () => setState(() => _quantity++),
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    _isAddingToCart ? null : _addToCart,
+                                icon: _isAddingToCart
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.shopping_cart_outlined,
+                                        size: 20,
+                                      ),
+                                label: Text(
+                                  'Add to Cart',
+                                  style: GoogleFonts.rubik(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: BorderSide(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.45),
+                                    width: 1.4,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Buy Once',
-                              icon: Icons.shopping_cart_outlined,
-                              isLoading: _isAddingToCart,
-                              onPressed: _addToCart,
+                              label: 'Buy Now',
+                              icon: Icons.flash_on_rounded,
+                              onPressed: _openBuyNow,
                             ),
                           ),
                         ],

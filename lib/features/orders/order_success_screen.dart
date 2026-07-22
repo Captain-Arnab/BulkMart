@@ -7,10 +7,12 @@ class OrderSuccessScreen extends StatelessWidget {
     super.key,
     required this.orderId,
     this.txnId,
+    this.totalAmount,
   });
 
   final String orderId;
   final String? txnId;
+  final double? totalAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,17 @@ class OrderSuccessScreen extends StatelessWidget {
                   style: GoogleFonts.rubik(
                     fontSize: 14,
                     color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+              if (totalAmount != null && totalAmount! > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Total: ₹${totalAmount!.toStringAsFixed(0)}',
+                  style: GoogleFonts.rubik(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF019934),
                   ),
                 ),
               ],

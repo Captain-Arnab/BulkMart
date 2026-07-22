@@ -145,6 +145,38 @@ class OrdersApiService {
         ),
       );
 
+  /// Single-product purchase that skips the cart.
+  /// [paymentMethod] must be `COD` or `ONLINE` (backend contract).
+  Future<ApiResult<Map<String, dynamic>>> buyNow({
+    required String firstName,
+    required String phone,
+    required String address,
+    required String city,
+    required String state,
+    required String pincode,
+    required String landmark,
+    required String addressType,
+    required String productId,
+    required int quantity,
+    required String paymentMethod,
+  }) =>
+      _client.post(
+        APIClass.buyNow,
+        body: {
+          'first_name': firstName,
+          'phone': phone,
+          'address': address,
+          'city': city,
+          'state': state,
+          'pincode': pincode.toString(),
+          'landmark': landmark.isNotEmpty ? landmark : '-',
+          'address_type': addressType,
+          'product_id': productId,
+          'quantity': quantity,
+          'payment_method': paymentMethod,
+        },
+      );
+
   Future<ApiResult<Map<String, dynamic>>> retryOnlinePayment({
     required OrderPaymentFields fields,
   }) =>

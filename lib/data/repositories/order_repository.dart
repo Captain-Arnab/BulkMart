@@ -9,6 +9,22 @@ abstract class OrderRepository {
     int? orderId,
     String? txnId,
   });
+
+  /// Single-product checkout that skips the cart (`POST /orders/buy_now.php`).
+  /// Do not send client-side prices — the backend resolves amount/stock.
+  Future<ApiResult<Map<String, dynamic>>> buyNow({
+    required String firstName,
+    required String phone,
+    required String address,
+    required String city,
+    required String state,
+    required String pincode,
+    required String landmark,
+    required String addressType,
+    required String productId,
+    required int quantity,
+    required String paymentMethod,
+  });
 }
 
 class ApiOrderRepository implements OrderRepository {
@@ -39,4 +55,32 @@ class ApiOrderRepository implements OrderRepository {
       txnId: hasTxn ? txnId.trim() : null,
     );
   }
+
+  @override
+  Future<ApiResult<Map<String, dynamic>>> buyNow({
+    required String firstName,
+    required String phone,
+    required String address,
+    required String city,
+    required String state,
+    required String pincode,
+    required String landmark,
+    required String addressType,
+    required String productId,
+    required int quantity,
+    required String paymentMethod,
+  }) =>
+      _api.orders.buyNow(
+        firstName: firstName,
+        phone: phone,
+        address: address,
+        city: city,
+        state: state,
+        pincode: pincode,
+        landmark: landmark,
+        addressType: addressType,
+        productId: productId,
+        quantity: quantity,
+        paymentMethod: paymentMethod,
+      );
 }

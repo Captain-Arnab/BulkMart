@@ -63,6 +63,7 @@ class APIClass {
   static const codOrder = '/orders/cod_order.php';
   static const onlineOrder = '/orders/paywith_online_order.php';
   static const walletOrder = '/orders/wallet_order.php';
+  static const buyNow = '/orders/buy_now.php';
   static const ordersList = '/orders/list.php';
   static const orderDetail = '/orders/detail.php';
   static const orderTracking = '/orders/tracking.php';

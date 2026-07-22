@@ -67,6 +67,27 @@ String? extractTxnId(Map<String, dynamic> data) {
   return null;
 }
 
+double? extractTotalAmount(Map<String, dynamic> data) {
+  for (final key in ['total_amount', 'totalAmount', 'grand_total', 'amount']) {
+    final value = data[key];
+    if (value != null) {
+      final parsed = double.tryParse(value.toString());
+      if (parsed != null) return parsed;
+    }
+  }
+  final inner = data['data'];
+  if (inner is Map) {
+    for (final key in ['total_amount', 'totalAmount', 'grand_total', 'amount']) {
+      final value = inner[key];
+      if (value != null) {
+        final parsed = double.tryParse(value.toString());
+        if (parsed != null) return parsed;
+      }
+    }
+  }
+  return null;
+}
+
 List<Map<String, dynamic>> cartItemsToProducts(
   List<Map<String, dynamic>> cartItems,
 ) {
