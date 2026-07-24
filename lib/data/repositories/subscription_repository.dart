@@ -11,6 +11,7 @@ class SubscriptionCreateData {
     required this.endDate,
     this.message = '',
     this.paymentUrl,
+    this.orderId,
     this.transactionId,
     this.amount,
     this.raw = const {},
@@ -21,10 +22,24 @@ class SubscriptionCreateData {
   final String startDate;
   final String endDate;
   final String message;
+  /// PhonePe checkout link from create.php (present when payment is required).
   final String? paymentUrl;
+  /// Links this subscription to a payment/order record.
+  final String? orderId;
   final String? transactionId;
+  /// Authoritative upfront charge for the full term (from create.php).
   final double? amount;
   final Map<String, dynamic> raw;
+
+  bool get requiresPayment =>
+      paymentUrl != null && paymentUrl!.trim().isNotEmpty;
+
+  /// Prefer txn_id when present; otherwise order_id (may be SUB_-prefixed).
+  String get paymentReferenceId {
+    final txn = transactionId?.trim() ?? '';
+    if (txn.isNotEmpty) return txn;
+    return orderId?.trim() ?? '';
+  }
 }
 
 abstract class SubscriptionRepository {
@@ -33,6 +48,12 @@ abstract class SubscriptionRepository {
     required String planId,
     required String productId,
     required String startDate,
+  });
+
+  /// Confirms payment_status after PhonePe return (check-status.php).
+  Future<ApiResult<bool>> verifySubscriptionPayment({
+    String? orderId,
+    String? txnId,
   });
 }
 
@@ -83,10 +104,97 @@ class ApiSubscriptionRepository implements SubscriptionRepository {
         message: data['message']?.toString() ??
             'Subscription created successfully',
         paymentUrl: extractPaymentUrl(data),
+        orderId: extractOrderId(data),
         transactionId: extractTxnId(data),
         amount: extractTotalAmount(data),
         raw: data,
       ),
     );
+  }
+
+  @override
+  Future<ApiResult<bool>> verifySubscriptionPayment({
+    String? orderId,
+    String? txnId,
+  }) async {
+    final oid = orderId?.trim() ?? '';
+    final tid = txnId?.trim() ?? '';
+    if (oid.isEmpty && tid.isEmpty) {
+      return const ApiFailure('Missing order_id / txn_id for payment check');
+    }
+
+    final result = await _api.payments.checkStatus(
+      orderId: oid.isNotEmpty ? oid : null,
+      txnId: tid.isNotEmpty ? tid : null,
+    );
+
+    if (result is ApiSuccess<Map<String, dynamic>>) {
+      return ApiSuccess(_isPaymentStatusComplete(result.data));
+    }
+
+    // Fallback: numeric order_id → existing orders/detail payment check.
+    if (oid.isNotEmpty) {
+      final detail = await _api.orders.orderDetail(
+        orderId: oid,
+        txnId: tid.isNotEmpty ? tid : null,
+      );
+      if (detail is ApiSuccess<Map<String, dynamic>>) {
+        return ApiSuccess(_isPaymentStatusComplete(detail.data));
+      }
+    }
+
+    final failure = result as ApiFailure<Map<String, dynamic>>;
+    return ApiFailure(failure.message, statusCode: failure.statusCode);
+  }
+
+  bool _isPaymentStatusComplete(Map<String, dynamic> data) {
+    final inner =
+        data['data'] is Map ? Map<String, dynamic>.from(data['data'] as Map) : null;
+
+    for (final key in ['is_paid', 'paid', 'payment_complete']) {
+      final value = data[key] ?? inner?[key];
+      if (value == true || value == 1 || value?.toString() == '1') return true;
+      if (value == false || value == 0 || value?.toString() == '0') return false;
+    }
+
+    // Prefer explicit payment fields over envelope `status` (API ok flag).
+    final candidates = <String?>[
+      data['payment_status']?.toString(),
+      data['paymentStatus']?.toString(),
+      data['txn_status']?.toString(),
+      inner?['payment_status']?.toString(),
+      inner?['paymentStatus']?.toString(),
+      inner?['txn_status']?.toString(),
+      inner?['status']?.toString(),
+    ];
+
+    for (final raw in candidates) {
+      final verdict = _paymentStatusVerdict(raw);
+      if (verdict != null) return verdict;
+    }
+    return false;
+  }
+
+  /// `true` paid, `false` unpaid/failed, `null` inconclusive.
+  bool? _paymentStatusVerdict(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final value = raw.toLowerCase().trim();
+    if (value.contains('paid') ||
+        value.contains('success') ||
+        value.contains('complete') ||
+        value.contains('captured') ||
+        value == '1' ||
+        value == 'true') {
+      return true;
+    }
+    if (value.contains('fail') ||
+        value.contains('cancel') ||
+        value.contains('pending') ||
+        value.contains('unpaid') ||
+        value == '0' ||
+        value == 'false') {
+      return false;
+    }
+    return null;
   }
 }

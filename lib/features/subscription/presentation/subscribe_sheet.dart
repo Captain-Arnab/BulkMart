@@ -4,9 +4,9 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/core/ui/sweet_alert_util.dart';
 import 'package:urban_roots/core/ui/ui_state.dart';
 import 'package:urban_roots/data/repositories/subscription_repository.dart';
+import 'package:urban_roots/features/subscription/presentation/subscription_payment_flow_screen.dart';
 import 'package:urban_roots/features/subscription/presentation/subscription_success_screen.dart';
 import 'package:urban_roots/features/subscription/subscribe_view_model.dart';
-import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 
 /// Bottom sheet: pick a subscription plan + start date, then create via API.
 /// Same visual family as Apply Coupon (drag handle, white sheet, top radius).
@@ -42,6 +42,9 @@ class _SubscribeSheet extends StatefulWidget {
 class _SubscribeSheetState extends State<_SubscribeSheet> {
   late final SubscribeViewModel _vm;
 
+  /// When true, ownership of [_vm] moves to [SubscriptionPaymentFlowScreen].
+  bool _handedOffViewModel = false;
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +55,9 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
   @override
   void dispose() {
     _vm.removeListener(_onVmChanged);
-    _vm.dispose();
+    if (!_handedOffViewModel) {
+      _vm.dispose();
+    }
     super.dispose();
   }
 
@@ -92,40 +97,24 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
         plan['plan_name']?.toString() ??
         '';
 
-    // Capture navigator before popping the sheet (sheet context unmounts).
-    final nav = Navigator.of(context);
-    nav.pop();
+    // Store create.php fields before navigating into payment.
+    _vm.capturePendingPayment(
+      data,
+      productName: widget.productName,
+      planName: planName,
+    );
 
-    // Billing is charged upfront — if create.php returns a payment URL, open it.
-    final paymentUrl = data.paymentUrl;
-    if (paymentUrl != null && paymentUrl.isNotEmpty) {
-      final amount = data.amount ??
-          double.tryParse(plan['price']?.toString() ?? '') ??
-          0;
-      final paid = await nav.push<bool>(
+    final nav = Navigator.of(context);
+    nav.pop(); // close sheet
+
+    if (data.requiresPayment) {
+      _handedOffViewModel = true;
+      await nav.push(
         MaterialPageRoute(
-          builder: (_) => WalletPaymentWebView(
-            paymentUrl: paymentUrl,
-            amount: amount,
-            transactionId: data.transactionId ?? '',
-          ),
+          builder: (_) => _OwnedPaymentFlow(viewModel: _vm),
         ),
       );
-      if (paid != true) {
-        // Subscription may already exist unpaid — still show confirmation
-        // so the user has the subscription_id to follow up.
-        await nav.push(
-          MaterialPageRoute(
-            builder: (_) => SubscriptionSuccessScreen(
-              data: data,
-              productName: widget.productName,
-              planName: planName,
-              paymentPending: true,
-            ),
-          ),
-        );
-        return;
-      }
+      return;
     }
 
     await nav.push(
@@ -149,6 +138,7 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
     final plansError = plansState is UiError<List<Map<String, dynamic>>>
         ? plansState.message
         : null;
+    final estimated = _vm.selectedPlanEstimatedTotal;
 
     return Container(
       margin: EdgeInsets.only(bottom: bottom),
@@ -250,6 +240,7 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
                         plan['plan_name']?.toString() ??
                         'Plan';
                     final price = plan['price']?.toString() ?? '';
+                    final priceNum = double.tryParse(price) ?? 0;
                     final type =
                         plan['subscription_type']?.toString() ?? '';
                     return Material(
@@ -284,11 +275,11 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    if (type.isNotEmpty || price.isNotEmpty)
+                                    if (type.isNotEmpty || priceNum > 0)
                                       Text(
                                         [
                                           if (type.isNotEmpty) type,
-                                          if (price.isNotEmpty) '₹$price',
+                                          if (priceNum > 0) '₹$price',
                                         ].join(' · '),
                                         style: GoogleFonts.rubik(
                                           fontSize: 12,
@@ -331,6 +322,37 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
+              if (estimated != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Estimated total: ₹${estimated.toStringAsFixed(0)}',
+                        style: GoogleFonts.rubik(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Final amount is confirmed when your subscription is created.',
+                        style: GoogleFonts.rubik(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 height: 48,
@@ -367,5 +389,28 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
         ),
       ),
     );
+  }
+}
+
+/// Owns [SubscribeViewModel] disposal after handoff from the sheet.
+class _OwnedPaymentFlow extends StatefulWidget {
+  const _OwnedPaymentFlow({required this.viewModel});
+
+  final SubscribeViewModel viewModel;
+
+  @override
+  State<_OwnedPaymentFlow> createState() => _OwnedPaymentFlowState();
+}
+
+class _OwnedPaymentFlowState extends State<_OwnedPaymentFlow> {
+  @override
+  void dispose() {
+    widget.viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SubscriptionPaymentFlowScreen(viewModel: widget.viewModel);
   }
 }

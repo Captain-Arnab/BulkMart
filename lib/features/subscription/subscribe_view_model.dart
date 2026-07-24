@@ -19,6 +19,11 @@ class SubscribeViewModel extends ChangeNotifier {
   UiState<List<Map<String, dynamic>>>? plansState;
   UiState<SubscriptionCreateData>? createState;
 
+  /// Snapshot from create.php retained through PhonePe + retry (do not re-create).
+  SubscriptionCreateData? pendingPayment;
+  String pendingProductName = '';
+  String pendingPlanName = '';
+
   Map<String, dynamic>? selectedPlan;
   DateTime startDate =
       DateTime.now().add(const Duration(days: kSubscriptionMinLeadDays));
@@ -38,6 +43,15 @@ class SubscribeViewModel extends ChangeNotifier {
   String get startDateApi => DateFormat('yyyy-MM-dd').format(startDate);
 
   String get startDateDisplay => DateFormat('dd MMM yyyy').format(startDate);
+
+  /// Estimated total from plans.php when the plan includes a price (> 0).
+  double? get selectedPlanEstimatedTotal {
+    final plan = selectedPlan;
+    if (plan == null) return null;
+    final parsed = double.tryParse(plan['price']?.toString() ?? '');
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
 
   Future<void> loadPlans() async {
     plansState = const UiLoading();
@@ -72,6 +86,26 @@ class SubscribeViewModel extends ChangeNotifier {
 
   void resetCreateState() {
     createState = null;
+    notifyListeners();
+  }
+
+  /// Stores create.php fields before opening PhonePe (used for success UI + retry).
+  void capturePendingPayment(
+    SubscriptionCreateData data, {
+    required String productName,
+    required String planName,
+  }) {
+    pendingPayment = data;
+    pendingProductName = productName;
+    pendingPlanName = planName;
+    createState = UiSuccess(data);
+    notifyListeners();
+  }
+
+  void clearPendingPayment() {
+    pendingPayment = null;
+    pendingProductName = '';
+    pendingPlanName = '';
     notifyListeners();
   }
 
@@ -110,5 +144,31 @@ class SubscribeViewModel extends ChangeNotifier {
     createState = UiSuccess(data);
     notifyListeners();
     return data;
+  }
+
+  /// Confirms final payment via `/payments/check-status.php` using order_id / txn_id.
+  Future<bool> verifyPendingPayment() async {
+    final data = pendingPayment;
+    if (data == null) return false;
+
+    final orderId = data.orderId?.trim() ?? '';
+    final txnId = data.transactionId?.trim() ?? '';
+    // When create.php only returns order_id (often SUB_-prefixed), use it as txn too.
+    final effectiveTxn = txnId.isNotEmpty
+        ? txnId
+        : (orderId.startsWith('SUB_') ? orderId : '');
+
+    if (orderId.isEmpty && effectiveTxn.isEmpty) {
+      // No server reference — cannot confirm; treat as unpaid.
+      return false;
+    }
+
+    final result = await _repository.verifySubscriptionPayment(
+      orderId: orderId.isNotEmpty ? orderId : null,
+      txnId: effectiveTxn.isNotEmpty ? effectiveTxn : null,
+    );
+
+    if (result is ApiFailure<bool>) return false;
+    return (result as ApiSuccess<bool>).data;
   }
 }

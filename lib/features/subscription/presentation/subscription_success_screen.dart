@@ -4,24 +4,24 @@ import 'package:urban_roots/core/theme/app_colors.dart';
 import 'package:urban_roots/data/repositories/subscription_repository.dart';
 import 'package:urban_roots/features/dashboard/dashboard_controller.dart';
 
-/// Confirmation screen after a successful single-product subscription create.
-/// Same visual pattern as [OrderSuccessScreen].
+/// Confirmation screen after a successful single-product subscription payment.
+/// Displays fields captured from create.php (not re-fetched).
 class SubscriptionSuccessScreen extends StatelessWidget {
   const SubscriptionSuccessScreen({
     super.key,
     required this.data,
     this.productName = '',
     this.planName = '',
-    this.paymentPending = false,
   });
 
   final SubscriptionCreateData data;
   final String productName;
   final String planName;
-  final bool paymentPending;
 
   @override
   Widget build(BuildContext context) {
+    final amount = data.amount;
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -36,23 +36,12 @@ class SubscriptionSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                paymentPending ? 'Subscription created' : 'Subscribed!',
+                'Subscribed!',
                 style: GoogleFonts.rubik(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (paymentPending) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Payment was not completed. You can finish payment from Profile → Subscriptions.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.rubik(
-                    fontSize: 13,
-                    color: Colors.orange.shade800,
-                  ),
-                ),
-              ],
               if (productName.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -81,6 +70,11 @@ class SubscriptionSuccessScreen extends StatelessWidget {
                 _DetailRow(
                   label: 'Subscription ID',
                   value: data.subscriptionId,
+                ),
+              if (amount != null && amount > 0)
+                _DetailRow(
+                  label: 'Amount charged',
+                  value: '₹${amount.toStringAsFixed(0)}',
                 ),
               if (data.startDate.isNotEmpty)
                 _DetailRow(label: 'Start date', value: data.startDate),

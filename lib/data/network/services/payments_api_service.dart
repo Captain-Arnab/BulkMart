@@ -23,4 +23,24 @@ class PaymentsApiService {
       },
     );
   }
+
+  /// GET /payments/check-status.php
+  /// Confirms final payment_status for order / wallet / SUB_-prefixed txns.
+  Future<ApiResult<Map<String, dynamic>>> checkStatus({
+    String? orderId,
+    String? txnId,
+  }) {
+    final params = <String, dynamic>{};
+    if (orderId != null && orderId.isNotEmpty) {
+      params['order_id'] = orderId;
+    }
+    if (txnId != null && txnId.isNotEmpty) {
+      params['txn_id'] = txnId;
+      params['txn'] = txnId;
+    }
+    return _client.get(
+      APIClass.paymentsCheckStatus,
+      queryParameters: params,
+    );
+  }
 }
