@@ -80,12 +80,15 @@ class APIClass {
 
   // ── MODULE 9b — PAYMENTS & SAVED CARDS (user base) ─────────────────
   static const paymentsHistory = '/payments/history.php';
-  /// Confirms PhonePe status for order / wallet / SUB_-prefixed txns.
-  static const paymentsCheckStatus = '/payments/check-status.php';
   static const cardsSave = '/cards/save.php';
   static const cardsConfirm = '/cards/confirm.php';
   static const cardsList = '/cards/list.php';
   static const cardsDelete = '/cards/delete.php';
+
+  // ── SITE ROOT (not under /api/) — use ApiClient.root ────────────────
+  /// PhonePe status for SUB_ / WALLET_ / order txns.
+  /// POST form field `transactionId`, or GET `transactionId` / `txn`.
+  static const checkStatus = '/check-status.php';
 
   // ── MODULE 10 — SUBSCRIPTION (user base) ─────────────────────────
   static const subscriptionPlans = '/subscription/plans.php';

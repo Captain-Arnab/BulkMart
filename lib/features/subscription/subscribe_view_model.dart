@@ -19,10 +19,15 @@ class SubscribeViewModel extends ChangeNotifier {
   UiState<List<Map<String, dynamic>>>? plansState;
   UiState<SubscriptionCreateData>? createState;
 
-  /// Snapshot from create.php retained through PhonePe + retry (do not re-create).
+  /// Latest create.php snapshot (updated on Retry — may be same or new sub).
   SubscriptionCreateData? pendingPayment;
   String pendingProductName = '';
   String pendingPlanName = '';
+
+  /// Original selection — Retry Payment re-calls create.php with these.
+  String pendingProductId = '';
+  String pendingPlanId = '';
+  String pendingStartDate = '';
 
   Map<String, dynamic>? selectedPlan;
   DateTime startDate =
@@ -30,6 +35,11 @@ class SubscribeViewModel extends ChangeNotifier {
 
   bool get isLoadingPlans => plansState is UiLoading;
   bool get isCreating => createState is UiLoading;
+
+  bool get canRetryPayment =>
+      pendingProductId.isNotEmpty &&
+      pendingPlanId.isNotEmpty &&
+      pendingStartDate.isNotEmpty;
 
   DateTime get minStartDate {
     final now = DateTime.now();
@@ -89,15 +99,21 @@ class SubscribeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Stores create.php fields before opening PhonePe (used for success UI + retry).
+  /// Stores create.php fields + original selection before opening PhonePe.
   void capturePendingPayment(
     SubscriptionCreateData data, {
+    required String productId,
     required String productName,
     required String planName,
+    required String planId,
+    required String startDate,
   }) {
     pendingPayment = data;
+    pendingProductId = productId;
     pendingProductName = productName;
     pendingPlanName = planName;
+    pendingPlanId = planId;
+    pendingStartDate = startDate;
     createState = UiSuccess(data);
     notifyListeners();
   }
@@ -106,6 +122,9 @@ class SubscribeViewModel extends ChangeNotifier {
     pendingPayment = null;
     pendingProductName = '';
     pendingPlanName = '';
+    pendingProductId = '';
+    pendingPlanId = '';
+    pendingStartDate = '';
     notifyListeners();
   }
 
@@ -146,28 +165,47 @@ class SubscribeViewModel extends ChangeNotifier {
     return data;
   }
 
-  /// Confirms final payment via `/payments/check-status.php` using order_id / txn_id.
+  /// Retry: call create.php again — backend dedupes pending (< ~18m) or issues
+  /// a fresh subscription_id + payment_url when stale. Updates [pendingPayment].
+  Future<SubscriptionCreateData?> retryCreate() async {
+    if (!canRetryPayment) {
+      createState = const UiError('Missing plan details to retry payment');
+      notifyListeners();
+      return null;
+    }
+
+    createState = const UiLoading();
+    notifyListeners();
+
+    final result = await _repository.createSubscription(
+      planId: pendingPlanId,
+      productId: pendingProductId,
+      startDate: pendingStartDate,
+    );
+
+    if (result is ApiFailure<SubscriptionCreateData>) {
+      createState = UiError(result.message);
+      notifyListeners();
+      return null;
+    }
+
+    final data = (result as ApiSuccess<SubscriptionCreateData>).data;
+    pendingPayment = data;
+    createState = UiSuccess(data);
+    notifyListeners();
+    return data;
+  }
+
+  /// Polls `/check-status.php` using the transaction id from the latest create.
   Future<bool> verifyPendingPayment() async {
     final data = pendingPayment;
     if (data == null) return false;
 
-    final orderId = data.orderId?.trim() ?? '';
-    final txnId = data.transactionId?.trim() ?? '';
-    // When create.php only returns order_id (often SUB_-prefixed), use it as txn too.
-    final effectiveTxn = txnId.isNotEmpty
-        ? txnId
-        : (orderId.startsWith('SUB_') ? orderId : '');
+    final txn = data.paymentReferenceId;
+    if (txn.isEmpty) return false;
 
-    if (orderId.isEmpty && effectiveTxn.isEmpty) {
-      // No server reference — cannot confirm; treat as unpaid.
-      return false;
-    }
-
-    final result = await _repository.verifySubscriptionPayment(
-      orderId: orderId.isNotEmpty ? orderId : null,
-      txnId: effectiveTxn.isNotEmpty ? effectiveTxn : null,
-    );
-
+    final result =
+        await _repository.verifySubscriptionPayment(transactionId: txn);
     if (result is ApiFailure<bool>) return false;
     return (result as ApiSuccess<bool>).data;
   }

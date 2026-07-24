@@ -3,8 +3,14 @@ import 'package:urban_roots/data/network/api_client.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 
 class PaymentsApiService {
-  PaymentsApiService({ApiClient? client}) : _client = client ?? ApiClient.user;
+  PaymentsApiService({
+    ApiClient? client,
+    ApiClient? rootClient,
+  })  : _client = client ?? ApiClient.user,
+        _root = rootClient ?? ApiClient.root;
+
   final ApiClient _client;
+  final ApiClient _root;
 
   /// GET /payments/history.php
   /// [type] optional: `wallet_topup` | `order_payment`
@@ -24,23 +30,23 @@ class PaymentsApiService {
     );
   }
 
-  /// GET /payments/check-status.php
-  /// Confirms final payment_status for order / wallet / SUB_-prefixed txns.
+  /// POST|GET `/check-status.php` on site root (not under /api/).
+  /// Auth not required. Routes by txn prefix: SUB_ / WALLET_ / other.
+  ///
+  /// Prefer POST form-urlencoded `transactionId` (JSON body will not work).
   Future<ApiResult<Map<String, dynamic>>> checkStatus({
-    String? orderId,
-    String? txnId,
+    required String transactionId,
   }) {
-    final params = <String, dynamic>{};
-    if (orderId != null && orderId.isNotEmpty) {
-      params['order_id'] = orderId;
+    final txn = transactionId.trim();
+    if (txn.isEmpty) {
+      return Future.value(
+        const ApiFailure('Missing transactionId for payment check'),
+      );
     }
-    if (txnId != null && txnId.isNotEmpty) {
-      params['txn_id'] = txnId;
-      params['txn'] = txnId;
-    }
-    return _client.get(
-      APIClass.paymentsCheckStatus,
-      queryParameters: params,
+    return _root.postFormUrlEncoded(
+      APIClass.checkStatus,
+      fields: {'transactionId': txn},
+      token: TokenMode.none,
     );
   }
 }

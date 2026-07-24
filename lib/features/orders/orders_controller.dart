@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/data/repositories/payment_repository.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/orders/order_tracking_models.dart';
@@ -61,6 +62,7 @@ String _friendlyTrackingMessage(String? technical) {
 
 class OrdersController extends GetxController {
   final _api = UrbanRootsApi.instance;
+  final PaymentRepository _payments = ApiPaymentRepository();
 
   final RxList<Order> orders = <Order>[].obs;
   final RxBool isLoading = false.obs;
@@ -185,6 +187,17 @@ class OrdersController extends GetxController {
   }
 
   Future<bool> verifyOrderPayment({int? orderId, String? txnId}) async {
+    final txn = txnId?.trim() ?? '';
+    if (txn.isNotEmpty) {
+      final check = await _payments.pollPaymentStatus(transactionId: txn);
+      if (check is ApiSuccess<PaymentStatusCheck>) {
+        final status = check.data;
+        if (status.isCompleted) return true;
+        if (status.isFailed) return false;
+        // PENDING / unknown → fall through to order detail
+      }
+    }
+
     final order = await loadOrderDetail(orderId: orderId, txnId: txnId);
     return order?.isPaymentComplete ?? false;
   }

@@ -96,12 +96,17 @@ class _SubscribeSheetState extends State<_SubscribeSheet> {
     final planName = plan['name']?.toString() ??
         plan['plan_name']?.toString() ??
         '';
+    final planId =
+        plan['id']?.toString() ?? plan['plan_id']?.toString() ?? '';
 
-    // Store create.php fields before navigating into payment.
+    // Store create.php fields + selection before navigating into payment.
     _vm.capturePendingPayment(
       data,
+      productId: widget.productId,
       productName: widget.productName,
       planName: planName,
+      planId: planId,
+      startDate: _vm.startDateApi,
     );
 
     final nav = Navigator.of(context);

@@ -1,6 +1,7 @@
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/data/repositories/payment_repository.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 
 class SubscriptionCreateData {
@@ -34,11 +35,25 @@ class SubscriptionCreateData {
   bool get requiresPayment =>
       paymentUrl != null && paymentUrl!.trim().isNotEmpty;
 
-  /// Prefer txn_id when present; otherwise order_id (may be SUB_-prefixed).
+  /// Merchant transaction id for `/check-status.php` (SUB_-prefixed when present).
   String get paymentReferenceId {
     final txn = transactionId?.trim() ?? '';
     if (txn.isNotEmpty) return txn;
-    return orderId?.trim() ?? '';
+
+    final order = orderId?.trim() ?? '';
+    if (order.isNotEmpty) return order;
+
+    final merchant = raw['merchantTransactionId']?.toString().trim() ?? '';
+    if (merchant.isNotEmpty) return merchant;
+    final inner = raw['data'];
+    if (inner is Map) {
+      final nested = inner['merchantTransactionId']?.toString().trim() ?? '';
+      if (nested.isNotEmpty) return nested;
+    }
+
+    final sub = subscriptionId.trim();
+    if (sub.isEmpty) return '';
+    return sub.startsWith('SUB_') ? sub : 'SUB_$sub';
   }
 }
 
@@ -50,18 +65,21 @@ abstract class SubscriptionRepository {
     required String startDate,
   });
 
-  /// Confirms payment_status after PhonePe return (check-status.php).
+  /// Polls site-root `/check-status.php` until COMPLETED / FAILED.
   Future<ApiResult<bool>> verifySubscriptionPayment({
-    String? orderId,
-    String? txnId,
+    required String transactionId,
   });
 }
 
 class ApiSubscriptionRepository implements SubscriptionRepository {
-  ApiSubscriptionRepository({UrbanRootsApi? api})
-      : _api = api ?? UrbanRootsApi.instance;
+  ApiSubscriptionRepository({
+    UrbanRootsApi? api,
+    PaymentRepository? paymentRepository,
+  })  : _api = api ?? UrbanRootsApi.instance,
+        _payments = paymentRepository ?? ApiPaymentRepository();
 
   final UrbanRootsApi _api;
+  final PaymentRepository _payments;
 
   @override
   Future<ApiResult<List<Map<String, dynamic>>>> getSubscriptionPlans() async {
@@ -114,87 +132,18 @@ class ApiSubscriptionRepository implements SubscriptionRepository {
 
   @override
   Future<ApiResult<bool>> verifySubscriptionPayment({
-    String? orderId,
-    String? txnId,
+    required String transactionId,
   }) async {
-    final oid = orderId?.trim() ?? '';
-    final tid = txnId?.trim() ?? '';
-    if (oid.isEmpty && tid.isEmpty) {
-      return const ApiFailure('Missing order_id / txn_id for payment check');
+    final txn = transactionId.trim();
+    if (txn.isEmpty) {
+      return const ApiFailure('Missing transactionId for payment check');
     }
 
-    final result = await _api.payments.checkStatus(
-      orderId: oid.isNotEmpty ? oid : null,
-      txnId: tid.isNotEmpty ? tid : null,
-    );
-
-    if (result is ApiSuccess<Map<String, dynamic>>) {
-      return ApiSuccess(_isPaymentStatusComplete(result.data));
+    final result = await _payments.pollPaymentStatus(transactionId: txn);
+    if (result is ApiFailure<PaymentStatusCheck>) {
+      return ApiFailure(result.message, statusCode: result.statusCode);
     }
-
-    // Fallback: numeric order_id → existing orders/detail payment check.
-    if (oid.isNotEmpty) {
-      final detail = await _api.orders.orderDetail(
-        orderId: oid,
-        txnId: tid.isNotEmpty ? tid : null,
-      );
-      if (detail is ApiSuccess<Map<String, dynamic>>) {
-        return ApiSuccess(_isPaymentStatusComplete(detail.data));
-      }
-    }
-
-    final failure = result as ApiFailure<Map<String, dynamic>>;
-    return ApiFailure(failure.message, statusCode: failure.statusCode);
-  }
-
-  bool _isPaymentStatusComplete(Map<String, dynamic> data) {
-    final inner =
-        data['data'] is Map ? Map<String, dynamic>.from(data['data'] as Map) : null;
-
-    for (final key in ['is_paid', 'paid', 'payment_complete']) {
-      final value = data[key] ?? inner?[key];
-      if (value == true || value == 1 || value?.toString() == '1') return true;
-      if (value == false || value == 0 || value?.toString() == '0') return false;
-    }
-
-    // Prefer explicit payment fields over envelope `status` (API ok flag).
-    final candidates = <String?>[
-      data['payment_status']?.toString(),
-      data['paymentStatus']?.toString(),
-      data['txn_status']?.toString(),
-      inner?['payment_status']?.toString(),
-      inner?['paymentStatus']?.toString(),
-      inner?['txn_status']?.toString(),
-      inner?['status']?.toString(),
-    ];
-
-    for (final raw in candidates) {
-      final verdict = _paymentStatusVerdict(raw);
-      if (verdict != null) return verdict;
-    }
-    return false;
-  }
-
-  /// `true` paid, `false` unpaid/failed, `null` inconclusive.
-  bool? _paymentStatusVerdict(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    final value = raw.toLowerCase().trim();
-    if (value.contains('paid') ||
-        value.contains('success') ||
-        value.contains('complete') ||
-        value.contains('captured') ||
-        value == '1' ||
-        value == 'true') {
-      return true;
-    }
-    if (value.contains('fail') ||
-        value.contains('cancel') ||
-        value.contains('pending') ||
-        value.contains('unpaid') ||
-        value == '0' ||
-        value == 'false') {
-      return false;
-    }
-    return null;
+    final check = (result as ApiSuccess<PaymentStatusCheck>).data;
+    return ApiSuccess(check.isCompleted);
   }
 }

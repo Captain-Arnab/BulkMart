@@ -8,10 +8,9 @@ import 'package:urban_roots/features/subscription/subscribe_view_model.dart';
 import 'package:urban_roots/features/wallet/wallet_payment_webview.dart';
 
 /// Post-create payment UX: brief charge confirmation → PhonePe WebView →
-/// check-status → success, or a distinct failure + Retry Payment (same URL).
+/// check-status → success, or a distinct failure + Retry Payment.
 ///
-/// Does **not** call create.php again on retry — subscription already exists
-/// with payment_status=pending on the backend.
+/// Retry Payment re-calls create.php (server dedupes pending / issues fresh URL).
 class SubscriptionPaymentFlowScreen extends StatefulWidget {
   const SubscriptionPaymentFlowScreen({
     super.key,
@@ -78,14 +77,14 @@ class _SubscriptionPaymentFlowScreenState
     setState(() => _phase = _PaymentPhase.opening);
 
     final amount = data.amount ?? 0;
+    final txn = data.paymentReferenceId;
     final paid = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => WalletPaymentWebView(
           paymentUrl: url,
           amount: amount,
-          // Prefer txn; order_id may be SUB_-prefixed and works with check-status.
           transactionId: '',
-          onReturnVerify: () => _vm.verifyPendingPayment(),
+          onReturnVerify: txn.isEmpty ? null : () => _vm.verifyPendingPayment(),
         ),
       ),
     );
@@ -127,9 +126,22 @@ class _SubscriptionPaymentFlowScreenState
   }
 
   Future<void> _retryPayment() async {
-    // Re-open the same payment_url from create.php — do not call create again.
-    // If PhonePe rejects expired links account-wide, backend may need a fresh
-    // payment_url endpoint; confirm with backend before assuming re-create.
+    // Re-call create.php — backend returns same pending URL or a fresh one.
+    setState(() => _phase = _PaymentPhase.confirming);
+    final data = await _vm.retryCreate();
+    if (!mounted) return;
+
+    if (data == null || !data.requiresPayment) {
+      if (data != null && !data.requiresPayment) {
+        _goToSuccess();
+        return;
+      }
+      setState(() => _phase = _PaymentPhase.failed);
+      return;
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
     await _openPaymentWebView();
   }
 
@@ -193,6 +205,8 @@ class _SubscriptionPaymentFlowScreenState
                       data: data,
                       productName: _vm.pendingProductName,
                       planName: _vm.pendingPlanName,
+                      canRetry: _vm.canRetryPayment,
+                      isRetrying: _vm.isCreating,
                       onRetry: _retryPayment,
                       onClose: () => Navigator.of(context).pop(),
                     )
@@ -298,6 +312,8 @@ class _FailureBody extends StatelessWidget {
     required this.data,
     required this.productName,
     required this.planName,
+    required this.canRetry,
+    required this.isRetrying,
     required this.onRetry,
     required this.onClose,
   });
@@ -305,14 +321,13 @@ class _FailureBody extends StatelessWidget {
   final SubscriptionCreateData data;
   final String productName;
   final String planName;
+  final bool canRetry;
+  final bool isRetrying;
   final VoidCallback onRetry;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    final canRetry =
-        data.paymentUrl != null && data.paymentUrl!.trim().isNotEmpty;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -390,7 +405,7 @@ class _FailureBody extends StatelessWidget {
           SizedBox(
             height: 48,
             child: ElevatedButton(
-              onPressed: onRetry,
+              onPressed: isRetrying ? null : onRetry,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -398,15 +413,24 @@ class _FailureBody extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: Text(
-                'Retry Payment',
-                style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
-              ),
+              child: isRetrying
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Retry Payment',
+                      style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+                    ),
             ),
           ),
         const SizedBox(height: 12),
         TextButton(
-          onPressed: onClose,
+          onPressed: isRetrying ? null : onClose,
           child: Text(
             'Close',
             style: GoogleFonts.rubik(

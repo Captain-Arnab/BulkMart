@@ -4,9 +4,11 @@ import 'package:get/get.dart';
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/data/repositories/payment_repository.dart';
 
 class WalletController extends GetxController {
   final _api = UrbanRootsApi.instance;
+  final PaymentRepository _payments = ApiPaymentRepository();
 
   final RxDouble balance = 0.0.obs;
   final RxList<Map<String, dynamic>> transactions = <Map<String, dynamic>>[].obs;
@@ -61,9 +63,24 @@ class WalletController extends GetxController {
     return _api.wallet.topUpVerify(txnId: txnId);
   }
 
-  /// Verifies wallet top-up with backend and refreshes balance on success.
+  /// Verifies wallet top-up via site-root `/check-status.php` (`state` field),
+  /// with legacy `/wallet/verify.php` as fallback.
   Future<bool> completeTopUpVerification(String txnId) async {
     if (txnId.isEmpty) return false;
+
+    final check = await _payments.pollPaymentStatus(transactionId: txnId);
+    if (check is ApiSuccess<PaymentStatusCheck>) {
+      final status = check.data;
+      if (status.isCompleted) {
+        await loadBalance();
+        await loadTransactions();
+        return true;
+      }
+      if (status.isFailed || status.isPending) {
+        return false;
+      }
+      // unknown → fall through to legacy verify
+    }
 
     final result = await verifyTopUp(txnId);
     if (result is ApiFailure<String>) {

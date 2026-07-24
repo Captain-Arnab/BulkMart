@@ -74,6 +74,9 @@ class ApiClient {
   /// Site API — https://urbunroots.com/api (offers, etc.)
   static final ApiClient site = ApiClient._(ApiConfig.apiBaseUrl);
 
+  /// Site root — https://urbunroots.com (e.g. /check-status.php, not under /api/).
+  static final ApiClient root = ApiClient._(ApiConfig.siteRoot);
+
   /// Admin API — https://urbunroots.com/api/admin (no auth token).
   static final ApiClient admin = ApiClient._(ApiConfig.adminBaseUrl);
 
@@ -121,6 +124,29 @@ class ApiClient {
           data: body,
           options:
               _options(token, extraHeaders, skipSessionClear: skipSessionClear),
+        ),
+        authenticated: token != TokenMode.none,
+        skipSessionClear: skipSessionClear,
+      );
+
+  /// POST with `application/x-www-form-urlencoded` body (not JSON).
+  Future<ApiResult<Map<String, dynamic>>> postFormUrlEncoded(
+    String path, {
+    required Map<String, dynamic> fields,
+    TokenMode token = TokenMode.none,
+    Map<String, String>? extraHeaders,
+    bool skipSessionClear = false,
+  }) =>
+      _request(
+        () => _dio.post(
+          path,
+          data: fields,
+          options: _options(
+            token,
+            extraHeaders,
+            skipSessionClear: skipSessionClear,
+            contentType: Headers.formUrlEncodedContentType,
+          ),
         ),
         authenticated: token != TokenMode.none,
         skipSessionClear: skipSessionClear,
@@ -188,9 +214,11 @@ class ApiClient {
     TokenMode token,
     Map<String, String>? extraHeaders, {
     bool skipSessionClear = false,
+    String? contentType,
   }) {
     return Options(
       headers: extraHeaders,
+      contentType: contentType,
       extra: {
         'tokenMode': token,
         if (skipSessionClear) kSkipSessionClear: true,
@@ -358,6 +386,15 @@ class ApiClient {
         await _handleUnauthorized();
       }
       return ApiFailure(message, statusCode: statusCode);
+    }
+
+    // PhonePe `/check-status.php` returns `state` (COMPLETED|FAILED|PENDING).
+    // `success` may be false when FAILED — still return the body for callers.
+    final phonePeState = data['state']?.toString().trim().toUpperCase() ?? '';
+    if (phonePeState == 'COMPLETED' ||
+        phonePeState == 'FAILED' ||
+        phonePeState == 'PENDING') {
+      return ApiSuccess(data);
     }
 
     final apiSuccess = ApiStatus.fromMap(data);
@@ -607,8 +644,14 @@ class _UrbanRootsInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     // Let Dio set the multipart boundary for file uploads; forcing JSON here
-    // would corrupt the request body.
-    if (options.data is! FormData) {
+    // would corrupt the request body. Also preserve explicit form-urlencoded.
+    final explicitType =
+        (options.contentType ?? options.headers['Content-Type']?.toString() ?? '')
+            .toLowerCase();
+    final keepExplicit = options.data is FormData ||
+        explicitType.contains('multipart/form-data') ||
+        explicitType.contains('application/x-www-form-urlencoded');
+    if (!keepExplicit) {
       options.headers['Content-Type'] = 'application/json';
     }
     options.headers['Accept'] = 'application/json';
