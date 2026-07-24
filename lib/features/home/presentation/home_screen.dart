@@ -111,6 +111,58 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
+    if (data.locationFilterActive) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Material(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.near_me_outlined,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      data.locationLabel.isNotEmpty
+                          ? 'Showing products near ${data.locationLabel}'
+                          : 'Showing products near you',
+                      style: GoogleFonts.rubik(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _vm.clearLocationFilter,
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text(
+                      'Show all',
+                      style: GoogleFonts.rubik(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (data.categories.isNotEmpty) {
       children.add(HomeCategoriesGrid(categories: data.categories));
     }

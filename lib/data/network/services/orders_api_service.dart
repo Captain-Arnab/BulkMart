@@ -125,25 +125,30 @@ class OrdersApiService {
     required String addressType,
     required List<Map<String, dynamic>> products,
     String? orderId,
-  }) =>
-      _client.post(
-        APIClass.onlineOrder,
-        body: _orderBody(
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone,
-          state: state,
-          city: city,
-          address: address,
-          pincode: pincode,
-          landmark: landmark,
-          addressType: addressType,
-          products: products,
-          orderId: orderId,
-          paymentMethod: 'online',
-        ),
-      );
+    String? cardTokenId,
+  }) {
+    final body = _orderBody(
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      state: state,
+      city: city,
+      address: address,
+      pincode: pincode,
+      landmark: landmark,
+      addressType: addressType,
+      products: products,
+      orderId: orderId,
+      paymentMethod: 'online',
+    );
+    // Optional: pending backend confirmation that create-payment / online order
+    // accepts card_token_id for card-on-file charges.
+    if (cardTokenId != null && cardTokenId.isNotEmpty) {
+      body['card_token_id'] = cardTokenId;
+    }
+    return _client.post(APIClass.onlineOrder, body: body);
+  }
 
   /// Single-product purchase that skips the cart.
   /// [paymentMethod] must be `COD` or `ONLINE` (backend contract).

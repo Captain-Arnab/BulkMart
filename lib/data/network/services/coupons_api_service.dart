@@ -9,17 +9,17 @@ class CouponsApiService {
   Future<ApiResult<Map<String, dynamic>>> list() =>
       _client.get(APIClass.couponsList, token: TokenMode.none);
 
+  /// Bearer-authenticated; persists applied coupon server-side.
   Future<ApiResult<Map<String, dynamic>>> apply({
     required String couponCode,
     required double amount,
   }) =>
       _client.post(
         APIClass.couponsApply,
-        token: TokenMode.none,
         body: {'coupon_code': couponCode, 'amount': amount},
       );
 
-  /// Server always returns zero discount — reset client-side on call.
+  /// Removes the applied coupon and returns recalculated discount totals.
   Future<ApiResult<Map<String, dynamic>>> remove() =>
-      _client.post(APIClass.couponsRemove, token: TokenMode.none);
+      _client.post(APIClass.couponsRemove);
 }

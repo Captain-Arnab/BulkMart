@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urban_roots/features/auth/presentation/change_password_screen.dart';
 import 'package:urban_roots/features/notifications/presentation/notifications_screen.dart';
+import 'package:urban_roots/features/payments/presentation/saved_cards_screen.dart';
 import 'package:urban_roots/features/referral/presentation/referral_screen.dart';
 import 'package:urban_roots/features/support/presentation/support_screen.dart';
 import 'package:urban_roots/features/userProfile/presentation/edit_profile_screen.dart';
@@ -131,6 +132,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.payment_outlined, 'Payment History', () {
                       DashboardController.findOrPut().openPaymentHistory();
+                    }),
+                    const SizedBox(height: 10),
+                    _profileMenuItem(Icons.credit_card_outlined, 'Saved Cards', () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SavedCardsScreen()),
+                      );
                     }),
                     const SizedBox(height: 10),
                     _profileMenuItem(Icons.location_on_outlined, 'My Addresses', () {

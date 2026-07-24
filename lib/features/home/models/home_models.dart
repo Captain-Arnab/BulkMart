@@ -45,6 +45,8 @@ class HomeUiData {
     required this.categorySections,
     this.offers = const [],
     this.sectionsLoading = false,
+    this.locationFilterActive = false,
+    this.locationLabel = '',
   });
 
   final List<Category> categories;
@@ -53,4 +55,6 @@ class HomeUiData {
   final List<OfferModel> offers;
   /// True while more category product rows are still loading in the background.
   final bool sectionsLoading;
+  final bool locationFilterActive;
+  final String locationLabel;
 }

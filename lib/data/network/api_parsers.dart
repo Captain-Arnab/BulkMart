@@ -3,6 +3,7 @@ import 'package:urban_roots/core/ui/network_image_widget.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 import 'package:urban_roots/features/orders/order_model.dart';
 import 'package:urban_roots/features/orders/order_tracking_models.dart';
+import 'package:urban_roots/features/payments/models/saved_card.dart';
 import 'package:urban_roots/features/products/models/Product.dart';
 import 'package:urban_roots/features/products/utils/catalog_filters.dart';
 import 'package:urban_roots/features/products/models/category.dart';
@@ -1034,6 +1035,13 @@ List<Address> parseAddresses(dynamic raw) {
     final landmark =
         map['landmark']?.toString() ?? map['address_line2']?.toString() ?? '';
 
+    final lat = double.tryParse(
+          (map['lat'] ?? map['latitude'] ?? '').toString(),
+        );
+    final lng = double.tryParse(
+          (map['lng'] ?? map['longitude'] ?? '').toString(),
+        );
+
     return Address(
       id: map['address_id']?.toString() ?? map['id']?.toString() ?? '',
       fullName: map['full_name']?.toString() ?? map['name']?.toString() ?? '',
@@ -1051,8 +1059,83 @@ List<Address> parseAddresses(dynamic raw) {
           map['is_default'] == 1 ||
           map['add_default'] == 1 ||
           map['default']?.toString() == '1',
+      latitude: lat,
+      longitude: lng,
     );
   }).toList();
+}
+
+List<Map<String, dynamic>> parsePaymentHistory(dynamic raw) {
+  return extractList(raw, key: 'payments').whereType<Map>().map((row) {
+    final map = Map<String, dynamic>.from(row);
+    final type = (map['type'] ?? map['payment_type'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    final amountRaw = map['amount'] ?? map['txn_amount'] ?? 0;
+    final amount = amountRaw is num
+        ? amountRaw.toDouble()
+        : double.tryParse(amountRaw.toString()) ?? 0;
+    final created = map['date'] ??
+        map['created_at'] ??
+        map['txn_date'] ??
+        map['paid_at'];
+    final reference = map['reference_id']?.toString() ??
+        map['txn_id']?.toString() ??
+        map['transaction_id']?.toString() ??
+        map['order_id']?.toString() ??
+        '';
+
+    final isWallet = type.contains('wallet');
+    final label = isWallet
+        ? 'Wallet Top-up'
+        : type.contains('order')
+            ? 'Order Payment'
+            : (map['description']?.toString().isNotEmpty == true
+                ? map['description'].toString()
+                : 'Payment');
+
+    return {
+      'type': type.isNotEmpty
+          ? type
+          : (isWallet ? 'wallet_topup' : 'order_payment'),
+      'amount': amount.abs(),
+      'status': (map['status'] ?? map['payment_status'] ?? 'success')
+          .toString()
+          .toLowerCase(),
+      'reference_id': reference,
+      'date': created,
+      'created_at': parseTimestampSeconds(created),
+      'description': map['description']?.toString().isNotEmpty == true
+          ? map['description'].toString()
+          : label,
+      'method': isWallet ? 'Wallet' : (map['method']?.toString() ?? 'Online'),
+      'gateway': map['gateway']?.toString() ??
+          map['provider']?.toString() ??
+          '',
+      'source': isWallet ? 'wallet' : 'order',
+    };
+  }).toList();
+}
+
+List<SavedCard> parseSavedCards(dynamic raw) {
+  List<dynamic> list = const [];
+  if (raw is Map) {
+    final map = Map<String, dynamic>.from(raw);
+    if (map['cards'] is List) {
+      list = map['cards'] as List;
+    } else {
+      list = extractList(map, key: 'cards');
+    }
+  } else if (raw is List) {
+    list = raw;
+  }
+
+  return list
+      .whereType<Map>()
+      .map((e) => SavedCard.fromJson(Map<String, dynamic>.from(e)))
+      .where((c) => c.cardTokenId.isNotEmpty || c.maskedNumber.isNotEmpty)
+      .toList();
 }
 
 int parseTimestampSeconds(dynamic created) {

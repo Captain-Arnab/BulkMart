@@ -446,14 +446,46 @@ class CartController extends GetxController {
     return list;
   }
 
-  /// Clears coupon locally only — backend coupons/remove.php is a stub.
+  /// Clears the applied coupon via coupons/remove.php and uses the
+  /// server-returned discount / final_amount.
   Future<void> removeCoupon() async {
+    final hadCoupon = appliedCoupon.value.trim().isNotEmpty;
+    if (!hadCoupon) {
+      discount.value = 0;
+      finalAmount.value = totalValue;
+      return;
+    }
+
+    final result = await _api.coupons.remove();
+    if (result is ApiSuccess<Map<String, dynamic>>) {
+      final d = result.data;
+      final inner = d['data'] is Map
+          ? Map<String, dynamic>.from(d['data'] as Map)
+          : d;
+      appliedCoupon.value = '';
+      discount.value = double.tryParse(
+            inner['discount']?.toString() ?? d['discount']?.toString() ?? '0',
+          ) ??
+          0;
+      finalAmount.value = double.tryParse(
+            inner['final_amount']?.toString() ??
+                d['final_amount']?.toString() ??
+                '',
+          ) ??
+          totalValue;
+      return;
+    }
+
+    // Fall back to local clear if the API call fails so the user isn't stuck.
     appliedCoupon.value = '';
     discount.value = 0;
     finalAmount.value = totalValue;
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      errorMessage.value = result.message;
+    }
   }
 
-  /// Re-sends the applied coupon against the current cart total (stateless API).
+  /// Re-sends the applied coupon against the current cart total.
   Future<void> reapplyCouponIfNeeded() async {
     final code = appliedCoupon.value.trim();
     if (code.isEmpty) {

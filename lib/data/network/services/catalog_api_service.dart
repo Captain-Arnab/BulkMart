@@ -66,6 +66,22 @@ class CatalogApiService {
   Future<ApiResult<Map<String, dynamic>>> homeBanners() =>
       _client.get(APIClass.homeBanners, token: TokenMode.none);
 
+  /// Location-aware home product list. Omit lat/lng for the unfiltered list.
+  Future<ApiResult<Map<String, dynamic>>> homeProducts({
+    double? lat,
+    double? lng,
+    double? radiusKm,
+  }) =>
+      _client.get(
+        APIClass.homeProducts,
+        token: TokenMode.none,
+        queryParameters: {
+          if (lat != null) 'lat': lat,
+          if (lng != null) 'lng': lng,
+          if (radiusKm != null) 'radius_km': radiusKm,
+        },
+      );
+
   Future<ApiResult<Map<String, dynamic>>> browseVendors({
     String? category,
     String? pincode,

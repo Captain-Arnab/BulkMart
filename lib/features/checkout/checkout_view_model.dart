@@ -69,6 +69,7 @@ class CheckoutViewModel extends ChangeNotifier {
     required CheckoutAddressFields address,
     required List<Map<String, dynamic>> products,
     required double payable,
+    String? cardTokenId,
   }) =>
       _placeOrder(
         cart: cart,
@@ -88,6 +89,7 @@ class CheckoutViewModel extends ChangeNotifier {
           landmark: address['landmark']!,
           addressType: address['addressType']!,
           products: products,
+          cardTokenId: cardTokenId,
         ),
       );
 

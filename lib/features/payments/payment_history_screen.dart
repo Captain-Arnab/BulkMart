@@ -16,32 +16,47 @@ class PaymentHistoryScreen extends StatefulWidget {
 
 class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   late final PaymentHistoryController _controller;
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _controller = PaymentHistoryController.findOrPut();
     _controller.loadPayments();
+    _scrollController.addListener(_onScroll);
   }
 
-  IconData _methodIcon(String method) {
-    final value = method.toLowerCase();
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _controller.loadMore();
+    }
+  }
+
+  IconData _typeIcon(String type) {
+    final value = type.toLowerCase();
     if (value.contains('wallet')) return Icons.account_balance_wallet_outlined;
-    if (value.contains('cod') || value.contains('cash')) {
-      return Icons.payments_outlined;
-    }
-    if (value.contains('upi') || value.contains('phonepe')) {
-      return Icons.account_balance;
-    }
-    if (value.contains('card')) return Icons.credit_card;
-    return Icons.language;
+    return Icons.receipt_long_outlined;
+  }
+
+  String _typeLabel(String type) {
+    final value = type.toLowerCase();
+    if (value.contains('wallet')) return 'Wallet Top-up';
+    if (value.contains('order')) return 'Order Payment';
+    return 'Payment';
   }
 
   String _formatAmount(Map<String, dynamic> payment) {
     final raw = payment['amount'];
-    if (raw is num) {
-      return raw.toDouble().toStringAsFixed(0);
-    }
+    if (raw is num) return raw.toDouble().toStringAsFixed(0);
     return '0';
   }
 
@@ -51,11 +66,11 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       final dt = DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
       return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
     }
-    if (createdAt is String && createdAt.isNotEmpty) {
-      final dt = DateTime.tryParse(createdAt);
-      if (dt != null) {
-        return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
-      }
+    final date = payment['date']?.toString() ?? '';
+    if (date.isNotEmpty) {
+      final dt = DateTime.tryParse(date);
+      if (dt != null) return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+      return date;
     }
     return '';
   }
@@ -63,20 +78,12 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   ({String label, Color bg, Color fg}) _statusStyle(String status) {
     final value = status.toLowerCase();
     if (value.contains('cancel')) {
-      return (
-        label: 'Cancelled',
-        bg: Colors.red.shade50,
-        fg: Colors.red.shade700,
-      );
+      return (label: 'Cancelled', bg: Colors.red.shade50, fg: Colors.red.shade700);
     }
     if (value.contains('fail') ||
         value.contains('declined') ||
         value.contains('refund')) {
-      return (
-        label: 'Failed',
-        bg: Colors.red.shade50,
-        fg: Colors.red.shade700,
-      );
+      return (label: 'Failed', bg: Colors.red.shade50, fg: Colors.red.shade700);
     }
     if (value.contains('pending') ||
         value.contains('unpaid') ||
@@ -115,177 +122,250 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
         ),
         centerTitle: false,
       ),
-      body: Obx(() {
-        if (_controller.isLoading.value && _controller.payments.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-        if (_controller.errorMessage.value.isNotEmpty &&
-            _controller.payments.isEmpty) {
-          return ApiStateView(
-            status: ApiViewStatus.error,
-            errorMessage: _controller.errorMessage.value,
-            onRetry: _controller.loadPayments,
-            child: const SizedBox(),
-          );
-        }
-        if (_controller.payments.isEmpty) {
-          return ApiStateView(
-            status: ApiViewStatus.empty,
-            emptyMessage: 'No payments yet',
-            child: const SizedBox(),
-          );
-        }
+      body: Column(
+        children: [
+          _FilterBar(controller: _controller),
+          Expanded(
+            child: Obx(() {
+              if (_controller.isLoading.value && _controller.payments.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+              if (_controller.errorMessage.value.isNotEmpty &&
+                  _controller.payments.isEmpty) {
+                return ApiStateView(
+                  status: ApiViewStatus.error,
+                  errorMessage: _controller.errorMessage.value,
+                  onRetry: _controller.loadPayments,
+                  child: const SizedBox(),
+                );
+              }
+              if (_controller.payments.isEmpty) {
+                return ApiStateView(
+                  status: ApiViewStatus.empty,
+                  emptyMessage: 'No payments yet',
+                  child: const SizedBox(),
+                );
+              }
 
-        return RefreshIndicator(
-          color: AppColors.primary,
-          onRefresh: _controller.loadPayments,
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _controller.payments.length,
-            itemBuilder: (context, index) {
-              final payment = _controller.payments[index];
-              final formattedDate = _formatDate(payment);
-              final amount = _formatAmount(payment);
-              final method = payment['method']?.toString() ?? 'N/A';
-              final gateway = payment['gateway']?.toString() ?? '';
-              final status =
-                  payment['status']?.toString().toLowerCase() ?? 'pending';
-              final statusStyle = _statusStyle(status);
-              final isNegative = status.contains('cancel') ||
-                  status.contains('fail') ||
-                  status.contains('refund');
+              final itemCount = _controller.payments.length +
+                  (_controller.hasMore.value ? 1 : 0);
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _methodIcon(method),
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            payment['description']?.toString() ?? '',
-                            style: GoogleFonts.rubik(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+              return RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: () => _controller.loadPayments(),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: itemCount,
+                  itemBuilder: (context, index) {
+                    if (index >= _controller.payments.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppColors.primary,
                             ),
                           ),
-                          if (formattedDate.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              formattedDate,
-                              style: GoogleFonts.rubik(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusStyle.bg,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  statusStyle.label,
-                                  style: GoogleFonts.rubik(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusStyle.fg,
-                                  ),
-                                ),
-                              ),
-                              if (gateway.isNotEmpty &&
-                                  gateway.toLowerCase() != method.toLowerCase())
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: gateway.toLowerCase() == 'phonepe'
-                                        ? const Color(0xFF5F259F)
-                                            .withValues(alpha: 0.12)
-                                        : AppColors.surfaceMint,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    gateway,
-                                    style: GoogleFonts.rubik(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w600,
-                                      color: gateway.toLowerCase() == 'phonepe'
-                                          ? const Color(0xFF5F259F)
-                                          : AppColors.primaryDark,
-                                    ),
-                                  ),
-                                ),
-                              Text(
-                                method,
-                                style: GoogleFonts.rubik(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ],
+                        ),
+                      );
+                    }
+
+                    final payment = _controller.payments[index];
+                    final formattedDate = _formatDate(payment);
+                    final amount = _formatAmount(payment);
+                    final type = payment['type']?.toString() ?? '';
+                    final status =
+                        payment['status']?.toString().toLowerCase() ?? 'pending';
+                    final statusStyle = _statusStyle(status);
+                    final reference =
+                        payment['reference_id']?.toString() ?? '';
+                    final isNegative = status.contains('cancel') ||
+                        status.contains('fail') ||
+                        status.contains('refund');
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                    ),
-                    Text(
-                      '₹$amount',
-                      style: GoogleFonts.rubik(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: isNegative
-                            ? Colors.grey.shade600
-                            : AppColors.primary,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              _typeIcon(type),
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  payment['description']?.toString() ??
+                                      _typeLabel(type),
+                                  style: GoogleFonts.rubik(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                if (formattedDate.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    formattedDate,
+                                    style: GoogleFonts.rubik(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusStyle.bg,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        statusStyle.label,
+                                        style: GoogleFonts.rubik(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                          color: statusStyle.fg,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceMint,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        _typeLabel(type),
+                                        style: GoogleFonts.rubik(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryDark,
+                                        ),
+                                      ),
+                                    ),
+                                    if (reference.isNotEmpty)
+                                      Text(
+                                        refLabel(reference),
+                                        style: GoogleFonts.rubik(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '₹$amount',
+                            style: GoogleFonts.rubik(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: isNegative
+                                  ? Colors.grey.shade600
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               );
-            },
+            }),
           ),
-        );
-      }),
+        ],
+      ),
     );
+  }
+
+  String refLabel(String reference) {
+    if (reference.length <= 12) return reference;
+    return '${reference.substring(0, 10)}…';
+  }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.controller});
+
+  final PaymentHistoryController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      return Container(
+        width: double.infinity,
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: PaymentHistoryFilter.values.map((filter) {
+              final selected = controller.filter.value == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(filter.label),
+                  selected: selected,
+                  onSelected: (_) => controller.setFilter(filter),
+                  selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                  labelStyle: GoogleFonts.rubik(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColors.primary : Colors.grey.shade700,
+                  ),
+                  side: BorderSide(
+                    color: selected
+                        ? AppColors.primary
+                        : Colors.grey.shade300,
+                  ),
+                  backgroundColor: Colors.white,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    });
   }
 }

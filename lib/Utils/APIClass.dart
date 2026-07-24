@@ -32,6 +32,7 @@ class APIClass {
   static const productView = '/product-view.php';
   static const searchProducts = '/search.php';
   static const homeBanners = '/home-banners.php';
+  static const homeProducts = '/home/products.php';
   static const vendorsList = '/vendors/list.php';
   static const checkPincode = '/check_pincode.php';
   static const removePincode = '/remove_pincode.php';
@@ -76,6 +77,13 @@ class APIClass {
   static const walletBalance = '/wallet/balance.php';
   static const walletDeduct = '/wallet/deduct.php';
   static const walletTransactions = '/wallet/transactions.php';
+
+  // ── MODULE 9b — PAYMENTS & SAVED CARDS (user base) ─────────────────
+  static const paymentsHistory = '/payments/history.php';
+  static const cardsSave = '/cards/save.php';
+  static const cardsConfirm = '/cards/confirm.php';
+  static const cardsList = '/cards/list.php';
+  static const cardsDelete = '/cards/delete.php';
 
   // ── MODULE 10 — SUBSCRIPTION (user base) ─────────────────────────
   static const subscriptionPlans = '/subscription/plans.php';

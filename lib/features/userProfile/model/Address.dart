@@ -10,6 +10,8 @@ class Address {
   String category;
   String? deliveryInstructions;
   bool isDefault;
+  double? latitude;
+  double? longitude;
 
   Address({
     this.id = '',
@@ -23,7 +25,15 @@ class Address {
     required this.category,
     this.deliveryInstructions,
     this.isDefault = false,
+    this.latitude,
+    this.longitude,
   });
+
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude!.abs() <= 90 &&
+      longitude!.abs() <= 180;
 
   Map<String, dynamic> toJson() {
     return {
@@ -38,6 +48,8 @@ class Address {
       'category': category,
       'deliveryInstructions': deliveryInstructions,
       'isDefault': isDefault,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -54,6 +66,8 @@ class Address {
       category: json['category']?.toString() ?? 'Home',
       deliveryInstructions: json['deliveryInstructions']?.toString(),
       isDefault: json['isDefault'] == true,
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
     );
   }
 }

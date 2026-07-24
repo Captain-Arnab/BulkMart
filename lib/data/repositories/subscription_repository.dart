@@ -1,6 +1,7 @@
 import 'package:urban_roots/data/network/api_parsers.dart';
 import 'package:urban_roots/data/network/api_result.dart';
 import 'package:urban_roots/data/network/urban_roots_api.dart';
+import 'package:urban_roots/features/orders/order_payment_utils.dart';
 
 class SubscriptionCreateData {
   const SubscriptionCreateData({
@@ -9,6 +10,9 @@ class SubscriptionCreateData {
     required this.startDate,
     required this.endDate,
     this.message = '',
+    this.paymentUrl,
+    this.transactionId,
+    this.amount,
     this.raw = const {},
   });
 
@@ -17,6 +21,9 @@ class SubscriptionCreateData {
   final String startDate;
   final String endDate;
   final String message;
+  final String? paymentUrl;
+  final String? transactionId;
+  final double? amount;
   final Map<String, dynamic> raw;
 }
 
@@ -75,6 +82,9 @@ class ApiSubscriptionRepository implements SubscriptionRepository {
         endDate: inner['end_date']?.toString() ?? '',
         message: data['message']?.toString() ??
             'Subscription created successfully',
+        paymentUrl: extractPaymentUrl(data),
+        transactionId: extractTxnId(data),
+        amount: extractTotalAmount(data),
         raw: data,
       ),
     );

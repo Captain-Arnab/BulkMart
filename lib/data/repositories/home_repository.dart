@@ -7,6 +7,22 @@ import 'package:urban_roots/features/products/data/ProductsController.dart'
     show Category;
 import 'package:urban_roots/features/products/models/Product.dart';
 
+class HomeProductsResult {
+  const HomeProductsResult({
+    required this.products,
+    this.locationFilter = false,
+    this.lat,
+    this.lng,
+    this.radiusKm,
+  });
+
+  final List<Product> products;
+  final bool locationFilter;
+  final double? lat;
+  final double? lng;
+  final double? radiusKm;
+}
+
 abstract class HomeRepository {
   Future<List<HomeBanner>> fetchBanners();
   Future<List<Category>> fetchCategories();
@@ -15,6 +31,11 @@ abstract class HomeRepository {
     required String categoryId,
     int limit = 10,
     int page = 1,
+  });
+  Future<HomeProductsResult> fetchHomeProducts({
+    double? lat,
+    double? lng,
+    double? radiusKm,
   });
 }
 
@@ -78,6 +99,35 @@ class ApiHomeRepository implements HomeRepository {
       throw HomeRepositoryException(result.message);
     }
     return parseProducts((result as ApiSuccess<Map<String, dynamic>>).data);
+  }
+
+  @override
+  Future<HomeProductsResult> fetchHomeProducts({
+    double? lat,
+    double? lng,
+    double? radiusKm,
+  }) async {
+    final result = await _api.catalog.homeProducts(
+      lat: lat,
+      lng: lng,
+      radiusKm: radiusKm,
+    );
+    if (result is ApiFailure<Map<String, dynamic>>) {
+      throw HomeRepositoryException(result.message);
+    }
+    final data = (result as ApiSuccess<Map<String, dynamic>>).data;
+    final products = parseProducts(data);
+    final filterActive = data['location_filter'] == true ||
+        data['location_filter'] == 1 ||
+        data['location_filter']?.toString() == '1';
+    return HomeProductsResult(
+      products: products,
+      locationFilter: filterActive,
+      lat: double.tryParse(data['lat']?.toString() ?? '') ?? lat,
+      lng: double.tryParse(data['lng']?.toString() ?? '') ?? lng,
+      radiusKm:
+          double.tryParse(data['radius_km']?.toString() ?? '') ?? radiusKm,
+    );
   }
 }
 

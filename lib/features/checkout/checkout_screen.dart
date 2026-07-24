@@ -14,6 +14,9 @@ import 'package:urban_roots/features/checkout/checkout_price_breakdown.dart';
 import 'package:urban_roots/features/orders/order_payment_utils.dart';
 import 'package:urban_roots/features/orders/orders_controller.dart';
 import 'package:urban_roots/features/orders/order_success_screen.dart';
+import 'package:urban_roots/features/payments/card_save_flow.dart';
+import 'package:urban_roots/features/payments/cards_controller.dart';
+import 'package:urban_roots/features/payments/models/saved_card.dart';
 import 'package:urban_roots/features/subscription/subscription_flow_controller.dart';
 import 'package:urban_roots/features/userProfile/address_controller.dart';
 import 'package:urban_roots/features/userProfile/user_profile_controller.dart';
@@ -39,8 +42,10 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = AddressController.findOrPut();
   final _wallet = WalletController.findOrPut();
+  final _cards = CardsController.findOrPut();
   late final CheckoutViewModel _checkoutVm;
   String? _selectedAddressId;
+  String? _selectedCardTokenId;
   String _payment = 'cod';
   String _customerEmail = '';
 
@@ -65,6 +70,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     await Future.wait([
       _addressController.loadAddresses(),
       _wallet.loadBalance(),
+      _cards.loadCards(),
       _loadProfileEmail(),
     ]);
     if (!mounted) return;
@@ -219,6 +225,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         address: address,
         products: products,
         payable: payable,
+        cardTokenId: _selectedCardTokenId,
       );
     }
 
@@ -432,14 +439,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String subtitle,
     required IconData icon,
     bool enabled = true,
+    VoidCallback? onTap,
   }) {
-    final selected = _payment == value;
+    final selected = _payment == value && _selectedCardTokenId == null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: enabled ? () => setState(() => _payment = value) : null,
+          onTap: enabled
+              ? (onTap ??
+                  () => setState(() {
+                        _payment = value;
+                        if (value != 'online') _selectedCardTokenId = null;
+                      }))
+              : null,
           borderRadius: BorderRadius.circular(16),
           child: Ink(
             decoration: BoxDecoration(
@@ -480,10 +494,141 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 Radio<String>(
                   value: value,
-                  groupValue: _payment,
+                  groupValue:
+                      _selectedCardTokenId == null ? _payment : '__card__',
                   activeColor: AppColors.primary,
-                  onChanged:
-                      enabled ? (v) => setState(() => _payment = v!) : null,
+                  onChanged: enabled
+                      ? (v) {
+                          if (v == null) return;
+                          setState(() {
+                            _payment = v;
+                            if (v != 'online') _selectedCardTokenId = null;
+                          });
+                        }
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _savedCardsSection() {
+    return Obx(() {
+      final cards = _cards.cards;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (cards.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(
+                'Saved cards',
+                style: GoogleFonts.rubik(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+            ...cards.map(_savedCardTile),
+          ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: OutlinedButton.icon(
+              onPressed: _cards.isSaving.value
+                  ? null
+                  : () async {
+                      final card = await startSaveCardFlow(context);
+                      if (card != null && mounted) {
+                        setState(() {
+                          _payment = 'online';
+                          _selectedCardTokenId = card.cardTokenId.isNotEmpty
+                              ? card.cardTokenId
+                              : null;
+                        });
+                      }
+                    },
+              icon: const Icon(Icons.add_card_outlined, size: 18),
+              label: Text(
+                'Save Card',
+                style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _savedCardTile(SavedCard card) {
+    final selected = _selectedCardTokenId == card.cardTokenId;
+    final networkColor = cardNetworkColor(card.cardNetwork);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() {
+            _payment = 'online';
+            _selectedCardTokenId = card.cardTokenId;
+          }),
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: selected ? AppColors.primary : Colors.grey.shade200,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(cardNetworkIcon(card.cardNetwork), color: networkColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.maskedNumber,
+                        style: GoogleFonts.rubik(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        [
+                          if (card.cardNetwork.isNotEmpty) card.cardNetwork,
+                          if (card.expiryDisplay.isNotEmpty)
+                            'Exp ${card.expiryDisplay}',
+                        ].join(' · '),
+                        style: GoogleFonts.rubik(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: selected ? AppColors.primary : Colors.grey,
                 ),
               ],
             ),
@@ -636,7 +781,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       title: 'Pay Online',
                       subtitle: 'UPI, card, or net banking',
                       icon: Icons.credit_card_rounded,
+                      onTap: () => setState(() {
+                        _payment = 'online';
+                        _selectedCardTokenId = null;
+                      }),
                     ),
+                    _savedCardsSection(),
                     _walletPaymentOption(
                       payable: payable,
                       walletBalance: walletBalance,
