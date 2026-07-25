@@ -1,11 +1,11 @@
 {
-    "name": "groceryapp",
-    "short_name": "groceryapp",
+    "name": "BulkMart",
+    "short_name": "BulkMart",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Grocery App",
+    "background_color": "#2F6D4F",
+    "theme_color": "#2F6D4F",
+    "description": "BulkMart — B2B bulk grocery ordering",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

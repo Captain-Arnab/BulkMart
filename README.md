@@ -2,6 +2,8 @@
 
 Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delivery only.
 
+> Working name: **BulkMart** (final brand TBD).
+
 ## Stack
 
 | Area | Choice |
@@ -11,16 +13,20 @@ Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delive
 | State | Provider (`ChangeNotifier`) |
 | Networking | Dio + `Result<T>` |
 | Auth storage | `flutter_secure_storage` |
+| Images | `cached_network_image` |
 | Fonts | Roboto Slab · Inter · Space Mono |
 
-## Session 1 status
+## Demo mode
 
-- [x] Project scaffold + theme tokens
-- [x] Splash → Login → OTP → Home
-- [x] Catalog grid with dummy wholesale products
-- [x] Shared widgets (`ProductCard`, `MoqBadge`, `StepperQty`, `StatusTimeline`, `PrimaryButton`)
-- [ ] Wire real auth / catalog APIs (pending endpoint tracker)
-- [ ] Product detail polish, full checkout, order tracking
+`lib/core/config/app_config.dart`:
+
+```dart
+static const bool kDemoMode = true;
+```
+
+With `kDemoMode = true`, product/order repositories return mock data (no backend). Flip to `false` when live APIs are ready.
+
+**Demo OTP:** `1234`
 
 ## Run
 
@@ -29,18 +35,25 @@ flutter pub get
 flutter run
 ```
 
-**Demo OTP:** `1234`
+## Identity
+
+| Key | Value |
+|-----|--------|
+| App name | BulkMart |
+| Android applicationId | `com.virtuousglobal.bulkmart` |
+| iOS bundle id | `com.virtuousglobal.bulkmart` |
 
 ## Layout
 
 ```
 lib/
+├── core/config/          # kDemoMode
+├── data/mock/            # mock_products, mock_orders
 ├── models/
 ├── repositories/
 ├── services/api/
 ├── viewmodels/
-├── views/screens/   # splash, auth, home, product, cart, orders, account
+├── views/screens/
 ├── views/widgets/
-├── theme/
-└── data/dummy/
+└── theme/
 ```

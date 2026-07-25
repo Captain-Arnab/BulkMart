@@ -29,8 +29,8 @@ Future<void> main() async {
   };
 
   final authRepository = AuthRepository(storage: storage);
-  final productRepository = ProductRepository();
-  final orderRepository = OrderRepository();
+  final productRepository = ProductRepository(apiClient: apiClient);
+  final orderRepository = OrderRepository(apiClient: apiClient);
 
   runApp(
     MultiProvider(

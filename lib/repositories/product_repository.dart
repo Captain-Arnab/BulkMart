@@ -1,5 +1,8 @@
-import '../data/dummy/dummy_products.dart';
+import '../core/config/app_config.dart';
+import '../data/mock/mock_products.dart';
 import '../models/product.dart';
+import '../services/api/api_client.dart';
+import '../services/api/api_endpoints.dart';
 import '../services/api/result.dart';
 
 class PaginatedProducts {
@@ -18,12 +21,28 @@ class PaginatedProducts {
   final bool hasMore;
 }
 
-/// Product catalog repository. Currently serves dummy data shaped like the API.
+/// Product catalog repository. Demo vs live is controlled by [AppConfig.kDemoMode].
 class ProductRepository {
+  ProductRepository({ApiClient? apiClient}) : _apiClient = apiClient;
+
+  final ApiClient? _apiClient;
+
   Future<Result<List<ProductCategory>>> fetchCategories() async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    // Real call: GET ApiEndpoints.categories
-    return const Success(DummyCatalog.categories);
+    if (AppConfig.kDemoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      return const Success(MockProducts.categories);
+    }
+
+    try {
+      final response = await _apiClient!.dio.get(ApiEndpoints.categories);
+      final raw = response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
+      final list = raw
+          .map((e) => ProductCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Success(list);
+    } catch (e) {
+      return Failure(e.toString());
+    }
   }
 
   Future<Result<PaginatedProducts>> fetchProducts({
@@ -32,10 +51,73 @@ class ProductRepository {
     int page = 1,
     int limit = 20,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 450));
-    // Real call: GET ApiEndpoints.products?page=&limit=&category_id=&q=
+    if (AppConfig.kDemoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      return Success(_paginateMock(
+        categoryId: categoryId,
+        query: query,
+        page: page,
+        limit: limit,
+      ));
+    }
 
-    var list = List<Product>.from(DummyCatalog.products);
+    try {
+      final response = await _apiClient!.dio.get(
+        ApiEndpoints.products,
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (categoryId != null && categoryId != 'all') 'category_id': categoryId,
+          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        },
+      );
+      final data = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
+      final rawItems = data['items'] as List<dynamic>? ?? data['products'] as List<dynamic>? ?? [];
+      final items = rawItems
+          .map((e) => Product.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final total = (data['total'] as num?)?.toInt() ?? items.length;
+      return Success(
+        PaginatedProducts(
+          items: items,
+          page: page,
+          limit: limit,
+          total: total,
+          hasMore: page * limit < total,
+        ),
+      );
+    } catch (e) {
+      return Failure(e.toString());
+    }
+  }
+
+  Future<Result<Product>> fetchProduct(String id) async {
+    if (AppConfig.kDemoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      try {
+        return Success(MockProducts.byId(id));
+      } catch (_) {
+        return const Failure('Product not found', statusCode: 404);
+      }
+    }
+
+    try {
+      final response = await _apiClient!.dio.get(ApiEndpoints.productDetail(id));
+      final data = response.data['data'] as Map<String, dynamic>? ??
+          response.data as Map<String, dynamic>;
+      return Success(Product.fromJson(data));
+    } catch (e) {
+      return Failure(e.toString());
+    }
+  }
+
+  PaginatedProducts _paginateMock({
+    String? categoryId,
+    String? query,
+    required int page,
+    required int limit,
+  }) {
+    var list = List<Product>.from(MockProducts.products);
 
     if (categoryId != null && categoryId.isNotEmpty && categoryId != 'all') {
       list = list.where((p) => p.categoryId == categoryId).toList();
@@ -55,38 +137,21 @@ class ProductRepository {
     final total = list.length;
     final start = (page - 1) * limit;
     if (start >= total) {
-      return Success(
-        PaginatedProducts(
-          items: const [],
-          page: page,
-          limit: limit,
-          total: total,
-          hasMore: false,
-        ),
-      );
-    }
-    final end = (start + limit).clamp(0, total);
-    final slice = list.sublist(start, end);
-
-    return Success(
-      PaginatedProducts(
-        items: slice,
+      return PaginatedProducts(
+        items: const [],
         page: page,
         limit: limit,
         total: total,
-        hasMore: end < total,
-      ),
-    );
-  }
-
-  Future<Result<Product>> fetchProduct(String id) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    // Real call: GET ApiEndpoints.productDetail(id)
-    try {
-      final product = DummyCatalog.products.firstWhere((p) => p.id == id);
-      return Success(product);
-    } catch (_) {
-      return const Failure('Product not found', statusCode: 404);
+        hasMore: false,
+      );
     }
+    final end = (start + limit).clamp(0, total);
+    return PaginatedProducts(
+      items: list.sublist(start, end),
+      page: page,
+      limit: limit,
+      total: total,
+      hasMore: end < total,
+    );
   }
 }

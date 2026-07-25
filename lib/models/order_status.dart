@@ -11,6 +11,24 @@ enum OrderStatus {
       case OrderStatus.placed:
         return 'Placed';
       case OrderStatus.confirmed:
+        return 'Awaiting Delivery Date';
+      case OrderStatus.deliveryDateSet:
+        return 'Delivery Date Set';
+      case OrderStatus.outForDelivery:
+        return 'Out for Delivery';
+      case OrderStatus.delivered:
+        return 'Delivered';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+
+  /// Fixed timeline step titles (Placed → Confirmed → …).
+  String get timelineLabel {
+    switch (this) {
+      case OrderStatus.placed:
+        return 'Placed';
+      case OrderStatus.confirmed:
         return 'Confirmed';
       case OrderStatus.deliveryDateSet:
         return 'Delivery Date Set';

@@ -5,6 +5,7 @@ import '../../models/product.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import 'moq_badge.dart';
+import 'product_network_image.dart';
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -41,26 +42,7 @@ class ProductCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.paper2,
-                          AppColors.paper,
-                          _categoryTint(product.categoryId),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        _categoryIcon(product.categoryId),
-                        size: 36,
-                        color: AppColors.forest.withValues(alpha: 0.35),
-                      ),
-                    ),
-                  ),
+                  ProductNetworkImage(product: product),
                   Positioned(
                     top: 6,
                     right: 6,
@@ -120,39 +102,5 @@ class ProductCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static Color _categoryTint(String id) {
-    switch (id) {
-      case 'oil':
-        return const Color(0xFFE8D9A8);
-      case 'spices':
-        return const Color(0xFFE5C4A8);
-      case 'dal':
-        return const Color(0xFFD4C9A8);
-      case 'flour':
-        return const Color(0xFFEDE6D0);
-      case 'sugar':
-        return const Color(0xFFE0E8E2);
-      default:
-        return AppColors.paper;
-    }
-  }
-
-  static IconData _categoryIcon(String id) {
-    switch (id) {
-      case 'oil':
-        return Icons.water_drop_outlined;
-      case 'spices':
-        return Icons.spa_outlined;
-      case 'dal':
-        return Icons.grain_outlined;
-      case 'flour':
-        return Icons.bakery_dining_outlined;
-      case 'sugar':
-        return Icons.cookie_outlined;
-      default:
-        return Icons.inventory_2_outlined;
-    }
   }
 }
