@@ -161,6 +161,8 @@ class AuthViewModel extends ChangeNotifier {
     );
   }
 
+  bool isUploadingAvatar = false;
+
   Future<bool> updateProfile({
     required String businessName,
     required String businessType,
@@ -183,6 +185,7 @@ class AuthViewModel extends ChangeNotifier {
       gstNumber: (gstNumber == null || gstNumber.trim().isEmpty) ? null : gstNumber.trim(),
       contactPerson:
           (contactPerson == null || contactPerson.trim().isEmpty) ? null : contactPerson.trim(),
+      avatarPath: u.avatarPath,
     );
 
     final result = await _authRepository.updateProfile(user: updated);
@@ -199,6 +202,50 @@ class AuthViewModel extends ChangeNotifier {
       failure: (message, {statusCode}) {
         error = message;
         isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> uploadAvatar(String localPath) async {
+    isUploadingAvatar = true;
+    error = null;
+    notifyListeners();
+
+    final result = await _authRepository.uploadAvatar(localPath: localPath);
+    return result.when(
+      success: (u) {
+        user = u;
+        isUploadingAvatar = false;
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode}) {
+        error = message;
+        isUploadingAvatar = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> removeAvatar() async {
+    isUploadingAvatar = true;
+    error = null;
+    notifyListeners();
+
+    final result = await _authRepository.removeAvatar();
+    return result.when(
+      success: (u) {
+        user = u;
+        isUploadingAvatar = false;
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode}) {
+        error = message;
+        isUploadingAvatar = false;
         notifyListeners();
         return false;
       },

@@ -101,6 +101,28 @@ class AuthRepository {
     return Success(user);
   }
 
+  Future<Result<User>> uploadAvatar({required String localPath}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    final current = await currentUser();
+    if (current == null) {
+      return const Failure('Not signed in');
+    }
+    final updated = current.copyWith(avatarPath: localPath);
+    await _storage.saveUserJson(jsonEncode(updated.toJson()));
+    return Success(updated);
+  }
+
+  Future<Result<User>> removeAvatar() async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final current = await currentUser();
+    if (current == null) {
+      return const Failure('Not signed in');
+    }
+    final updated = current.copyWith(clearAvatar: true);
+    await _storage.saveUserJson(jsonEncode(updated.toJson()));
+    return Success(updated);
+  }
+
   Future<User?> currentUser() async {
     final raw = await _storage.readUserJson();
     if (raw == null || raw.isEmpty) return null;

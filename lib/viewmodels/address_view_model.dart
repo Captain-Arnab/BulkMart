@@ -30,6 +30,20 @@ class AddressViewModel extends ChangeNotifier {
 
   List<SavedAddress> get addresses => List.unmodifiable(_addresses);
 
+  SavedAddress? get defaultAddress {
+    for (final a in _addresses) {
+      if (a.isDefault) return a;
+    }
+    return _addresses.isEmpty ? null : _addresses.first;
+  }
+
+  void setDefault(String id) {
+    _addresses = _addresses
+        .map((e) => e.copyWith(isDefault: e.id == id))
+        .toList();
+    notifyListeners();
+  }
+
   void upsert(SavedAddress address) {
     final index = _addresses.indexWhere((e) => e.id == address.id);
     var next = List<SavedAddress>.from(_addresses);

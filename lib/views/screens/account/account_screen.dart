@@ -10,6 +10,7 @@ import '../../../core/ui/shell_controller.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
+import '../../widgets/profile_avatar.dart';
 import '../auth/login_screen.dart';
 import 'about_screen.dart';
 import 'addresses_screen.dart';
@@ -46,27 +47,13 @@ class AccountScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.violet,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      (user?.businessName.isNotEmpty == true)
-                          ? user!.businessName.characters.first.toUpperCase()
-                          : 'B',
-                      style: AppTextStyles.display(fontSize: 20, color: AppColors.white),
-                    ),
-                  ),
+                  ProfileAvatar(user: user, size: 48),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                Text(
+                        Text(
                           user?.businessName ?? 'Your business',
                           style: GoogleFonts.sora(
                             fontSize: 18,

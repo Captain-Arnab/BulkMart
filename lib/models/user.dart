@@ -8,6 +8,7 @@ class User {
     this.email,
     this.contactPerson,
     this.businessType,
+    this.avatarPath,
   });
 
   final String id;
@@ -18,6 +19,9 @@ class User {
   final String? email;
   final String? contactPerson;
   final String? businessType;
+
+  /// Local file path (demo) or remote URL for profile photo.
+  final String? avatarPath;
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -32,6 +36,10 @@ class User {
           json['contact_person']?.toString() ?? json['contactPerson']?.toString(),
       businessType:
           json['business_type']?.toString() ?? json['businessType']?.toString(),
+      avatarPath:
+          json['avatar_path']?.toString() ??
+          json['avatarPath']?.toString() ??
+          json['avatar_url']?.toString(),
     );
   }
 
@@ -44,6 +52,7 @@ class User {
         if (email != null) 'email': email,
         if (contactPerson != null) 'contact_person': contactPerson,
         if (businessType != null) 'business_type': businessType,
+        if (avatarPath != null) 'avatar_path': avatarPath,
       };
 
   User copyWith({
@@ -55,6 +64,8 @@ class User {
     String? email,
     String? contactPerson,
     String? businessType,
+    String? avatarPath,
+    bool clearAvatar = false,
   }) {
     return User(
       id: id ?? this.id,
@@ -65,6 +76,19 @@ class User {
       email: email ?? this.email,
       contactPerson: contactPerson ?? this.contactPerson,
       businessType: businessType ?? this.businessType,
+      avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
     );
+  }
+
+  /// Initials from business name (up to 2 letters).
+  String get initials {
+    final parts = businessName.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty);
+    if (parts.isEmpty) return 'B';
+    final list = parts.toList();
+    if (list.length == 1) {
+      final s = list.first;
+      return (s.length >= 2 ? s.substring(0, 2) : s).toUpperCase();
+    }
+    return ('${list[0][0]}${list[1][0]}').toUpperCase();
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/ui/app_motion.dart';
@@ -11,6 +13,7 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/auth_widgets.dart';
+import '../../widgets/profile_avatar.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -32,6 +35,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   late String _initialGst;
   late String _initialContact;
   late String _type;
+  Object? _avatarBounceKey;
+
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -87,6 +93,85 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _openAvatarSheet() async {
+    final auth = context.read<AuthViewModel>();
+    final hasPhoto =
+        auth.user?.avatarPath != null && auth.user!.avatarPath!.isNotEmpty;
+    await showAvatarSourceSheet(
+      context,
+      hasPhoto: hasPhoto,
+      onCamera: () => _pickAndUpload(ImageSource.camera),
+      onGallery: () => _pickAndUpload(ImageSource.gallery),
+      onRemove: hasPhoto
+          ? () async {
+              final ok = await auth.removeAvatar();
+              if (!mounted) return;
+              if (ok) {
+                setState(() => _avatarBounceKey = DateTime.now());
+                showAppSuccessSnackBar(context, message: 'Photo removed');
+              }
+            }
+          : null,
+    );
+  }
+
+  Future<void> _pickAndUpload(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        imageQuality: 90,
+      );
+      if (picked == null || !mounted) return;
+
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop photo',
+            toolbarColor: AppColors.violet,
+            toolbarWidgetColor: AppColors.white,
+            activeControlsWidgetColor: AppColors.violet,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            hideBottomControls: false,
+            cropStyle: CropStyle.circle,
+          ),
+          IOSUiSettings(
+            title: 'Crop photo',
+            cropStyle: CropStyle.circle,
+            aspectRatioLockEnabled: true,
+          ),
+        ],
+      );
+      if (cropped == null || !mounted) return;
+
+      final auth = context.read<AuthViewModel>();
+      final ok = await auth.uploadAvatar(cropped.path);
+      if (!mounted) return;
+      if (ok) {
+        setState(() => _avatarBounceKey = DateTime.now());
+        showAppSuccessSnackBar(context, message: 'Profile photo updated');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.error ?? 'Upload failed'),
+            backgroundColor: AppColors.alert,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not update photo: $e'),
+          backgroundColor: AppColors.alert,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthViewModel>();
@@ -122,6 +207,21 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   'Update how buyers see your business on BulkMart.',
                   style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
                 ).animate().fadeIn(delay: 40.ms, duration: 200.ms),
+                const SizedBox(height: 20),
+                Center(
+                  child: ProfileAvatar(
+                    user: auth.user,
+                    size: 96,
+                    showCameraBadge: true,
+                    isUploading: auth.isUploadingAvatar,
+                    bounceKey: _avatarBounceKey,
+                    onCameraTap: _openAvatarSheet,
+                  ),
+                ).animate().fadeIn(delay: 50.ms, duration: 220.ms).scale(
+                      begin: const Offset(0.92, 0.92),
+                      end: const Offset(1, 1),
+                      delay: 50.ms,
+                    ),
                 const SizedBox(height: 24),
                 const AuthFieldLabel('Business / Shop Name'),
                 const SizedBox(height: 8),
