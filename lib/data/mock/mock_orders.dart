@@ -70,5 +70,18 @@ class MockOrders {
       estimatedDeliveryDate: DateTime.now().add(const Duration(days: 3)),
       deliveryAddress: '12, Wholesale Market Road, Bengaluru 560001',
     ),
+    // Cancelled
+    Order(
+      id: 'BM-10350',
+      items: [
+        CartItem(product: MockProducts.byId('p2'), quantity: 2),
+      ],
+      status: OrderStatus.cancelled,
+      subtotal: 2340 * 2,
+      deliveryFee: 0,
+      total: 2340 * 2,
+      placedAt: DateTime.now().subtract(const Duration(days: 20)),
+      deliveryAddress: '12, Wholesale Market Road, Bengaluru 560001',
+    ),
   ];
 }

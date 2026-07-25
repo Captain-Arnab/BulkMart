@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ui/app_motion.dart';
+import '../../core/ui/pressable_scale.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+
+enum PrimaryButtonState { idle, loading, success }
 
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
@@ -9,66 +13,65 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.isLoading = false,
+    this.state = PrimaryButtonState.idle,
     this.backgroundColor,
     this.foregroundColor,
     this.expand = true,
+    this.height = 56,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final PrimaryButtonState state;
   final Color? backgroundColor;
   final Color? foregroundColor;
   final bool expand;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    final child = isLoading
-        ? SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              color: foregroundColor ?? AppColors.white,
-            ),
-          )
-        : Text(
-            label,
-            style: AppTextStyles.body(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: foregroundColor ?? AppColors.white,
-            ),
-          );
+    final bg = backgroundColor ?? AppColors.violet;
+    final fg = foregroundColor ?? AppColors.white;
+    final effective = isLoading ? PrimaryButtonState.loading : state;
+    final busy = effective != PrimaryButtonState.idle;
 
-    final button = ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor ?? AppColors.forest,
-        foregroundColor: foregroundColor ?? AppColors.white,
-        disabledBackgroundColor: (backgroundColor ?? AppColors.forest).withValues(alpha: 0.5),
-        minimumSize: Size(expand ? double.infinity : 0, 50),
-        elevation: 0,
-        shadowColor: AppColors.forest.withValues(alpha: 0.35),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      child: child,
-    );
+    Widget content;
+    switch (effective) {
+      case PrimaryButtonState.loading:
+        content = SizedBox(
+          height: 22,
+          width: 22,
+          child: CircularProgressIndicator(strokeWidth: 2.2, color: fg),
+        );
+      case PrimaryButtonState.success:
+        content = Icon(Icons.check_rounded, color: fg, size: 24);
+      case PrimaryButtonState.idle:
+        content = Text(
+          label,
+          style: AppTextStyles.body(fontSize: 15, fontWeight: FontWeight.w800, color: fg),
+        );
+    }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: onPressed == null || isLoading
-            ? null
-            : [
-                BoxShadow(
-                  color: (backgroundColor ?? AppColors.forest).withValues(alpha: 0.28),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+    return PressableScale(
+      enabled: !busy && onPressed != null,
+      onTap: onPressed,
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        curve: AppMotion.ease,
+        width: expand ? double.infinity : null,
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: busy ? bg.withValues(alpha: 0.85) : bg,
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          boxShadow: busy ? null : AppShadows.button(color: bg),
+        ),
+        child: AnimatedSwitcher(
+          duration: AppMotion.fast,
+          child: KeyedSubtree(key: ValueKey(effective), child: content),
+        ),
       ),
-      child: button,
     );
   }
 }

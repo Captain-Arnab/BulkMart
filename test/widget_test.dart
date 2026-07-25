@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -10,10 +11,9 @@ import 'package:bulkmart/viewmodels/auth_view_model.dart';
 import 'package:bulkmart/viewmodels/cart_view_model.dart';
 import 'package:bulkmart/viewmodels/home_view_model.dart';
 import 'package:bulkmart/views/screens/auth/login_screen.dart';
-import 'package:flutter/material.dart';
 
 void main() {
-  testWidgets('Login screen renders bulk buyer welcome', (tester) async {
+  testWidgets('Login screen renders bulk ordering headline', (tester) async {
     final storage = SecureStorageService();
     final authRepository = AuthRepository(storage: storage);
     final productRepository = ProductRepository();
@@ -38,8 +38,10 @@ void main() {
         ),
       ),
     );
+    await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.textContaining('bulk buyer'), findsOneWidget);
+    expect(find.textContaining('Bulk ordering'), findsOneWidget);
     expect(find.text('Send OTP'), findsOneWidget);
+    expect(find.textContaining('Register your business'), findsOneWidget);
   });
 }

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'core/navigation/app_page_route.dart';
 import 'core/navigation/root_navigator.dart';
 import 'core/storage/secure_storage_service.dart';
+import 'core/ui/shell_controller.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/order_repository.dart';
 import 'repositories/product_repository.dart';
 import 'services/api/api_client.dart';
 import 'theme/app_theme.dart';
+import 'viewmodels/address_view_model.dart';
 import 'viewmodels/auth_view_model.dart';
 import 'viewmodels/cart_view_model.dart';
 import 'viewmodels/home_view_model.dart';
@@ -23,7 +26,7 @@ Future<void> main() async {
     final nav = rootNavigatorKey.currentState;
     if (nav == null) return;
     nav.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      AppPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,
     );
   };
@@ -40,6 +43,7 @@ Future<void> main() async {
         Provider.value(value: authRepository),
         Provider.value(value: productRepository),
         Provider.value(value: orderRepository),
+        ChangeNotifierProvider(create: (_) => ShellController()),
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authRepository: authRepository),
         ),
@@ -47,6 +51,7 @@ Future<void> main() async {
           create: (_) => HomeViewModel(productRepository: productRepository),
         ),
         ChangeNotifierProvider(create: (_) => CartViewModel()),
+        ChangeNotifierProvider(create: (_) => AddressViewModel()),
       ],
       child: const BulkMartApp(),
     ),

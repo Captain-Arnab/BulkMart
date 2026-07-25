@@ -15,14 +15,43 @@ class AuthViewModel extends ChangeNotifier {
 
   String mobile = '';
   String businessName = '';
+  String businessType = 'Wholesaler';
+  String gstNumber = '';
+  String address = '';
+  String pincode = '';
+
+  /// `login` | `register`
+  String authFlow = 'login';
 
   void setMobile(String value) {
     mobile = value;
     error = null;
+    notifyListeners();
   }
 
   void setBusinessName(String value) {
     businessName = value;
+    error = null;
+  }
+
+  void setBusinessType(String value) {
+    businessType = value;
+    notifyListeners();
+  }
+
+  void setGstNumber(String value) => gstNumber = value;
+
+  void setAddress(String value) => address = value;
+
+  void setPincode(String value) => pincode = value;
+
+  void startLoginFlow() {
+    authFlow = 'login';
+    error = null;
+  }
+
+  void startRegisterFlow() {
+    authFlow = 'register';
     error = null;
   }
 
@@ -83,7 +112,7 @@ class AuthViewModel extends ChangeNotifier {
     final result = await _authRepository.verifyOtp(
       mobile: mobile,
       otp: otp,
-      businessName: businessName,
+      businessName: businessName.isEmpty ? 'Bulk Buyer' : businessName,
     );
 
     return result.when(
@@ -102,11 +131,90 @@ class AuthViewModel extends ChangeNotifier {
     );
   }
 
+  Future<bool> completeRegistration() async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    final result = await _authRepository.completeRegistration(
+      mobile: mobile,
+      businessName: businessName,
+      businessType: businessType,
+      address: address,
+      pincode: pincode,
+      gstNumber: gstNumber,
+    );
+
+    return result.when(
+      success: (u) {
+        user = u;
+        isLoading = false;
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode}) {
+        error = message;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> updateProfile({
+    required String businessName,
+    required String businessType,
+    String? gstNumber,
+    String? contactPerson,
+  }) async {
+    if (user == null) return false;
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    final u = user!;
+    final updated = User(
+      id: u.id,
+      mobile: u.mobile,
+      businessName: businessName.trim(),
+      address: u.address,
+      email: u.email,
+      businessType: businessType,
+      gstNumber: (gstNumber == null || gstNumber.trim().isEmpty) ? null : gstNumber.trim(),
+      contactPerson:
+          (contactPerson == null || contactPerson.trim().isEmpty) ? null : contactPerson.trim(),
+    );
+
+    final result = await _authRepository.updateProfile(user: updated);
+    return result.when(
+      success: (u) {
+        user = u;
+        this.businessName = u.businessName;
+        this.businessType = u.businessType ?? businessType;
+        this.gstNumber = u.gstNumber ?? '';
+        isLoading = false;
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode}) {
+        error = message;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     user = null;
     mobile = '';
     businessName = '';
+    businessType = 'Wholesaler';
+    gstNumber = '';
+    address = '';
+    pincode = '';
+    authFlow = 'login';
     notifyListeners();
   }
 }

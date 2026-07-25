@@ -1,6 +1,9 @@
 import '../core/config/app_config.dart';
 import '../data/mock/mock_orders.dart';
+import '../data/mock/mock_products.dart';
+import '../models/cart_item.dart';
 import '../models/order.dart';
+import '../models/order_status.dart';
 import '../services/api/api_client.dart';
 import '../services/api/api_endpoints.dart';
 import '../services/api/result.dart';
@@ -30,10 +33,27 @@ class OrderRepository {
   Future<Result<PaginatedOrders>> fetchOrders({
     int page = 1,
     int limit = 20,
+    String? filter,
   }) async {
     if (AppConfig.kDemoMode) {
       await Future<void>.delayed(const Duration(milliseconds: 350));
-      final all = MockOrders.orders;
+      var all = List<Order>.from(MockOrders.orders);
+      switch (filter) {
+        case 'pending':
+          all = all
+              .where(
+                (o) =>
+                    o.status != OrderStatus.delivered &&
+                    o.status != OrderStatus.cancelled,
+              )
+              .toList();
+        case 'delivered':
+          all = all.where((o) => o.status == OrderStatus.delivered).toList();
+        case 'cancelled':
+          all = all.where((o) => o.status == OrderStatus.cancelled).toList();
+        default:
+          break;
+      }
       final start = (page - 1) * limit;
       if (start >= all.length) {
         return Success(
@@ -87,8 +107,42 @@ class OrderRepository {
     required String addressId,
   }) async {
     if (AppConfig.kDemoMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-      return const Failure('Demo mode — place-order UI success flow coming next');
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      final stamp = DateTime.now().millisecondsSinceEpoch % 100000;
+      final order = Order(
+        id: 'BM-$stamp',
+        items: const [],
+        status: OrderStatus.placed,
+        subtotal: 0,
+        deliveryFee: 0,
+        total: 0,
+        placedAt: DateTime.now(),
+        deliveryAddress: '12, Wholesale Market Road, Bengaluru 560001',
+      );
+      // Prefer reconstructing from cart payload via mock products when available.
+      try {
+        final builtItems = items.map((raw) {
+          final product = MockProducts.byId(raw['product_id'].toString());
+          final qty = (raw['quantity'] as num?)?.toInt() ?? product.moq;
+          return CartItem(product: product, quantity: qty);
+        }).toList();
+        final subtotal = builtItems.fold<double>(0, (s, i) => s + i.lineTotal);
+        final placed = Order(
+          id: order.id,
+          items: builtItems,
+          status: OrderStatus.placed,
+          subtotal: subtotal,
+          deliveryFee: 0,
+          total: subtotal,
+          placedAt: order.placedAt,
+          deliveryAddress: order.deliveryAddress,
+        );
+        MockOrders.orders.insert(0, placed);
+        return Success(placed);
+      } catch (_) {
+        MockOrders.orders.insert(0, order);
+        return Success(order);
+      }
     }
 
     try {

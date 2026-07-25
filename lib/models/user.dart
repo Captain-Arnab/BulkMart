@@ -6,6 +6,8 @@ class User {
     this.address,
     this.gstNumber,
     this.email,
+    this.contactPerson,
+    this.businessType,
   });
 
   final String id;
@@ -14,6 +16,8 @@ class User {
   final String? address;
   final String? gstNumber;
   final String? email;
+  final String? contactPerson;
+  final String? businessType;
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -24,6 +28,10 @@ class User {
       address: json['address']?.toString(),
       gstNumber: json['gst_number']?.toString() ?? json['gstNumber']?.toString(),
       email: json['email']?.toString(),
+      contactPerson:
+          json['contact_person']?.toString() ?? json['contactPerson']?.toString(),
+      businessType:
+          json['business_type']?.toString() ?? json['businessType']?.toString(),
     );
   }
 
@@ -34,6 +42,8 @@ class User {
         if (address != null) 'address': address,
         if (gstNumber != null) 'gst_number': gstNumber,
         if (email != null) 'email': email,
+        if (contactPerson != null) 'contact_person': contactPerson,
+        if (businessType != null) 'business_type': businessType,
       };
 
   User copyWith({
@@ -43,6 +53,8 @@ class User {
     String? address,
     String? gstNumber,
     String? email,
+    String? contactPerson,
+    String? businessType,
   }) {
     return User(
       id: id ?? this.id,
@@ -51,6 +63,8 @@ class User {
       address: address ?? this.address,
       gstNumber: gstNumber ?? this.gstNumber,
       email: email ?? this.email,
+      contactPerson: contactPerson ?? this.contactPerson,
+      businessType: businessType ?? this.businessType,
     );
   }
 }

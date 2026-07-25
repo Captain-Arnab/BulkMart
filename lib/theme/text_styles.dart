@@ -6,13 +6,14 @@ import 'colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
+  /// Chunky geometric display — Plus Jakarta Sans
   static TextStyle display({
     double fontSize = 22,
-    FontWeight fontWeight = FontWeight.w700,
+    FontWeight fontWeight = FontWeight.w800,
     Color color = AppColors.ink,
     double? height,
   }) {
-    return GoogleFonts.robotoSlab(
+    return GoogleFonts.plusJakartaSans(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -34,29 +35,39 @@ class AppTextStyles {
     );
   }
 
-  static TextStyle mono({
-    double fontSize = 13,
-    FontWeight fontWeight = FontWeight.w400,
+  /// Prices / quantities — bold Inter (not monospace)
+  static TextStyle price({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w700,
     Color color = AppColors.ink,
     double? height,
-    double? letterSpacing,
   }) {
-    return GoogleFonts.spaceMono(
+    return GoogleFonts.inter(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       height: height,
-      letterSpacing: letterSpacing,
     );
+  }
+
+  /// @deprecated Use [price] — kept so call sites compile during redesign.
+  static TextStyle mono({
+    double fontSize = 13,
+    FontWeight fontWeight = FontWeight.w700,
+    Color color = AppColors.ink,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return price(fontSize: fontSize, fontWeight: fontWeight, color: color, height: height);
   }
 
   static TextStyle label({
     double fontSize = 11,
     FontWeight fontWeight = FontWeight.w600,
-    Color color = AppColors.slate,
-    double letterSpacing = 0.4,
+    Color color = AppColors.muted,
+    double letterSpacing = 0.2,
   }) {
-    return GoogleFonts.spaceMono(
+    return GoogleFonts.inter(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

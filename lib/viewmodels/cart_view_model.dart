@@ -17,6 +17,32 @@ class CartViewModel extends ChangeNotifier {
 
   double get total => subtotal + deliveryFee;
 
+  int quantityOf(String productId) {
+    final index = _items.indexWhere((e) => e.product.id == productId);
+    if (index < 0) return 0;
+    return _items[index].quantity;
+  }
+
+  /// Adds one sellable unit; first add respects MOQ.
+  void quickAdd(Product product) {
+    final existing = quantityOf(product.id);
+    if (existing == 0) {
+      addProduct(product, quantity: product.moq);
+    } else {
+      updateQuantity(product.id, existing + 1);
+    }
+  }
+
+  void quickDecrement(Product product) {
+    final existing = quantityOf(product.id);
+    if (existing <= 0) return;
+    if (existing <= product.moq) {
+      remove(product.id);
+    } else {
+      updateQuantity(product.id, existing - 1);
+    }
+  }
+
   void addProduct(Product product, {int? quantity}) {
     final qty = quantity ?? product.moq;
     final index = _items.indexWhere((e) => e.product.id == product.id);

@@ -109,8 +109,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Placed ${DateFormat('d MMM yyyy, h:mm a').format(order.placedAt)} · COD',
+                  'Placed ${DateFormat('d MMM yyyy, h:mm a').format(order.placedAt)}',
                   style: AppTextStyles.body(fontSize: 12, color: AppColors.slate),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      'Payment',
+                      style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Cash on Delivery',
+                      style: AppTextStyles.body(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

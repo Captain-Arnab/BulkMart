@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 
-/// BulkMart design tokens — keep in sync with Docs/B2B_App_Screen_Mockups.html
+/// BulkMart quick-commerce design tokens (Blinkit/Zepto-inspired language).
 class AppColors {
   AppColors._();
 
-  static const Color forest = Color(0xFF2F6D4F);
-  static const Color forestDark = Color(0xFF1F5038);
-  static const Color ink = Color(0xFF16233D);
-  static const Color paper = Color(0xFFF1EEE2);
-  static const Color paper2 = Color(0xFFE8E3D2);
-  static const Color mustard = Color(0xFFD9962B);
-  static const Color rust = Color(0xFFB5551A);
-  static const Color slate = Color(0xFF5B6472);
-  static const Color white = Color(0xFFFFFEFA);
-  static const Color line = Color(0x2416233D); // ink @ 14%
+  /// Electric Violet — brand, active states, CTAs (primary)
+  static const Color violet = Color(0xFF7B2FF7);
+
+  /// Success / Add to Cart / in-stock
+  static const Color success = Color(0xFF0FA968);
+
+  /// Accent yellow — MOQ badges, highlights
+  static const Color accent = Color(0xFFFFC93C);
+
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color bg = Color(0xFFFFFFFF);
+  static const Color section = Color(0xFFF7F7FA);
+
+  static const Color ink = Color(0xFF1A1A2E);
+  static const Color muted = Color(0xFF6B6F7B);
+  static const Color alert = Color(0xFFFF3B30);
+  static const Color line = Color(0xFFECECF2);
+
+  // --- Compatibility aliases (map old ledger tokens → new system) ---
+  static const Color forest = violet;
+  static const Color forestDark = ink;
+  static const Color paper = section;
+  static const Color paper2 = section;
+  static const Color mustard = accent;
+  static const Color rust = alert;
+  static const Color slate = muted;
 }

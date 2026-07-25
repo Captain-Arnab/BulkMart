@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/navigation/app_page_route.dart';
+import '../../../core/ui/app_motion.dart';
+import '../../../core/ui/pressable_scale.dart';
+import '../../../core/ui/shell_controller.dart';
 import '../../../models/order.dart';
 import '../../../models/order_status.dart';
 import '../../../repositories/order_repository.dart';
@@ -18,9 +23,24 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
+  static const _pageSize = 2;
+  static const _filters = [
+    ('all', 'All'),
+    ('pending', 'Pending'),
+    ('delivered', 'Delivered'),
+    ('cancelled', 'Cancelled'),
+  ];
+
   bool _loading = true;
+  bool _loadingMore = false;
   String? _error;
   List<Order> _orders = [];
+  String _filter = 'all';
+  int _page = 1;
+  bool _hasMore = false;
+  final _scroll = ScrollController();
+  ShellController? _shell;
+  int? _lastTab;
 
   static final _priceFormat = NumberFormat.currency(
     locale: 'en_IN',
@@ -31,20 +51,62 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _scroll.addListener(_onScroll);
+    _load(reset: true);
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final result = await context.read<OrderRepository>().fetchOrders();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shell = context.read<ShellController>();
+    if (_shell != shell) {
+      _shell?.removeListener(_onShell);
+      _shell = shell;
+      _lastTab = shell.tabIndex;
+      _shell!.addListener(_onShell);
+    }
+  }
+
+  void _onShell() {
+    final i = _shell?.tabIndex;
+    if (i == 2 && _lastTab != 2) _load(reset: true);
+    _lastTab = i;
+  }
+
+  void _onScroll() {
+    if (!_hasMore || _loadingMore || _loading) return;
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _shell?.removeListener(_onShell);
+    super.dispose();
+  }
+
+  Future<void> _load({required bool reset}) async {
+    if (reset) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _page = 1;
+      });
+    }
+    final result = await context.read<OrderRepository>().fetchOrders(
+          page: 1,
+          limit: _pageSize,
+          filter: _filter == 'all' ? null : _filter,
+        );
     if (!mounted) return;
     result.when(
       success: (page) {
         setState(() {
           _orders = page.items;
+          _hasMore = page.hasMore;
+          _page = 1;
           _loading = false;
         });
       },
@@ -57,149 +119,242 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  Future<void> _loadMore() async {
+    setState(() => _loadingMore = true);
+    final next = _page + 1;
+    final result = await context.read<OrderRepository>().fetchOrders(
+          page: next,
+          limit: _pageSize,
+          filter: _filter == 'all' ? null : _filter,
+        );
+    if (!mounted) return;
+    result.when(
+      success: (page) {
+        setState(() {
+          _orders = [..._orders, ...page.items];
+          _hasMore = page.hasMore;
+          _page = next;
+          _loadingMore = false;
+        });
+      },
+      failure: (_, {statusCode}) {
+        setState(() => _loadingMore = false);
+      },
+    );
+  }
+
+  StatusPillKind _kind(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.delivered => StatusPillKind.success,
+      OrderStatus.outForDelivery => StatusPillKind.info,
+      OrderStatus.cancelled => StatusPillKind.danger,
+      _ => StatusPillKind.warning,
+    };
+  }
+
+  String _itemPreview(Order order) {
+    final names = order.items.map((e) => e.product.name).toList();
+    if (names.isEmpty) return 'No items';
+    if (names.length == 1) return names.first;
+    if (names.length == 2) return '${names[0]}, ${names[1]}';
+    return '${names[0]}, ${names[1]} +${names.length - 2} more';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.paper,
-      appBar: AppBar(
-        title: Text(
-          'Orders',
-          style: AppTextStyles.display(fontSize: 18, color: AppColors.white),
+      backgroundColor: AppColors.section,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text('Orders', style: AppTextStyles.display(fontSize: 26)),
+            ),
+            SizedBox(
+              height: 42,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _filters.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final (key, label) = _filters[index];
+                  final selected = _filter == key;
+                  return PressableScale(
+                    onTap: () {
+                      if (_filter == key) return;
+                      setState(() => _filter = key);
+                      _load(reset: true);
+                    },
+                    child: AnimatedContainer(
+                      duration: AppMotion.fast,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: selected ? AppColors.violet : AppColors.white,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        border: Border.all(
+                          color: selected ? AppColors.violet : AppColors.line,
+                        ),
+                      ),
+                      child: Text(
+                        label,
+                        style: AppTextStyles.body(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: selected ? AppColors.white : AppColors.ink,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.violet,
+                backgroundColor: AppColors.white,
+                onRefresh: () => _load(reset: true),
+                child: _buildBody(),
+              ),
+            ),
+          ],
         ),
-      ),
-      body: RefreshIndicator(
-        color: AppColors.forest,
-        onRefresh: _load,
-        child: _buildBody(),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading && _orders.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.forest));
+      return const Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.violet),
+        ),
+      );
     }
     if (_error != null && _orders.isEmpty) {
-      return ErrorState(message: _error!, onRetry: _load);
+      return ErrorState(message: _error!, onRetry: () => _load(reset: true));
     }
     if (_orders.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
+        children: [
+          const SizedBox(height: 24),
           EmptyState(
             title: 'No orders yet',
-            subtitle:
-                'Active and past orders will show here once you place your first COD order.',
+            subtitle: 'Your COD order history will appear here once you place your first bulk order.',
+            lottieAsset: 'assets/lottie/empty_cart.json',
             icon: Icons.receipt_long_outlined,
+            ctaLabel: 'Start Shopping',
+            onCta: () => context.read<ShellController>().goToTab(0),
           ),
         ],
       );
     }
 
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      itemCount: _orders.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final order = _orders[index];
-        return Material(
-          color: AppColors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppColors.line),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id)),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          order.id,
-                          style: AppTextStyles.mono(fontSize: 11, color: AppColors.slate),
-                        ),
-                      ),
-                      _StatusChip(status: order.status),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _priceFormat.format(order.total),
-                    style: AppTextStyles.display(fontSize: 18),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${order.items.length} item${order.items.length == 1 ? '' : 's'} · '
-                    '${DateFormat('d MMM yyyy').format(order.placedAt)} · COD',
-                    style: AppTextStyles.body(fontSize: 11.5, color: AppColors.slate),
-                  ),
-                  if (order.estimatedDeliveryDate != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Est. delivery ${DateFormat('EEE, d MMM').format(order.estimatedDeliveryDate!)}',
-                      style: AppTextStyles.mono(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF8A5C13),
-                      ),
+    return AnimationLimiter(
+      child: ListView.separated(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        itemCount: _orders.length + (_loadingMore ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          if (index >= _orders.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.violet),
+                ),
+              ),
+            );
+          }
+          final order = _orders[index];
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 280),
+            child: SlideAnimation(
+              verticalOffset: 24,
+              curve: AppMotion.ease,
+              child: FadeInAnimation(
+                child: PressableScale(
+                  onTap: () {
+                    AppPageRoute.push(
+                      context,
+                      OrderDetailScreen(orderId: order.id),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                      boxShadow: AppShadows.card,
                     ),
-                  ],
-                ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                order.id,
+                                style: AppTextStyles.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.violet,
+                                ),
+                              ),
+                            ),
+                            StatusPill(label: order.status.label, kind: _kind(order.status)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          DateFormat('d MMM yyyy').format(order.placedAt),
+                          style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${order.items.length} item${order.items.length == 1 ? '' : 's'} · ${_itemPreview(order)}',
+                          style: AppTextStyles.body(fontSize: 13, color: AppColors.ink),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              _priceFormat.format(order.total),
+                              style: AppTextStyles.display(fontSize: 18),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Cash on Delivery',
+                              style: AppTextStyles.body(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-
-  final OrderStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (bg, fg) = switch (status) {
-      OrderStatus.delivered => (
-          AppColors.forest.withValues(alpha: 0.14),
-          AppColors.forestDark,
-        ),
-      OrderStatus.outForDelivery => (
-          const Color(0xFF1E4E8C).withValues(alpha: 0.14),
-          const Color(0xFF1E4E8C),
-        ),
-      OrderStatus.cancelled => (
-          AppColors.rust.withValues(alpha: 0.14),
-          AppColors.rust,
-        ),
-      _ => (
-          AppColors.mustard.withValues(alpha: 0.18),
-          const Color(0xFF8A5C13),
-        ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status.label,
-        style: AppTextStyles.mono(fontSize: 9, fontWeight: FontWeight.w700, color: fg),
+          );
+        },
       ),
     );
   }
