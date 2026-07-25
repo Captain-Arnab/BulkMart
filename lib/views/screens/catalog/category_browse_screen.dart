@@ -68,15 +68,25 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.viewPaddingOf(context).top;
+
     return ChangeNotifierProvider.value(
       value: _vm,
       child: Scaffold(
         backgroundColor: AppColors.section,
-        appBar: AppBar(
-          backgroundColor: AppColors.white,
-          elevation: 0,
-          foregroundColor: AppColors.ink,
-          title: Text('Products', style: AppTextStyles.display(fontSize: 18)),
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(kToolbarHeight + topInset),
+          child: Container(
+            color: AppColors.white,
+            padding: EdgeInsets.only(top: topInset),
+            child: AppBar(
+              backgroundColor: AppColors.white,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              foregroundColor: AppColors.ink,
+              title: Text('Products', style: AppTextStyles.display(fontSize: 18)),
+            ),
+          ),
         ),
         body: Consumer<CategoryBrowseViewModel>(
           builder: (context, vm, _) {
@@ -269,7 +279,7 @@ class _ProductPane extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 0.68,
+          childAspectRatio: 0.58,
         ),
         itemCount: vm.products.length,
         itemBuilder: (context, index) {

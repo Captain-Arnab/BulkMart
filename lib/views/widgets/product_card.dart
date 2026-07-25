@@ -66,7 +66,7 @@ class _ProductCardState extends State<ProductCard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                flex: 65,
+                flex: 62,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -123,36 +123,53 @@ class _ProductCardState extends State<ProductCard> {
                 ),
               ),
               Expanded(
-                flex: 35,
+                flex: 38,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.product.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.body(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.product.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _priceFormat.format(widget.product.wholesalePrice),
+                                style: AppTextStyles.price(
+                                  fontSize: 15,
+                                  color: AppColors.violet,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                widget.product.unitSize,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.body(
+                                  fontSize: 11,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _priceFormat.format(widget.product.wholesalePrice),
-                        style: AppTextStyles.price(
-                          fontSize: 15,
-                          color: AppColors.violet,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.product.unitSize,
-                        style: AppTextStyles.body(fontSize: 11, color: AppColors.muted),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
