@@ -1,40 +1,66 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:urban_roots/core/navigation/auth_navigation.dart';
-import 'package:urban_roots/core/navigation/root_navigator.dart';
-import 'package:urban_roots/core/notifications/push_notification_service.dart';
-import 'package:urban_roots/data/network/api_client.dart';
-import 'package:urban_roots/core/theme/app_theme.dart';
-import 'package:urban_roots/features/splash/Splashscreen.dart';
+import 'package:provider/provider.dart';
+
+import 'core/navigation/root_navigator.dart';
+import 'core/storage/secure_storage_service.dart';
+import 'repositories/auth_repository.dart';
+import 'repositories/order_repository.dart';
+import 'repositories/product_repository.dart';
+import 'services/api/api_client.dart';
+import 'theme/app_theme.dart';
+import 'viewmodels/auth_view_model.dart';
+import 'viewmodels/cart_view_model.dart';
+import 'viewmodels/home_view_model.dart';
+import 'views/screens/auth/login_screen.dart';
+import 'views/screens/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-    await PushNotificationService.instance.initialize();
-  } catch (e, stack) {
-    debugPrint('[Startup] Firebase init failed: $e\n$stack');
-  }
-  ApiClient.user.onUnauthorized = () {
-    final context = rootNavigatorKey.currentContext;
-    if (context != null) navigateToLogin(context);
+
+  final storage = SecureStorageService();
+  final apiClient = ApiClient(storage: storage);
+  apiClient.onUnauthorized = () {
+    final nav = rootNavigatorKey.currentState;
+    if (nav == null) return;
+    nav.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   };
-  ApiClient.vendor.onUnauthorized = () {
-    final context = rootNavigatorKey.currentContext;
-    if (context != null) navigateToWelcomeScreen(context);
-  };
-  runApp(const MyApp());
+
+  final authRepository = AuthRepository(storage: storage);
+  final productRepository = ProductRepository();
+  final orderRepository = OrderRepository();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider.value(value: storage),
+        Provider.value(value: apiClient),
+        Provider.value(value: authRepository),
+        Provider.value(value: productRepository),
+        Provider.value(value: orderRepository),
+        ChangeNotifierProvider(
+          create: (_) => AuthViewModel(authRepository: authRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(productRepository: productRepository),
+        ),
+        ChangeNotifierProvider(create: (_) => CartViewModel()),
+      ],
+      child: const BulkMartApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BulkMartApp extends StatelessWidget {
+  const BulkMartApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      title: 'Urban Roots',
+      title: 'BulkMart',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const SplashScreen(),

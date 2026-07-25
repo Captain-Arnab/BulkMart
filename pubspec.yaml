@@ -1,8 +1,8 @@
-name: urban_roots
-description: "Urban Roots App"
+name: bulkmart
+description: "BulkMart — B2B bulk-ordering grocery app for wholesalers and restaurants."
 publish_to: 'none'
 
-version: 1.0.2+3
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.2.3 <4.0.0'
@@ -11,106 +11,18 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # UI & Navigation
-  google_fonts: 6.0.0
-  get: ^4.6.6
-  carousel_slider: ^5.0.0
-  smooth_page_indicator: ^1.1.0
-  cupertino_icons: ^1.0.2
-
-  # SVG & Images
-  svg_flutter: ^0.0.1
-
-  # State Management
-  flutter_bloc: ^8.1.5
-
-  # Utilities
-  fluttertoast: ^8.2.4
-  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.5
+  dio: ^5.7.0
+  google_fonts: ^6.2.1
   flutter_secure_storage: ^9.2.4
   shimmer: ^3.0.0
-  dio: ^5.7.0
-
-  # Firebase / push notifications
-  firebase_core: ^3.15.2
-  firebase_messaging: ^15.2.10
-  flutter_local_notifications: ^18.0.1
-
-  # Location & maps
-  geolocator: ^13.0.2
-  geocoding: ^3.0.0
-  google_maps_flutter: ^2.10.0
-
-  # Rating
-  flutter_rating_stars: ^1.1.0
-
-  # HTML rendering
-  flutter_html: ^3.0.0-beta.2
-
-  # Animations
-  flutter_animate: ^4.5.0
-  quickalert: ^1.1.0
-  webview_flutter: ^4.13.1
-  url_launcher: ^6.3.2
-  fl_chart: ^1.1.0
-  shared_preferences: ^2.5.3
-  image_picker: ^1.2.1
-
-dependency_overrides:
-  # Flutter 3.32 pins vector_math 2.1.4; fl_chart 1.1.x needs 2.2.0
-  # (translateByDouble / scaleByDouble). See: github.com/imaNNeo/fl_chart/issues/1985
-  vector_math: 2.2.0
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-  flutter_launcher_icons: ^0.13.1
-
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/logo_new.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/logo_new.png"
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/logo_new.png
-    - assets/logo.png
-    - assets/background.jpg
-    - assets/background.png
-    - assets/pista_image.png
-    - assets/black_dates.png
-    - assets/spices.png
-    - assets/millet.png
-    - assets/seeds.png
-    - assets/herbs.png
-    - assets/cereals.png
-    - assets/profile.jpg
-    - assets/loader.gif
-    - assets/profile_banner.jpg
-    - assets/slider1.png
-    - assets/slider2.png
-    - assets/slider3.png
-    - assets/slider4.png
-    - assets/slider5.png
-    - assets/poster1.jpg
-    - assets/poster2.jpg
-    - assets/haradilogo.png
-    - assets/icon-1.svg
-    - assets/icon-2.svg
-    - assets/icon-3.svg
-    - assets/icon-4.svg
-    - assets/icon-5.svg
-    - assets/sample.png
-    - assets/pista_cover.jpg
-    - assets/spices_cover.jpg
-    - assets/herbs_cover.jpg
-    - assets/dates_cover.jpg
-    - assets/seeds_cover.jpg
-    - assets/millets_cover.jpg
-    - assets/cereals_cover.jpg
-    - assets/nuts_cover.jpg

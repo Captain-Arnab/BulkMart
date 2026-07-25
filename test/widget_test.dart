@@ -1,30 +1,45 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
-import 'package:urban_roots/main.dart';
+import 'package:bulkmart/core/storage/secure_storage_service.dart';
+import 'package:bulkmart/repositories/auth_repository.dart';
+import 'package:bulkmart/repositories/order_repository.dart';
+import 'package:bulkmart/repositories/product_repository.dart';
+import 'package:bulkmart/theme/app_theme.dart';
+import 'package:bulkmart/viewmodels/auth_view_model.dart';
+import 'package:bulkmart/viewmodels/cart_view_model.dart';
+import 'package:bulkmart/viewmodels/home_view_model.dart';
+import 'package:bulkmart/views/screens/auth/login_screen.dart';
+import 'package:flutter/material.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Login screen renders bulk buyer welcome', (tester) async {
+    final storage = SecureStorageService();
+    final authRepository = AuthRepository(storage: storage);
+    final productRepository = ProductRepository();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider.value(value: authRepository),
+          Provider.value(value: productRepository),
+          Provider.value(value: OrderRepository()),
+          ChangeNotifierProvider(
+            create: (_) => AuthViewModel(authRepository: authRepository),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => HomeViewModel(productRepository: productRepository),
+          ),
+          ChangeNotifierProvider(create: (_) => CartViewModel()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const LoginScreen(),
+        ),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.textContaining('bulk buyer'), findsOneWidget);
+    expect(find.text('Send OTP'), findsOneWidget);
   });
 }

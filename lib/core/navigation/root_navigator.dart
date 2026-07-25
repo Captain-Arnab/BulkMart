@@ -1,4 +1,4 @@
 import 'package:flutter/material.dart';
 
-/// App-wide navigator key for dialogs and auth redirects.
+/// Global navigator key for 401 redirects outside widget tree.
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();

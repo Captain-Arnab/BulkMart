@@ -1,106 +1,46 @@
-# Urban Roots — User App
+# BulkMart — B2B Bulk Ordering App
 
-Flutter mobile app for **grocery shopping**: browse products, manage a cart, check out, view orders, and maintain profile details (addresses, payments, and related settings).
+Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delivery only.
 
----
-
-## Features
-
-- **Authentication** — registration and login (email / phone with OTP).
-- **Catalog** — categories and products; search and filters.
-- **Cart & checkout** — add items, choose delivery address and payment method.
-- **Payments** — cash on delivery (COD) and online gateways (e.g. Razorpay / Paytm / Stripe) where integrated.
-- **Promotions** — coupons and discounts.
-- **Orders** — history, reorder, and order status / tracking when connected to the backend.
-- **Notifications** — push updates for orders and offers (e.g. Firebase).
-- **Profile** — addresses, preferences, and account-related screens.
-
-### In-app flow (customer)
-
-1. Browse or search products.  
-2. Add items to the cart and open checkout.  
-3. Set delivery address and payment method.  
-4. Place the order.  
-5. View order history and track status from the app.
-
----
-
-## Tech stack
+## Stack
 
 | Area | Choice |
 |------|--------|
-| Framework | [Flutter](https://flutter.dev/) (Dart SDK `>=3.2.3 <4.0.0`) |
-| Navigation / DI | [GetX](https://pub.dev/packages/get) |
-| State management | [flutter_bloc](https://pub.dev/packages/flutter_bloc) (and GetX controllers where used) |
-| Typography | [google_fonts](https://pub.dev/packages/google_fonts) |
-| UI | carousel_slider, smooth_page_indicator, flutter_animate, flutter_rating_stars, flutter_html, svg_flutter |
-| Utilities | intl, fluttertoast |
+| Framework | Flutter (Material 3) |
+| Architecture | MVVM + Repository |
+| State | Provider (`ChangeNotifier`) |
+| Networking | Dio + `Result<T>` |
+| Auth storage | `flutter_secure_storage` |
+| Fonts | Roboto Slab · Inter · Space Mono |
 
-Backend integration is expected via **REST APIs**; push, maps, and payments can be added as the app is wired to live services.
+## Session 1 status
 
-**Firebase (Android):** Project `urban-roots-ee10d`, package `com.urbanroots.delivery`. FCM + Device Token API client ready (`user` / `vendor` roles). Set API URL when backend shares staging/production URL — see `docs/BACKEND_INTEGRATION_STATUS.md`.
+- [x] Project scaffold + theme tokens
+- [x] Splash → Login → OTP → Home
+- [x] Catalog grid with dummy wholesale products
+- [x] Shared widgets (`ProductCard`, `MoqBadge`, `StepperQty`, `StatusTimeline`, `PrimaryButton`)
+- [ ] Wire real auth / catalog APIs (pending endpoint tracker)
+- [ ] Product detail polish, full checkout, order tracking
 
----
-
-## Repository notes
-
-- **Package name:** `urban_roots` (`pubspec.yaml`).  
-- **App title:** Urban Roots (`lib/main.dart`).  
-- **APIs:** `lib/Utils/APIClass.dart` uses placeholder endpoints; **`lib/data/dummy_data.dart`** supports demo flows until a real API base URL and routes are configured.
-
----
-
-## Getting started
-
-### Prerequisites
-
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable, compatible with the Dart SDK range above).  
-- Android Studio or VS Code with Flutter tooling.  
-- An Android emulator or a device with USB debugging enabled.
-
-### Commands
+## Run
 
 ```bash
-cd user_app
 flutter pub get
 flutter run
 ```
 
-```bash
-flutter analyze
-flutter test
-```
+**Demo OTP:** `1234`
 
-Launcher icons: `flutter_launcher_icons` in `pubspec.yaml` (source image: `assets/logo_new.png`).
-
----
-
-## Project layout
+## Layout
 
 ```
 lib/
-├── main.dart
-├── data/                     # Local / demo data
-├── features/
-│   ├── dashboard/
-│   ├── login/, registration/
-│   ├── orders/, payments/
-│   ├── products/
-│   ├── userProfile/
-│   └── splash/
-└── Utils/
+├── models/
+├── repositories/
+├── services/api/
+├── viewmodels/
+├── views/screens/   # splash, auth, home, product, cart, orders, account
+├── views/widgets/
+├── theme/
+└── data/dummy/
 ```
-
----
-
-## Connecting APIs
-
-1. Set `APIClass._baseUrl` and endpoint constants in `lib/Utils/APIClass.dart`.  
-2. Swap dummy data for real HTTP calls and models as endpoints go live.  
-3. Add Firebase, maps, and payment keys per environment using your preferred secrets approach (for example `--dart-define` or CI-injected values; avoid committing secrets).
-
----
-
-## License
-
-Private / unpublished (`publish_to: 'none'` in `pubspec.yaml`). Distribution is governed by your organization’s policies.
