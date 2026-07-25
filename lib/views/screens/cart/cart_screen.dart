@@ -6,6 +6,7 @@ import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/cart_view_model.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/product_network_image.dart';
 import '../../widgets/stepper_qty.dart';
 import '../../widgets/ui_states.dart';
 
@@ -51,16 +52,15 @@ class CartScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: AppColors.paper2,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.inventory_2_outlined,
-                                color: AppColors.forest,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: ProductNetworkImage(
+                                  product: item.product,
+                                  iconSize: 22,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),

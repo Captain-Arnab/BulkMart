@@ -1,4 +1,4 @@
-package com.urbanroots.delivery
+package com.virtuousglobal.bulkmart
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -37,6 +37,18 @@ class Product {
     return unitSize;
   }
 
+  /// Deterministic Picsum fallback when LoremFlickr is slow/unavailable.
+  String get fallbackImageUrl {
+    final slug = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    return 'https://picsum.photos/seed/$slug/400/400';
+  }
+
+  String get primaryImageUrl =>
+      (imageUrl != null && imageUrl!.isNotEmpty) ? imageUrl! : fallbackImageUrl;
+
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id']?.toString() ?? '',

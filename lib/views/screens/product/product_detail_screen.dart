@@ -9,6 +9,7 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/cart_view_model.dart';
 import '../../widgets/moq_badge.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/product_network_image.dart';
 import '../../widgets/stepper_qty.dart';
 import '../../widgets/ui_states.dart';
 
@@ -98,20 +99,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFEADFC4), AppColors.paper2],
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.inventory_2_outlined,
-                            size: 72,
-                            color: Color(0x402F6D4F),
-                          ),
-                        ),
+                        ProductNetworkImage(product: product, iconSize: 64),
                         Positioned(
                           left: 16,
                           bottom: 16,

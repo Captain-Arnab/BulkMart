@@ -44,7 +44,7 @@ class StatusTimeline extends StatelessWidget {
       final i = flow.indexOf(s);
       return TimelineStep(
         status: s,
-        title: s.label,
+        title: s.timelineLabel,
         completed: currentIndex >= i && current != OrderStatus.cancelled,
         eta: s == OrderStatus.deliveryDateSet ? estimatedDelivery : null,
         subtitle: s == OrderStatus.deliveryDateSet && estimatedDelivery != null
