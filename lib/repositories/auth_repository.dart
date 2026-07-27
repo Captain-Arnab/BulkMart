@@ -30,6 +30,7 @@ class AuthRepository {
     required String mobile,
     required String otp,
     String businessName = '',
+    bool persistSession = true,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     if (otp.trim() != demoOtp) {
@@ -44,13 +45,17 @@ class AuthRepository {
       id: 'u_demo_1',
       mobile: mobile.trim(),
       businessName: storedName,
-      address: '12, Wholesale Market Road, Bengaluru 560001',
-      gstNumber: '29AAAAA0000A1Z5',
+      address: persistSession ? '12, Wholesale Market Road, Bengaluru 560001' : null,
+      gstNumber: persistSession ? '29AAAAA0000A1Z5' : null,
     );
 
-    await _storage.saveToken('demo_jwt_token_${user.id}');
-    await _storage.saveUserJson(jsonEncode(user.toJson()));
-    await _storage.saveBusinessName(user.businessName);
+    // During registration, OTP only verifies the number — session is saved
+    // later in completeRegistration (avoids heavy secure-storage + half-login).
+    if (persistSession) {
+      await _storage.saveToken('demo_jwt_token_${user.id}');
+      await _storage.saveUserJson(jsonEncode(user.toJson()));
+      await _storage.saveBusinessName(user.businessName);
+    }
 
     return Success(user);
   }

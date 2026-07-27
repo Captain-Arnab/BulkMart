@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/navigation/app_page_route.dart';
@@ -34,6 +33,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _businessError;
   String? _addressError;
   String? _pincodeError;
+  bool _stepValid = false;
 
   static const _types = ['Wholesaler', 'Restaurant', 'Retailer', 'Other'];
   static const _labels = ['Mobile', 'Business Info', 'Address'];
@@ -42,6 +42,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _step = widget.initialStep.clamp(0, 2);
+    _mobileController.addListener(_recomputeValid);
+    _businessController.addListener(_recomputeValid);
+    _addressController.addListener(_recomputeValid);
+    _pincodeController.addListener(_recomputeValid);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = context.read<AuthViewModel>();
@@ -52,12 +57,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (auth.businessName.isNotEmpty && auth.businessName != 'Bulk Buyer') {
         _businessController.text = auth.businessName;
       }
-      setState(() {});
+      _recomputeValid();
     });
   }
 
   @override
   void dispose() {
+    _mobileController.removeListener(_recomputeValid);
+    _businessController.removeListener(_recomputeValid);
+    _addressController.removeListener(_recomputeValid);
+    _pincodeController.removeListener(_recomputeValid);
     _mobileController.dispose();
     _businessController.dispose();
     _gstController.dispose();
@@ -66,18 +75,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.dispose();
   }
 
-  bool get _stepValid {
-    switch (_step) {
-      case 0:
-        return _mobileController.text.trim().length == 10;
-      case 1:
-        return _businessController.text.trim().isNotEmpty;
-      case 2:
-        return _addressController.text.trim().isNotEmpty &&
-            _pincodeController.text.trim().length == 6;
-      default:
-        return false;
-    }
+  void _recomputeValid() {
+    final next = switch (_step) {
+      0 => _mobileController.text.trim().length == 10,
+      1 => _businessController.text.trim().isNotEmpty,
+      2 =>
+        _addressController.text.trim().isNotEmpty &&
+            _pincodeController.text.trim().length == 6,
+      _ => false,
+    };
+    if (next == _stepValid) return;
+    setState(() => _stepValid = next);
   }
 
   Future<void> _continue() async {
@@ -103,12 +111,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         setState(() => _businessError = 'Business name is required');
         return;
       }
-      setState(() => _businessError = null);
-      auth.setBusinessName(_businessController.text.trim());
-      auth.setGstNumber(_gstController.text.trim());
       setState(() {
+        _businessError = null;
         _step = 2;
       });
+      auth.setBusinessName(_businessController.text.trim());
+      auth.setGstNumber(_gstController.text.trim());
+      _recomputeValid();
       return;
     }
 
@@ -163,11 +172,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         if (_step > 1 || (_step == 1 && widget.initialStep == 1)) {
                           if (_step > 1) {
                             setState(() => _step = 1);
+                            _recomputeValid();
                           } else {
                             Navigator.of(context).pop();
                           }
                         } else if (_step > 0) {
                           setState(() => _step = _step - 1);
+                          _recomputeValid();
                         } else {
                           Navigator.of(context).pop();
                         }
@@ -184,10 +195,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               ? 'Tell us about your business'
                               : 'Where should we deliver?',
                       style: AppTextStyles.display(fontSize: 26, height: 1.2),
-                    )
-                        .animate(key: ValueKey('h$_step'))
-                        .fadeIn(duration: 200.ms)
-                        .slideY(begin: 0.1, end: 0),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       _step == 0
@@ -210,7 +218,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   if (_mobileError != null) {
                                     setState(() => _mobileError = null);
                                   }
-                                  setState(() {});
                                 },
                               )
                             : _step == 1
@@ -220,11 +227,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     businessError: _businessError,
                                     selectedType: auth.businessType,
                                     onType: (t) => auth.setBusinessType(t),
-                                    onChanged: () {
+                                    onBusinessChanged: () {
                                       if (_businessError != null) {
                                         setState(() => _businessError = null);
                                       }
-                                      setState(() {});
                                     },
                                   )
                                 : _AddressStep(
@@ -233,10 +239,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     addressError: _addressError,
                                     pincodeError: _pincodeError,
                                     onChanged: () {
-                                      setState(() {
-                                        _addressError = null;
-                                        _pincodeError = null;
-                                      });
+                                      if (_addressError != null || _pincodeError != null) {
+                                        setState(() {
+                                          _addressError = null;
+                                          _pincodeError = null;
+                                        });
+                                      }
                                     },
                                   ),
                       ),
@@ -346,10 +354,7 @@ class _MobileStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AuthFieldLabel('Mobile number')
-            .animate()
-            .fadeIn(duration: 180.ms)
-            .slideY(begin: 0.12, end: 0),
+        const AuthFieldLabel('Mobile number'),
         const SizedBox(height: 8),
         PillTextField(
           controller: controller,
@@ -362,10 +367,7 @@ class _MobileStep extends StatelessWidget {
             LengthLimitingTextInputFormatter(10),
           ],
           onChanged: onChanged,
-        )
-            .animate()
-            .fadeIn(delay: 60.ms, duration: 180.ms)
-            .slideY(begin: 0.12, end: 0, delay: 60.ms),
+        ),
       ],
     );
   }
@@ -378,7 +380,7 @@ class _BusinessStep extends StatelessWidget {
     required this.businessError,
     required this.selectedType,
     required this.onType,
-    required this.onChanged,
+    required this.onBusinessChanged,
   });
 
   final TextEditingController businessController;
@@ -386,28 +388,22 @@ class _BusinessStep extends StatelessWidget {
   final String? businessError;
   final String selectedType;
   final ValueChanged<String> onType;
-  final VoidCallback onChanged;
+  final VoidCallback onBusinessChanged;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AuthFieldLabel('Business / Shop Name')
-            .animate()
-            .fadeIn(duration: 180.ms)
-            .slideY(begin: 0.12, end: 0),
+        const AuthFieldLabel('Business / Shop Name'),
         const SizedBox(height: 8),
         PillTextField(
           controller: businessController,
           hint: 'e.g. Sharma Restaurant Supplies',
           textCapitalization: TextCapitalization.words,
           errorText: businessError,
-          onChanged: (_) => onChanged(),
-        )
-            .animate()
-            .fadeIn(delay: 60.ms, duration: 180.ms)
-            .slideY(begin: 0.12, end: 0, delay: 60.ms),
+          onChanged: (_) => onBusinessChanged(),
+        ),
         const SizedBox(height: 20),
         Text(
           'BUSINESS TYPE',
@@ -417,9 +413,7 @@ class _BusinessStep extends StatelessWidget {
             color: AppColors.ink,
             letterSpacing: 0.6,
           ),
-        )
-            .animate()
-            .fadeIn(delay: 100.ms, duration: 180.ms),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -430,7 +424,7 @@ class _BusinessStep extends StatelessWidget {
               onTap: () => onType(t),
               child: AnimatedContainer(
                 duration: AppMotion.fast,
-                curve: AppMotion.pop,
+                curve: AppMotion.ease,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: selected ? AppColors.violet : AppColors.white,
@@ -450,34 +444,19 @@ class _BusinessStep extends StatelessWidget {
                     color: selected ? AppColors.white : AppColors.ink,
                   ),
                 ),
-              )
-                  .animate(target: selected ? 1 : 0)
-                  .scale(
-                    begin: const Offset(1, 1),
-                    end: const Offset(1.04, 1.04),
-                    duration: 160.ms,
-                    curve: AppMotion.pop,
-                  ),
+              ),
             );
           }).toList(),
-        )
-            .animate()
-            .fadeIn(delay: 140.ms, duration: 180.ms)
-            .slideY(begin: 0.1, end: 0, delay: 140.ms),
+        ),
         const SizedBox(height: 20),
-        const AuthFieldLabel('GSTIN', optional: true)
-            .animate()
-            .fadeIn(delay: 180.ms, duration: 180.ms),
+        const AuthFieldLabel('GSTIN', optional: true),
         const SizedBox(height: 8),
         PillTextField(
           controller: gstController,
           hint: '22AAAAA0000A1Z5',
           textCapitalization: TextCapitalization.characters,
           inputFormatters: [LengthLimitingTextInputFormatter(15)],
-        )
-            .animate()
-            .fadeIn(delay: 200.ms, duration: 180.ms)
-            .slideY(begin: 0.12, end: 0, delay: 200.ms),
+        ),
       ],
     );
   }
@@ -503,10 +482,7 @@ class _AddressStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AuthFieldLabel('Delivery Address')
-            .animate()
-            .fadeIn(duration: 180.ms)
-            .slideY(begin: 0.12, end: 0),
+        const AuthFieldLabel('Delivery Address'),
         const SizedBox(height: 8),
         PillTextField(
           controller: addressController,
@@ -517,14 +493,9 @@ class _AddressStep extends StatelessWidget {
           textCapitalization: TextCapitalization.sentences,
           errorText: addressError,
           onChanged: (_) => onChanged(),
-        )
-            .animate()
-            .fadeIn(delay: 60.ms, duration: 180.ms)
-            .slideY(begin: 0.12, end: 0, delay: 60.ms),
+        ),
         const SizedBox(height: 20),
-        const AuthFieldLabel('Pincode')
-            .animate()
-            .fadeIn(delay: 120.ms, duration: 180.ms),
+        const AuthFieldLabel('Pincode'),
         const SizedBox(height: 8),
         PillTextField(
           controller: pincodeController,
@@ -536,10 +507,7 @@ class _AddressStep extends StatelessWidget {
           ],
           errorText: pincodeError,
           onChanged: (_) => onChanged(),
-        )
-            .animate()
-            .fadeIn(delay: 160.ms, duration: 180.ms)
-            .slideY(begin: 0.12, end: 0, delay: 160.ms),
+        ),
       ],
     );
   }

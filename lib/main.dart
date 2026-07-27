@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'core/navigation/app_page_route.dart';
@@ -19,6 +20,19 @@ import 'views/screens/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Preload brand fonts so rebuilds don't block the UI on network font fetches
+  // (common Android ANR while typing on forms). Timeout so offline first-run
+  // still launches; disable further HTTP fetches only after a successful preload.
+  try {
+    await GoogleFonts.pendingFonts([
+      GoogleFonts.plusJakartaSans(),
+      GoogleFonts.inter(),
+    ]).timeout(const Duration(seconds: 4));
+    GoogleFonts.config.allowRuntimeFetching = false;
+  } catch (_) {
+    // Keep runtime fetching as fallback if preload failed / timed out.
+  }
 
   final storage = SecureStorageService();
   final apiClient = ApiClient(storage: storage);

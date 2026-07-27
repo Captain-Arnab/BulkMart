@@ -98,7 +98,8 @@ class _OtpScreenState extends State<OtpScreen> {
     if (_submitting || _otp.length != _length) return;
     setState(() => _submitting = true);
     final auth = context.read<AuthViewModel>();
-    final ok = await auth.verifyOtp(_otp);
+    final persist = !widget.resumeRegistration && auth.authFlow != 'register';
+    final ok = await auth.verifyOtp(_otp, persistSession: persist);
     if (!mounted) return;
 
     if (!ok) {

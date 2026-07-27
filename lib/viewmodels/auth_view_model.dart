@@ -104,7 +104,7 @@ class AuthViewModel extends ChangeNotifier {
     );
   }
 
-  Future<bool> verifyOtp(String otp) async {
+  Future<bool> verifyOtp(String otp, {bool persistSession = true}) async {
     isLoading = true;
     error = null;
     notifyListeners();
@@ -113,11 +113,15 @@ class AuthViewModel extends ChangeNotifier {
       mobile: mobile,
       otp: otp,
       businessName: businessName.isEmpty ? 'Bulk Buyer' : businessName,
+      persistSession: persistSession,
     );
 
     return result.when(
       success: (u) {
-        user = u;
+        if (persistSession) {
+          user = u;
+          businessName = u.businessName;
+        }
         isLoading = false;
         notifyListeners();
         return true;
