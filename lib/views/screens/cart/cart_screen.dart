@@ -218,15 +218,17 @@ class _CartDismissibleTile extends StatelessWidget {
   final VoidCallback onDismissed;
   final ValueChanged<int> onQtyChanged;
 
+  void _remove(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    onDismissed();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dismissible(
       key: ValueKey(item.product.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) {
-        HapticFeedback.mediumImpact();
-        onDismissed();
-      },
+      onDismissed: (_) => _remove(context),
       background: Container(
         alignment: Alignment.centerRight,
         margin: const EdgeInsets.only(bottom: 10),
@@ -247,6 +249,7 @@ class _CartDismissibleTile extends StatelessWidget {
           boxShadow: AppShadows.soft(opacity: 0.04),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(AppRadii.sm),
@@ -285,6 +288,18 @@ class _CartDismissibleTile extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Remove item',
+              onPressed: () => _remove(context),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.rust.withValues(alpha: 0.9),
+                size: 22,
               ),
             ),
           ],
