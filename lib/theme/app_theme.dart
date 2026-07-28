@@ -10,9 +10,9 @@ class AppTheme {
 
   static ThemeData light() {
     final base = ColorScheme.fromSeed(
-      seedColor: AppColors.violet,
+      seedColor: AppColors.green,
       brightness: Brightness.light,
-      primary: AppColors.violet,
+      primary: AppColors.green,
       onPrimary: AppColors.white,
       secondary: AppColors.accent,
       onSecondary: AppColors.ink,
@@ -46,7 +46,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: false,
-        backgroundColor: AppColors.violet,
+        backgroundColor: AppColors.green,
         foregroundColor: AppColors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: AppTextStyles.display(fontSize: 18, color: AppColors.white),
@@ -65,14 +65,14 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.violet, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.green, width: 1.5),
         ),
         labelStyle: AppTextStyles.label(),
         hintStyle: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.violet,
+          backgroundColor: AppColors.green,
           foregroundColor: AppColors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

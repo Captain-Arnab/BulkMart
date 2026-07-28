@@ -7,6 +7,7 @@ import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../core/ui/shell_controller.dart';
+import '../../../models/user.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/address_view_model.dart';
@@ -27,24 +28,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _bannerIndex = 0;
-
-  static const _banners = [
-    _BannerData(
-      title: 'Flat 10% off on bulk\norders above ₹10,000',
-      colors: [Color(0xFF7B2FF7), Color(0xFF9B4DFF)],
-    ),
-    _BannerData(
-      title: 'New: Cashew & Dry Fruits\nnow available',
-      colors: [Color(0xFFFFC93C), Color(0xFFFFB347)],
-      textColor: AppColors.ink,
-    ),
-    _BannerData(
-      title: 'Free delivery\nthis week',
-      colors: [Color(0xFF0FA968), Color(0xFF14C47A)],
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -66,13 +49,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final home = context.watch<HomeViewModel>();
-    final auth = context.watch<AuthViewModel>();
-    final addressVm = context.watch<AddressViewModel>();
+    final user = context.select<AuthViewModel, User?>((a) => a.user);
+    final deliveryLabel = context.select<AddressViewModel, String>((a) {
+      final delivery = a.defaultAddress;
+      return delivery == null
+          ? 'Add delivery address'
+          : '${delivery.label} · ${delivery.city}';
+    });
     final shell = context.read<ShellController>();
-    final delivery = addressVm.defaultAddress;
-    final deliveryLabel = delivery == null
-        ? 'Add delivery address'
-        : '${delivery.label} · ${delivery.city}';
+    final categories = home.categories.where((c) => c.id != 'all').toList();
+    final popular = home.products.length > 5
+        ? home.products.sublist(0, 5)
+        : home.products;
 
     return Scaffold(
       backgroundColor: AppColors.section,
@@ -157,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   PressableScale(
                     onTap: () => shell.goToTab(3),
-                    child: ProfileAvatar(user: auth.user, size: 36),
+                    child: ProfileAvatar(user: user, size: 36),
                   ),
                 ],
               ),
@@ -195,63 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                    ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.08, end: 0),
+                    ).animate().fadeIn(duration: 180.ms),
                     const SizedBox(height: 16),
 
-                    // Banner carousel
-                    CarouselSlider.builder(
-                      itemCount: _banners.length,
-                      itemBuilder: (context, index, _) {
-                        final b = _banners[index];
-                        return Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(AppRadii.md),
-                            gradient: LinearGradient(
-                              colors: b.colors,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            b.title,
-                            style: AppTextStyles.display(
-                              fontSize: 18,
-                              color: b.textColor,
-                              height: 1.25,
-                            ),
-                          ),
-                        );
-                      },
-                      options: CarouselOptions(
-                        height: 120,
-                        autoPlay: true,
-                        autoPlayInterval: const Duration(seconds: 4),
-                        enlargeCenterPage: true,
-                        viewportFraction: 0.9,
-                        onPageChanged: (i, _) => setState(() => _bannerIndex = i),
-                      ),
-                    ).animate().fadeIn(delay: 60.ms, duration: 220.ms),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_banners.length, (i) {
-                        final active = i == _bannerIndex;
-                        return AnimatedContainer(
-                          duration: AppMotion.fast,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          height: 6,
-                          width: active ? 18 : 6,
-                          decoration: BoxDecoration(
-                            color: active ? AppColors.violet : AppColors.line,
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                          ),
-                        );
-                      }),
-                    ),
+                    // Banner carousel (isolated so auto-play doesn't rebuild Home)
+                    const _HomeBannerCarousel(),
                     const SizedBox(height: 18),
 
                     // Browse entry card
@@ -272,12 +208,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF3EBFF),
+                                  color: AppColors.greenSoft,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: const Icon(
                                   Icons.storefront_rounded,
-                                  color: AppColors.violet,
+                                  color: AppColors.green,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -303,26 +239,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.chevron_right_rounded, color: AppColors.violet),
+                              const Icon(Icons.chevron_right_rounded, color: AppColors.green),
                             ],
                           ),
                         ),
                       ),
-                    ).animate().fadeIn(delay: 100.ms, duration: 220.ms),
+                    ),
                     const SizedBox(height: 16),
 
                     // Category chips
-                    if (home.categories.isNotEmpty)
+                    if (categories.isNotEmpty)
                       SizedBox(
                         height: 92,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: home.categories.where((c) => c.id != 'all').length,
+                          itemCount: categories.length,
                           separatorBuilder: (_, __) => const SizedBox(width: 12),
                           itemBuilder: (context, index) {
-                            final cats = home.categories.where((c) => c.id != 'all').toList();
-                            final cat = cats[index];
+                            final cat = categories[index];
                             return PressableScale(
                               onTap: () => _openBrowse(categoryId: cat.id),
                               child: SizedBox(
@@ -340,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       child: Icon(
                                         categoryIconFor(cat.id),
-                                        color: AppColors.violet,
+                                        color: AppColors.green,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -379,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: AppTextStyles.body(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.violet,
+                                color: AppColors.green,
                               ),
                             ),
                           ),
@@ -388,24 +323,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     SizedBox(
                       height: 240,
-                      child: home.products.isEmpty
+                      child: popular.isEmpty
                           ? const Center(
                               child: SizedBox(
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.2,
-                                  color: AppColors.violet,
+                                  color: AppColors.green,
                                 ),
                               ),
                             )
                           : ListView.separated(
                               scrollDirection: Axis.horizontal,
                               padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: home.products.take(5).length,
+                              itemCount: popular.length,
                               separatorBuilder: (_, __) => const SizedBox(width: 10),
                               itemBuilder: (context, index) {
-                                final product = home.products[index];
+                                final product = popular[index];
                                 return SizedBox(
                                   width: 160,
                                   child: ProductCard(
@@ -428,6 +363,94 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HomeBannerCarousel extends StatefulWidget {
+  const _HomeBannerCarousel();
+
+  @override
+  State<_HomeBannerCarousel> createState() => _HomeBannerCarouselState();
+}
+
+class _HomeBannerCarouselState extends State<_HomeBannerCarousel> {
+  int _bannerIndex = 0;
+
+  static const _banners = [
+    _BannerData(
+      title: 'Flat 10% off on bulk\norders above ₹10,000',
+      colors: [AppColors.green, AppColors.greenLight],
+    ),
+    _BannerData(
+      title: 'New: Cashew & Dry Fruits\nnow available',
+      colors: [Color(0xFFFFC93C), Color(0xFFFFB347)],
+      textColor: AppColors.ink,
+    ),
+    _BannerData(
+      title: 'Free delivery\nthis week',
+      colors: [Color(0xFF0A7A44), Color(0xFF0D9F58)],
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CarouselSlider.builder(
+          itemCount: _banners.length,
+          itemBuilder: (context, index, _) {
+            final b = _banners[index];
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadii.md),
+                gradient: LinearGradient(
+                  colors: b.colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                b.title,
+                style: AppTextStyles.display(
+                  fontSize: 18,
+                  color: b.textColor,
+                  height: 1.25,
+                ),
+              ),
+            );
+          },
+          options: CarouselOptions(
+            height: 120,
+            autoPlay: true,
+            autoPlayInterval: const Duration(seconds: 4),
+            enlargeCenterPage: true,
+            viewportFraction: 0.9,
+            onPageChanged: (i, _) => setState(() => _bannerIndex = i),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (i) {
+            final active = i == _bannerIndex;
+            return AnimatedContainer(
+              duration: AppMotion.fast,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: active ? 18 : 6,
+              decoration: BoxDecoration(
+                color: active ? AppColors.green : AppColors.line,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }

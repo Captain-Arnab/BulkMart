@@ -6,7 +6,7 @@ import '../../core/ui/pressable_scale.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
-/// Soft violet-tinted auth background used across Login / OTP / Register.
+/// Soft green-tinted auth background used across Login / OTP / Register.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -22,7 +22,7 @@ class AuthScaffold extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF3EBFF),
+        backgroundColor: AppColors.greenSoft,
         resizeToAvoidBottomInset: resizeToAvoidBottomInset,
         body: child,
       ),
@@ -251,7 +251,7 @@ class CountryCodeChip extends StatelessWidget {
       margin: const EdgeInsets.only(left: 10),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3EBFF),
+        color: AppColors.greenSoft,
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(

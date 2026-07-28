@@ -31,7 +31,7 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = backgroundColor ?? AppColors.violet;
+    final bg = backgroundColor ?? AppColors.green;
     final fg = foregroundColor ?? AppColors.white;
     final effective = isLoading ? PrimaryButtonState.loading : state;
     final busy = effective != PrimaryButtonState.idle;

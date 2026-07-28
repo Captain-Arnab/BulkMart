@@ -40,8 +40,11 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = context.watch<CartViewModel>();
-    final qty = cart.quantityOf(widget.product.id);
+    // Rebuild only when this product's qty changes — not on every cart edit.
+    final qty = context.select<CartViewModel, int>(
+      (c) => c.quantityOf(widget.product.id),
+    );
+    final cart = context.read<CartViewModel>();
     final inCart = qty > 0;
 
     return GestureDetector(
@@ -53,127 +56,117 @@ class _ProductCardState extends State<ProductCard> {
         scale: _lifted ? 1.02 : 1,
         duration: AppMotion.press,
         curve: AppMotion.ease,
-        child: AnimatedContainer(
-          duration: AppMotion.fast,
+        child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(AppRadii.lg),
             border: Border.all(color: AppColors.line),
             boxShadow: _lifted ? AppShadows.floating : AppShadows.card,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 62,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Hero(
-                      tag: ProductCard.heroTag(widget.product.id),
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: ProductNetworkImage(product: widget.product),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                          boxShadow: AppShadows.soft(opacity: 0.12),
-                        ),
-                        child: Text(
-                          'MOQ ${widget.product.moq} ${widget.product.unitLabel}s',
-                          style: AppTextStyles.body(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 62,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RepaintBoundary(
+                        child: Hero(
+                          tag: ProductCard.heroTag(widget.product.id),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: ProductNetworkImage(product: widget.product),
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      right: 10,
-                      bottom: 10,
-                      child: _QuickAddControl(
-                        qty: qty,
-                        inCart: inCart,
-                        onAdd: () {
-                          HapticFeedback.lightImpact();
-                          cart.quickAdd(widget.product);
-                          widget.onQuickAdd?.call();
-                        },
-                        onIncrement: () {
-                          HapticFeedback.lightImpact();
-                          cart.quickAdd(widget.product);
-                          widget.onQuickAdd?.call();
-                        },
-                        onDecrement: () {
-                          HapticFeedback.lightImpact();
-                          cart.quickDecrement(widget.product);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 38,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.product.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.body(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.2,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _priceFormat.format(widget.product.wholesalePrice),
-                                style: AppTextStyles.price(
-                                  fontSize: 15,
-                                  color: AppColors.violet,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                widget.product.unitSize,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.body(
-                                  fontSize: 11,
-                                  color: AppColors.muted,
-                                ),
-                              ),
-                            ],
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Text(
+                            'MOQ ${widget.product.moq} ${widget.product.unitLabel}s',
+                            style: AppTextStyles.body(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: _QuickAddControl(
+                          qty: qty,
+                          inCart: inCart,
+                          onAdd: () {
+                            HapticFeedback.lightImpact();
+                            cart.quickAdd(widget.product);
+                            widget.onQuickAdd?.call();
+                          },
+                          onIncrement: () {
+                            HapticFeedback.lightImpact();
+                            cart.quickAdd(widget.product);
+                            widget.onQuickAdd?.call();
+                          },
+                          onDecrement: () {
+                            HapticFeedback.lightImpact();
+                            cart.quickDecrement(widget.product);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  flex: 38,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _priceFormat.format(widget.product.wholesalePrice),
+                          style: AppTextStyles.price(
+                            fontSize: 15,
+                            color: AppColors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.product.unitSize,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.body(
+                            fontSize: 11,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

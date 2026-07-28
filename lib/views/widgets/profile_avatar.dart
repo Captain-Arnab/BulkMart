@@ -37,6 +37,21 @@ class _ProfileAvatarState extends State<ProfileAvatar>
   late final AnimationController _bounce;
   Object? _lastBounceKey;
 
+  String? _resolvedPath;
+  bool _hasFile = false;
+
+  void _resolveAvatarFile() {
+    final path = widget.user?.avatarPath;
+    if (path == null || path.isEmpty) {
+      _resolvedPath = null;
+      _hasFile = false;
+      return;
+    }
+    if (path == _resolvedPath) return;
+    _resolvedPath = path;
+    _hasFile = File(path).existsSync();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +60,7 @@ class _ProfileAvatarState extends State<ProfileAvatar>
       duration: const Duration(milliseconds: 420),
     );
     _lastBounceKey = widget.bounceKey;
+    _resolveAvatarFile();
   }
 
   @override
@@ -53,6 +69,9 @@ class _ProfileAvatarState extends State<ProfileAvatar>
     if (widget.bounceKey != null && widget.bounceKey != _lastBounceKey) {
       _lastBounceKey = widget.bounceKey;
       _bounce.forward(from: 0);
+    }
+    if (oldWidget.user?.avatarPath != widget.user?.avatarPath) {
+      _resolveAvatarFile();
     }
   }
 
@@ -64,8 +83,8 @@ class _ProfileAvatarState extends State<ProfileAvatar>
 
   @override
   Widget build(BuildContext context) {
-    final path = widget.user?.avatarPath;
-    final hasFile = path != null && path.isNotEmpty && File(path).existsSync();
+    final path = _resolvedPath;
+    final hasFile = _hasFile;
 
     return AnimatedBuilder(
       animation: _bounce,
@@ -83,11 +102,11 @@ class _ProfileAvatarState extends State<ProfileAvatar>
               width: widget.size,
               height: widget.size,
               decoration: const BoxDecoration(
-                color: Color(0xFFF3EBFF),
+                color: AppColors.greenSoft,
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
-              child: hasFile
+              child: hasFile && path != null
                   ? Image.file(File(path), fit: BoxFit.cover)
                   : Center(
                       child: Text(

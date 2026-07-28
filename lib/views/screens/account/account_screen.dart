@@ -40,7 +40,7 @@ class AccountScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3EBFF),
+                color: AppColors.greenSoft,
                 borderRadius: BorderRadius.circular(AppRadii.lg),
                 boxShadow: AppShadows.card,
               ),

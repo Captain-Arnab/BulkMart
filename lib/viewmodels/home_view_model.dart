@@ -47,7 +47,6 @@ class HomeViewModel extends ChangeNotifier {
     hasMore = true;
     isLoading = true;
     error = null;
-    notifyListeners();
 
     final result = await _productRepository.fetchProducts(
       categoryId: selectedCategoryId,

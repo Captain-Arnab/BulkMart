@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
@@ -68,109 +69,139 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Use viewPadding once — Material AppBar + edge-to-edge can stack insets
+    // and leave a large empty band above the title.
     final topInset = MediaQuery.viewPaddingOf(context).top;
 
     return ChangeNotifierProvider.value(
       value: _vm,
-      child: Scaffold(
-        backgroundColor: AppColors.section,
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(kToolbarHeight + topInset),
-          child: Container(
-            color: AppColors.white,
-            padding: EdgeInsets.only(top: topInset),
-            child: AppBar(
-              backgroundColor: AppColors.white,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              foregroundColor: AppColors.ink,
-              title: Text('Products', style: AppTextStyles.display(fontSize: 18)),
-            ),
-          ),
-        ),
-        body: Consumer<CategoryBrowseViewModel>(
-          builder: (context, vm, _) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CategorySidebar(
-                  categories: vm.categories,
-                  selectedId: vm.selectedCategoryId,
-                  onSelect: vm.selectCategory,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: AppColors.section,
+          body: Column(
+            children: [
+              Material(
+                color: AppColors.white,
+                child: Padding(
+                  padding: EdgeInsets.only(top: topInset),
+                  child: SizedBox(
+                    height: 52,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          color: AppColors.ink,
+                        ),
+                        Text(
+                          'Products',
+                          style: AppTextStyles.display(fontSize: 18),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Container(
-                        color: AppColors.white,
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: PillTextField(
-                                controller: _search,
-                                hint: 'Search products…',
-                                prefix: const Padding(
-                                  padding: EdgeInsets.only(left: 14),
-                                  child: Icon(Icons.search_rounded, color: AppColors.muted, size: 20),
-                                ),
-                                onChanged: vm.onSearchChanged,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            PressableScale(
-                              onTap: _openFilters,
-                              child: Container(
-                                height: 52,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.section,
-                                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                                  border: Border.all(color: AppColors.line),
-                                ),
+              ),
+              Expanded(
+                child: Consumer<CategoryBrowseViewModel>(
+                  builder: (context, vm, _) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _CategorySidebar(
+                          categories: vm.categories,
+                          selectedId: vm.selectedCategoryId,
+                          onSelect: vm.selectCategory,
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Container(
+                                color: AppColors.white,
+                                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.tune_rounded, size: 18, color: AppColors.violet),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Filters',
-                                      style: AppTextStyles.body(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    if (vm.activeFilterCount > 0) ...[
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.violet,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          '${vm.activeFilterCount}',
-                                          style: AppTextStyles.body(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.white,
+                                    Expanded(
+                                      child: PillTextField(
+                                        controller: _search,
+                                        hint: 'Search products…',
+                                        prefix: const Padding(
+                                          padding: EdgeInsets.only(left: 14),
+                                          child: Icon(
+                                            Icons.search_rounded,
+                                            color: AppColors.muted,
+                                            size: 20,
                                           ),
                                         ),
+                                        onChanged: vm.onSearchChanged,
                                       ),
-                                    ],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    PressableScale(
+                                      onTap: _openFilters,
+                                      child: Container(
+                                        height: 52,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.section,
+                                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                                          border: Border.all(color: AppColors.line),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.tune_rounded,
+                                              size: 18,
+                                              color: AppColors.green,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Filters',
+                                              style: AppTextStyles.body(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            if (vm.activeFilterCount > 0) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.green,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${vm.activeFilterCount}',
+                                                  style: AppTextStyles.price(
+                                                    fontSize: 10,
+                                                    color: AppColors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
+                              Expanded(child: _ProductPane(vm: vm)),
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(child: _ProductPane(vm: vm)),
-                    ],
-                  ),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -206,7 +237,7 @@ class _CategorySidebar extends StatelessWidget {
               margin: const EdgeInsets.symmetric(vertical: 2),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFFF3EBFF) : Colors.transparent,
+                color: selected ? AppColors.greenSoft : Colors.transparent,
                 border: Border(
                   left: BorderSide(
                     color: selected ? AppColors.violet : Colors.transparent,
@@ -292,7 +323,7 @@ class _ProductPane extends StatelessWidget {
                 ProductDetailScreen(productId: product.id),
               );
             },
-          ).animate().fadeIn(duration: 180.ms);
+          );
         },
       ),
     );

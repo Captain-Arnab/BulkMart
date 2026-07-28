@@ -58,7 +58,8 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> bootstrapSession() async {
     isLoading = true;
     error = null;
-    notifyListeners();
+    // Do not notify before the first await — callers often start this from
+    // initState / first frame, and a sync notify would rebuild during build.
 
     try {
       final loggedIn = await _authRepository.isLoggedIn();

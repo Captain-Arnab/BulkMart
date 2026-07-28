@@ -25,7 +25,7 @@ class AppShadows {
 
   static List<BoxShadow> floating = [
     BoxShadow(
-      color: AppColors.violet.withValues(alpha: 0.22),
+      color: AppColors.green.withValues(alpha: 0.22),
       blurRadius: 24,
       offset: const Offset(0, 10),
       spreadRadius: -4,
@@ -37,7 +37,7 @@ class AppShadows {
     ),
   ];
 
-  static List<BoxShadow> button({Color color = AppColors.violet}) => [
+  static List<BoxShadow> button({Color color = AppColors.green}) => [
         BoxShadow(
           color: color.withValues(alpha: 0.32),
           blurRadius: 18,

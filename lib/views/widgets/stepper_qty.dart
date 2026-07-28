@@ -5,7 +5,7 @@ import '../../core/ui/app_motion.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
-/// Pill-shaped violet-accent quantity stepper.
+/// Pill-shaped green-accent quantity stepper.
 class StepperQty extends StatelessWidget {
   const StepperQty({
     super.key,

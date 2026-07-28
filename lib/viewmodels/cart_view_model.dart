@@ -6,6 +6,7 @@ import '../models/product.dart';
 /// Local cart until cart API is wired. Exposed for bottom-nav badge later.
 class CartViewModel extends ChangeNotifier {
   final List<CartItem> _items = [];
+  final Map<String, int> _qtyById = {};
 
   List<CartItem> get items => List.unmodifiable(_items);
 
@@ -17,10 +18,12 @@ class CartViewModel extends ChangeNotifier {
 
   double get total => subtotal + deliveryFee;
 
-  int quantityOf(String productId) {
-    final index = _items.indexWhere((e) => e.product.id == productId);
-    if (index < 0) return 0;
-    return _items[index].quantity;
+  int quantityOf(String productId) => _qtyById[productId] ?? 0;
+
+  void _syncQtyIndex() {
+    _qtyById
+      ..clear()
+      ..addEntries(_items.map((e) => MapEntry(e.product.id, e.quantity)));
   }
 
   /// Adds one sellable unit; first add respects MOQ.
@@ -52,6 +55,7 @@ class CartViewModel extends ChangeNotifier {
     } else {
       _items.add(CartItem(product: product, quantity: qty));
     }
+    _syncQtyIndex();
     notifyListeners();
   }
 
@@ -64,16 +68,19 @@ class CartViewModel extends ChangeNotifier {
     } else {
       _items[index] = _items[index].copyWith(quantity: quantity);
     }
+    _syncQtyIndex();
     notifyListeners();
   }
 
   void remove(String productId) {
     _items.removeWhere((e) => e.product.id == productId);
+    _syncQtyIndex();
     notifyListeners();
   }
 
   void clear() {
     _items.clear();
+    _qtyById.clear();
     notifyListeners();
   }
 }

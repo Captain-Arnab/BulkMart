@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/ui/app_motion.dart';
@@ -28,12 +27,16 @@ class _MainShellState extends State<MainShell> {
     _TabSpec('Account', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 
+  /// Lazily mount tabs so Cart / Orders / Account don't init until first open.
+  final Set<int> _activated = {0};
+
   @override
   Widget build(BuildContext context) {
-    final shell = context.watch<ShellController>();
-    final cartCount = context.watch<CartViewModel>().itemCount;
-    final index = shell.tabIndex;
-    // viewPadding survives Scaffold inset consumption / edge-to-edge.
+    final index = context.select<ShellController, int>((s) => s.tabIndex);
+    final cartCount = context.select<CartViewModel, int>((c) => c.itemCount);
+    final shell = context.read<ShellController>();
+    _activated.add(index);
+
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     const navHeight = 64.0;
     const navGap = 12.0;
@@ -45,8 +48,6 @@ class _MainShellState extends State<MainShell> {
         children: [
           Positioned.fill(
             child: MediaQuery(
-              // Parent Scaffold can zero padding under edge-to-edge; restore
-              // status-bar inset so nested AppBars (Cart / Orders) sit correctly.
               data: MediaQuery.of(context).copyWith(
                 padding: MediaQuery.paddingOf(context).copyWith(
                   top: MediaQuery.viewPaddingOf(context).top,
@@ -54,11 +55,11 @@ class _MainShellState extends State<MainShell> {
               ),
               child: IndexedStack(
                 index: index,
-                children: const [
-                  HomeScreen(),
-                  CartScreen(),
-                  OrdersScreen(),
-                  AccountScreen(),
+                children: [
+                  const HomeScreen(),
+                  _activated.contains(1) ? const CartScreen() : const SizedBox.shrink(),
+                  _activated.contains(2) ? const OrdersScreen() : const SizedBox.shrink(),
+                  _activated.contains(3) ? const AccountScreen() : const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -98,7 +99,7 @@ class _MainShellState extends State<MainShell> {
                     width: tabW - 16,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.violet,
+                        color: AppColors.green,
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                     ),
@@ -128,34 +129,23 @@ class _MainShellState extends State<MainShell> {
                                       Positioned(
                                         right: -10,
                                         top: -6,
-                                        child: AnimatedScale(
-                                          scale: 1,
-                                          duration: AppMotion.fast,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 5,
-                                              vertical: 1,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accent,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            cartCount > 99 ? '99+' : '$cartCount',
+                                            key: ValueKey(cartCount),
+                                            style: AppTextStyles.price(
+                                              fontSize: 9,
+                                              color: AppColors.ink,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.accent,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              cartCount > 99 ? '99+' : '$cartCount',
-                                              key: ValueKey(cartCount),
-                                              style: AppTextStyles.price(
-                                                fontSize: 9,
-                                                color: AppColors.ink,
-                                              ),
-                                            ),
-                                          )
-                                              .animate(key: ValueKey(cartCount))
-                                              .scale(
-                                                begin: const Offset(0.6, 0.6),
-                                                end: const Offset(1, 1),
-                                                duration: 200.ms,
-                                                curve: AppMotion.pop,
-                                              ),
+                                          ),
                                         ),
                                       ),
                                   ],

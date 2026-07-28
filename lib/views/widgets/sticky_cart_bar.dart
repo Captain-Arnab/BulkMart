@@ -17,12 +17,14 @@ class StickyCartBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cart = context.watch<CartViewModel>();
-    final shell = context.watch<ShellController>();
-    final visible = cart.itemCount > 0 && shell.tabIndex != 1;
+    final itemCount = context.select<CartViewModel, int>((c) => c.itemCount);
+    final total = context.select<CartViewModel, double>((c) => c.total);
+    final tabIndex = context.select<ShellController, int>((s) => s.tabIndex);
+    final visible = itemCount > 0 && tabIndex != 1;
+    final shell = context.read<ShellController>();
 
     return AnimatedSlide(
-      duration: const Duration(milliseconds: 520),
+      duration: const Duration(milliseconds: 420),
       curve: AppMotion.springy,
       offset: visible ? Offset.zero : const Offset(0, 1.4),
       child: AnimatedOpacity(
@@ -38,7 +40,7 @@ class StickyCartBar extends StatelessWidget {
                 height: 58,
                 padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
                 decoration: BoxDecoration(
-                  color: AppColors.violet,
+                  color: AppColors.green,
                   borderRadius: BorderRadius.circular(AppRadii.xl),
                   boxShadow: AppShadows.floating,
                 ),
@@ -50,27 +52,19 @@ class StickyCartBar extends StatelessWidget {
                         color: AppColors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
-                      child: AnimatedSwitcher(
-                        duration: AppMotion.fast,
-                        transitionBuilder: (child, anim) => ScaleTransition(
-                          scale: anim,
-                          child: child,
-                        ),
-                        child: Text(
-                          '${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'}',
-                          key: ValueKey(cart.itemCount),
-                          style: AppTextStyles.body(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
-                          ),
+                      child: Text(
+                        '$itemCount item${itemCount == 1 ? '' : 's'}',
+                        style: AppTextStyles.body(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: AnimatedCartTotal(
-                        value: cart.total,
+                        value: total,
                         style: AppTextStyles.price(fontSize: 16, color: AppColors.white),
                       ),
                     ),
@@ -85,7 +79,7 @@ class StickyCartBar extends StatelessWidget {
                         style: AppTextStyles.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.violet,
+                          color: AppColors.green,
                         ),
                       ),
                     ),

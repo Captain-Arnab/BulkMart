@@ -207,7 +207,7 @@ class _SupportScreenState extends State<SupportScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3EBFF),
+                color: AppColors.greenSoft,
                 borderRadius: BorderRadius.circular(AppRadii.lg),
                 boxShadow: AppShadows.card,
               ),
@@ -522,7 +522,7 @@ class _OrderChip extends StatelessWidget {
       duration: AppMotion.fast,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFFF3EBFF) : AppColors.section,
+        color: selected ? AppColors.greenSoft : AppColors.section,
         borderRadius: BorderRadius.circular(AppRadii.pill),
         border: Border.all(color: selected ? AppColors.violet : AppColors.line),
       ),

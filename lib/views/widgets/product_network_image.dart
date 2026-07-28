@@ -1,11 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../models/product.dart';
 import '../../theme/colors.dart';
 
-/// Network product image with shimmer placeholder, Picsum fallback, broken-icon final fail.
+/// Network product image with static placeholder, sized decode cache, Picsum fallback.
 class ProductNetworkImage extends StatefulWidget {
   const ProductNetworkImage({
     super.key,
@@ -54,32 +53,40 @@ class _ProductNetworkImageState extends State<ProductNetworkImage> {
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
-      imageUrl: _url,
-      fit: widget.fit,
-      placeholder: (_, __) => Shimmer.fromColors(
-        baseColor: AppColors.paper2,
-        highlightColor: AppColors.white,
-        child: Container(color: AppColors.paper2),
-      ),
-      errorWidget: (_, __, ___) {
-        if (!_usingFallback) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _onPrimaryFailed();
-          });
-          return Shimmer.fromColors(
-            baseColor: AppColors.paper2,
-            highlightColor: AppColors.white,
-            child: Container(color: AppColors.paper2),
-          );
-        }
-        return ColoredBox(
-          color: AppColors.paper2,
-          child: Icon(
-            Icons.broken_image_outlined,
-            size: widget.iconSize,
-            color: AppColors.slate.withValues(alpha: 0.55),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final cacheW = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+            ? (constraints.maxWidth * dpr).round().clamp(40, 720)
+            : 320;
+        final cacheH = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+            ? (constraints.maxHeight * dpr).round().clamp(40, 720)
+            : 320;
+
+        return CachedNetworkImage(
+          imageUrl: _url,
+          fit: widget.fit,
+          memCacheWidth: cacheW,
+          memCacheHeight: cacheH,
+          fadeInDuration: const Duration(milliseconds: 120),
+          fadeOutDuration: Duration.zero,
+          placeholder: (_, __) => const ColoredBox(color: AppColors.paper2),
+          errorWidget: (_, __, ___) {
+            if (!_usingFallback) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _onPrimaryFailed();
+              });
+              return const ColoredBox(color: AppColors.paper2);
+            }
+            return ColoredBox(
+              color: AppColors.paper2,
+              child: Icon(
+                Icons.broken_image_outlined,
+                size: widget.iconSize,
+                color: AppColors.slate.withValues(alpha: 0.55),
+              ),
+            );
+          },
         );
       },
     );

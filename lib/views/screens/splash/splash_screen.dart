@@ -18,37 +18,31 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _loader;
-
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _loader = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
-    _bootstrap();
+    // Wait until after the first frame so bootstrap notifyListeners can't
+    // mark InheritedProviders dirty while the tree is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _bootstrap();
+    });
   }
 
   Future<void> _bootstrap() async {
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
     final auth = context.read<AuthViewModel>();
-    final loggedIn = await auth.bootstrapSession();
+    // Session check runs immediately; short min delay only for brand presence.
+    final results = await Future.wait<Object?>([
+      auth.bootstrapSession(),
+      Future<void>.delayed(const Duration(milliseconds: 500)),
+    ]);
     if (!mounted) return;
+    final loggedIn = results.first as bool;
     await AppPageRoute.pushReplacement(
       context,
       loggedIn ? const MainShell() : const LoginScreen(),
       slide: false,
     );
-  }
-
-  @override
-  void dispose() {
-    _loader.dispose();
-    super.dispose();
   }
 
   @override
@@ -63,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF7B2FF7), Color(0xFF9B4DFF)],
+              colors: [AppColors.green, AppColors.greenLight],
             ),
           ),
           child: Stack(
@@ -92,24 +86,17 @@ class _SplashScreenState extends State<SplashScreen>
                         style: AppTextStyles.display(
                           fontSize: 30,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.violet,
+                          color: AppColors.green,
                         ),
                       ),
                     )
                         .animate()
                         .fadeIn(duration: 180.ms)
                         .scale(
-                          begin: const Offset(0, 0),
-                          end: const Offset(1.05, 1.05),
-                          duration: 320.ms,
-                          curve: AppMotion.pop,
-                        )
-                        .then()
-                        .scale(
-                          begin: const Offset(1.05, 1.05),
+                          begin: const Offset(0.85, 0.85),
                           end: const Offset(1, 1),
-                          duration: 160.ms,
-                          curve: AppMotion.ease,
+                          duration: 280.ms,
+                          curve: AppMotion.pop,
                         ),
                     const SizedBox(height: 20),
                     Text(
@@ -120,12 +107,12 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     )
                         .animate()
-                        .fadeIn(delay: 150.ms, duration: 220.ms, curve: AppMotion.ease)
+                        .fadeIn(delay: 100.ms, duration: 200.ms, curve: AppMotion.ease)
                         .slideY(
-                          begin: 0.15,
+                          begin: 0.12,
                           end: 0,
-                          delay: 150.ms,
-                          duration: 220.ms,
+                          delay: 100.ms,
+                          duration: 200.ms,
                           curve: AppMotion.ease,
                         ),
                   ],
@@ -135,28 +122,14 @@ class _SplashScreenState extends State<SplashScreen>
                 left: 0,
                 right: 0,
                 bottom: 56 + MediaQuery.paddingOf(context).bottom,
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _loader,
-                    builder: (_, __) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(3, (i) {
-                          final phase = (_loader.value + i * 0.2) % 1.0;
-                          final scale = 0.7 + (0.3 * (1 - (phase - 0.5).abs() * 2).clamp(0, 1));
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: 8,
-                            height: 8,
-                            transform: Matrix4.diagonal3Values(scale, scale, 1),
-                            decoration: BoxDecoration(
-                              color: AppColors.white.withValues(alpha: 0.55 + 0.45 * scale),
-                              shape: BoxShape.circle,
-                            ),
-                          );
-                        }),
-                      );
-                    },
+                child: const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: AppColors.white,
+                    ),
                   ),
                 ),
               ),

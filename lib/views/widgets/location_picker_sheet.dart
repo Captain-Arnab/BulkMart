@@ -124,7 +124,7 @@ class _AddressTile extends StatelessWidget {
         duration: AppMotion.fast,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF3EBFF) : AppColors.section,
+          color: selected ? AppColors.greenSoft : AppColors.section,
           borderRadius: BorderRadius.circular(AppRadii.lg),
           border: Border.all(color: selected ? AppColors.violet : AppColors.line),
         ),
