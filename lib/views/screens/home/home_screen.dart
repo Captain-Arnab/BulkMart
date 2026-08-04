@@ -7,6 +7,7 @@ import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../core/ui/shell_controller.dart';
+import '../../../models/product.dart';
 import '../../../models/user.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -58,9 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     final shell = context.read<ShellController>();
     final categories = home.categories.where((c) => c.id != 'all').toList();
-    final popular = home.products.length > 5
-        ? home.products.sublist(0, 5)
-        : home.products;
 
     return Scaffold(
       backgroundColor: AppColors.section,
@@ -176,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               const Icon(Icons.search_rounded, color: AppColors.muted),
                               const SizedBox(width: 10),
                               Text(
-                                'Search for rice, oil, spices…',
+                                'Search fruits & vegetables…',
                                 style: AppTextStyles.body(fontSize: 14, color: AppColors.muted),
                               ),
                             ],
@@ -230,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '500+ items across 12 categories',
+                                      '${home.products.isEmpty ? '33' : home.products.length} produce items · bulk wholesale',
                                       style: AppTextStyles.body(
                                         fontSize: 12,
                                         color: AppColors.muted,
@@ -267,14 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Container(
                                       width: 56,
                                       height: 56,
+                                      alignment: Alignment.center,
                                       decoration: BoxDecoration(
                                         color: AppColors.white,
                                         shape: BoxShape.circle,
                                         border: Border.all(color: AppColors.line),
                                         boxShadow: AppShadows.card,
                                       ),
-                                      child: Icon(
-                                        categoryIconFor(cat.id),
+                                      child: CategoryIcon(
+                                        categoryId: cat.id,
+                                        size: 26,
                                         color: AppColors.green,
                                       ),
                                     ),
@@ -297,65 +297,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     const SizedBox(height: 8),
 
-                    // Popular in Bulk
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Popular in Bulk',
-                            style: AppTextStyles.display(fontSize: 18),
-                          ),
-                          const Spacer(),
-                          PressableScale(
-                            onTap: () => _openBrowse(),
-                            child: Text(
-                              'See All',
-                              style: AppTextStyles.body(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.green,
-                              ),
+                    // Category-wise horizontal sections
+                    if (home.isLoading && home.products.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: AppColors.green,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: 240,
-                      child: popular.isEmpty
-                          ? const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  color: AppColors.green,
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: popular.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 10),
-                              itemBuilder: (context, index) {
-                                final product = popular[index];
-                                return SizedBox(
-                                  width: 160,
-                                  child: ProductCard(
-                                    product: product,
-                                    onTap: () {
-                                      AppPageRoute.push(
-                                        context,
-                                        ProductDetailScreen(productId: product.id),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
+                        ),
+                      )
+                    else
+                      ..._buildCategorySections(home),
                   ],
                 ),
               ),
@@ -363,6 +321,121 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  List<Widget> _buildCategorySections(HomeViewModel home) {
+    final widgets = <Widget>[];
+    var sectionIndex = 0;
+
+    for (final categoryId in HomeViewModel.homeSectionCategoryIds) {
+      final items = home.productsForCategory(categoryId, limit: 8);
+      if (items.isEmpty) continue;
+
+      final title = home.categoryById(categoryId)?.name ??
+          switch (categoryId) {
+            'green_vegetables' => 'Green Vegetables',
+            'root_vegetables' => 'Root Vegetables',
+            'seasonal_fruits' => 'Seasonal Fruits',
+            'herbs_leafy' => 'Herbs & Leafy',
+            _ => categoryId,
+          };
+
+      widgets.add(
+        _CategoryProductSection(
+          title: title,
+          products: items,
+          onSeeAll: () => _openBrowse(categoryId: categoryId),
+          onProductTap: (product) {
+            AppPageRoute.push(
+              context,
+              ProductDetailScreen(productId: product.id),
+            );
+          },
+        )
+            .animate(delay: (sectionIndex * 90).ms)
+            .fadeIn(duration: 320.ms, curve: Curves.easeOut)
+            .slideY(begin: 0.06, end: 0, duration: 360.ms, curve: Curves.easeOutCubic),
+      );
+      sectionIndex++;
+    }
+
+    return widgets;
+  }
+}
+
+class _CategoryProductSection extends StatelessWidget {
+  const _CategoryProductSection({
+    required this.title,
+    required this.products,
+    required this.onSeeAll,
+    required this.onProductTap,
+  });
+
+  final String title;
+  final List<Product> products;
+  final VoidCallback onSeeAll;
+  final ValueChanged<Product> onProductTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.display(fontSize: 18),
+                ),
+              ),
+              PressableScale(
+                onTap: onSeeAll,
+                child: Text(
+                  'See All →',
+                  style: AppTextStyles.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.violet,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Builder(
+          builder: (context) {
+            final screenW = MediaQuery.sizeOf(context).width;
+            // ~2.35 cards visible so the next card peeks; clamps for tiny/large phones.
+            final cardW = (screenW / 2.35).clamp(128.0, 168.0);
+            // Compact ratio: square-ish image + fixed text block (~1.38 overall).
+            final cardH = cardW * 1.38;
+            return SizedBox(
+              height: cardH,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 0, 28, 0),
+                itemCount: products.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  return SizedBox(
+                    width: cardW,
+                    child: ProductCard(
+                      product: product,
+                      onTap: () => onProductTap(product),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -383,7 +456,7 @@ class _HomeBannerCarouselState extends State<_HomeBannerCarousel> {
       colors: [AppColors.green, AppColors.greenLight],
     ),
     _BannerData(
-      title: 'New: Cashew & Dry Fruits\nnow available',
+      title: 'Fresh greens delivered\nin bulk this week',
       colors: [Color(0xFFFFC93C), Color(0xFFFFB347)],
       textColor: AppColors.ink,
     ),

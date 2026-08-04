@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
@@ -12,25 +10,24 @@ class HomeViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
 
   bool isLoading = false;
-  bool isLoadingMore = false;
   String? error;
   List<Product> products = [];
   List<ProductCategory> categories = [];
-  String? selectedCategoryId = 'all';
-  String searchQuery = '';
 
-  int _page = 1;
-  bool hasMore = true;
-  static const _limit = 20;
-
-  Timer? _debounce;
+  /// Home section order (exclude "All").
+  static const homeSectionCategoryIds = [
+    'green_vegetables',
+    'root_vegetables',
+    'seasonal_fruits',
+    'herbs_leafy',
+  ];
 
   Future<void> init() async {
     await Future.wait([loadCategories(), refresh()]);
   }
 
   Future<void> loadCategories() async {
-    final result = await _productRepository.fetchCategories();
+    final result = await _productRepository.getCategories();
     result.when(
       success: (list) {
         categories = list;
@@ -43,22 +40,14 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    _page = 1;
-    hasMore = true;
     isLoading = true;
     error = null;
 
-    final result = await _productRepository.fetchProducts(
-      categoryId: selectedCategoryId,
-      query: searchQuery,
-      page: _page,
-      limit: _limit,
-    );
+    final result = await _productRepository.getAllProducts();
 
     result.when(
-      success: (page) {
-        products = page.items;
-        hasMore = page.hasMore;
+      success: (list) {
+        products = list;
         isLoading = false;
         notifyListeners();
       },
@@ -70,50 +59,17 @@ class HomeViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> loadMore() async {
-    if (!hasMore || isLoadingMore || isLoading) return;
-    isLoadingMore = true;
-    notifyListeners();
-
-    final next = _page + 1;
-    final result = await _productRepository.fetchProducts(
-      categoryId: selectedCategoryId,
-      query: searchQuery,
-      page: next,
-      limit: _limit,
-    );
-
-    result.when(
-      success: (page) {
-        _page = next;
-        products = [...products, ...page.items];
-        hasMore = page.hasMore;
-        isLoadingMore = false;
-        notifyListeners();
-      },
-      failure: (message, {statusCode}) {
-        isLoadingMore = false;
-        notifyListeners();
-      },
-    );
+  /// First [limit] products for a category; empty if none.
+  List<Product> productsForCategory(String categoryId, {int limit = 8}) {
+    final list = products.where((p) => p.categoryId == categoryId).toList();
+    if (list.length <= limit) return list;
+    return list.sublist(0, limit);
   }
 
-  void selectCategory(String? categoryId) {
-    selectedCategoryId = categoryId ?? 'all';
-    refresh();
-  }
-
-  void onSearchChanged(String value) {
-    searchQuery = value;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      refresh();
-    });
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    super.dispose();
+  ProductCategory? categoryById(String id) {
+    for (final c in categories) {
+      if (c.id == id) return c;
+    }
+    return null;
   }
 }

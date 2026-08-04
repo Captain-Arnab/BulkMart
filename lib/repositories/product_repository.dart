@@ -5,37 +5,82 @@ import '../services/api/api_client.dart';
 import '../services/api/api_endpoints.dart';
 import '../services/api/result.dart';
 
-class PaginatedProducts {
-  const PaginatedProducts({
-    required this.items,
-    required this.page,
-    required this.limit,
-    required this.total,
-    required this.hasMore,
-  });
+// TODO: When backend API is ready, implement the real HTTP calls in
+// ApiProductRepository (already scaffolded below) and flip kDemoMode to false
+// in app_config.dart — no screen-level code should need to change.
 
-  final List<Product> items;
-  final int page;
-  final int limit;
-  final int total;
-  final bool hasMore;
+/// Screens call only these catalog methods — never Dio / mock data directly.
+abstract class ProductRepository {
+  factory ProductRepository({ApiClient? apiClient}) {
+    if (AppConfig.kDemoMode) {
+      return MockProductRepository();
+    }
+    return ApiProductRepository(apiClient: apiClient!);
+  }
+
+  Future<Result<List<ProductCategory>>> getCategories();
+
+  Future<Result<List<Product>>> getAllProducts();
+
+  Future<Result<List<Product>>> getProductsByCategory(String category);
+
+  Future<Result<List<Product>>> searchProducts(String query);
+
+  Future<Result<Product>> getProductById(String id);
 }
 
-/// Product catalog repository. Demo vs live is controlled by [AppConfig.kDemoMode].
-class ProductRepository {
-  ProductRepository({ApiClient? apiClient}) : _apiClient = apiClient;
+/// Demo implementation — reads [MockProducts].
+class MockProductRepository implements ProductRepository {
+  @override
+  Future<Result<List<ProductCategory>>> getCategories() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return const Success(MockProducts.categories);
+  }
 
-  final ApiClient? _apiClient;
+  @override
+  Future<Result<List<Product>>> getAllProducts() async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    return Success(List<Product>.from(MockProducts.products));
+  }
 
-  Future<Result<List<ProductCategory>>> fetchCategories() async {
-    if (AppConfig.kDemoMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      return const Success(MockProducts.categories);
+  @override
+  Future<Result<List<Product>>> getProductsByCategory(String category) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (category.isEmpty || category == 'all') {
+      return Success(List<Product>.from(MockProducts.products));
     }
+    return Success(MockProducts.byCategory(category));
+  }
 
+  @override
+  Future<Result<List<Product>>> searchProducts(String query) async {
+    await Future<void>.delayed(const Duration(milliseconds: 280));
+    return Success(MockProducts.search(query));
+  }
+
+  @override
+  Future<Result<Product>> getProductById(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     try {
-      final response = await _apiClient!.dio.get(ApiEndpoints.categories);
-      final raw = response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
+      return Success(MockProducts.byId(id));
+    } catch (_) {
+      return const Failure('Product not found', statusCode: 404);
+    }
+  }
+}
+
+/// Live API implementation — stubs until backend catalog endpoints are ready.
+class ApiProductRepository implements ProductRepository {
+  ApiProductRepository({required ApiClient apiClient}) : _apiClient = apiClient;
+
+  final ApiClient _apiClient;
+
+  @override
+  Future<Result<List<ProductCategory>>> getCategories() async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.categories);
+      final raw =
+          response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
       final list = raw
           .map((e) => ProductCategory.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -45,113 +90,33 @@ class ProductRepository {
     }
   }
 
-  Future<Result<PaginatedProducts>> fetchProducts({
-    String? categoryId,
-    String? query,
-    int page = 1,
-    int limit = 20,
-  }) async {
-    if (AppConfig.kDemoMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 450));
-      return Success(_paginateMock(
-        categoryId: categoryId,
-        query: query,
-        page: page,
-        limit: limit,
-      ));
-    }
-
-    try {
-      final response = await _apiClient!.dio.get(
-        ApiEndpoints.products,
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-          if (categoryId != null && categoryId != 'all') 'category_id': categoryId,
-          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-        },
-      );
-      final data = response.data['data'] as Map<String, dynamic>? ?? response.data as Map<String, dynamic>;
-      final rawItems = data['items'] as List<dynamic>? ?? data['products'] as List<dynamic>? ?? [];
-      final items = rawItems
-          .map((e) => Product.fromJson(e as Map<String, dynamic>))
-          .toList();
-      final total = (data['total'] as num?)?.toInt() ?? items.length;
-      return Success(
-        PaginatedProducts(
-          items: items,
-          page: page,
-          limit: limit,
-          total: total,
-          hasMore: page * limit < total,
-        ),
-      );
-    } catch (e) {
-      return Failure(e.toString());
-    }
+  @override
+  Future<Result<List<Product>>> getAllProducts() async {
+    // TODO: Wire to GET /products (paginated) and flatten/map to [Product].
+    throw UnimplementedError('ApiProductRepository.getAllProducts');
   }
 
-  Future<Result<Product>> fetchProduct(String id) async {
-    if (AppConfig.kDemoMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      try {
-        return Success(MockProducts.byId(id));
-      } catch (_) {
-        return const Failure('Product not found', statusCode: 404);
-      }
-    }
+  @override
+  Future<Result<List<Product>>> getProductsByCategory(String category) async {
+    // TODO: Wire to GET /products?category_id=… 
+    throw UnimplementedError('ApiProductRepository.getProductsByCategory');
+  }
 
+  @override
+  Future<Result<List<Product>>> searchProducts(String query) async {
+    // TODO: Wire to GET /products?q=…
+    throw UnimplementedError('ApiProductRepository.searchProducts');
+  }
+
+  @override
+  Future<Result<Product>> getProductById(String id) async {
     try {
-      final response = await _apiClient!.dio.get(ApiEndpoints.productDetail(id));
+      final response = await _apiClient.dio.get(ApiEndpoints.productDetail(id));
       final data = response.data['data'] as Map<String, dynamic>? ??
           response.data as Map<String, dynamic>;
       return Success(Product.fromJson(data));
     } catch (e) {
       return Failure(e.toString());
     }
-  }
-
-  PaginatedProducts _paginateMock({
-    String? categoryId,
-    String? query,
-    required int page,
-    required int limit,
-  }) {
-    var list = List<Product>.from(MockProducts.products);
-
-    if (categoryId != null && categoryId.isNotEmpty && categoryId != 'all') {
-      list = list.where((p) => p.categoryId == categoryId).toList();
-    }
-
-    final q = query?.trim().toLowerCase();
-    if (q != null && q.isNotEmpty) {
-      list = list
-          .where(
-            (p) =>
-                p.name.toLowerCase().contains(q) ||
-                p.category.toLowerCase().contains(q),
-          )
-          .toList();
-    }
-
-    final total = list.length;
-    final start = (page - 1) * limit;
-    if (start >= total) {
-      return PaginatedProducts(
-        items: const [],
-        page: page,
-        limit: limit,
-        total: total,
-        hasMore: false,
-      );
-    }
-    final end = (start + limit).clamp(0, total);
-    return PaginatedProducts(
-      items: list.sublist(start, end),
-      page: page,
-      limit: limit,
-      total: total,
-      hasMore: end < total,
-    );
   }
 }

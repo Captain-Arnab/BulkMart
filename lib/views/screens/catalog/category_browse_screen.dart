@@ -247,8 +247,8 @@ class _CategorySidebar extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Icon(
-                    categoryIconFor(cat.id),
+                  CategoryIcon(
+                    categoryId: cat.id,
                     size: 22,
                     color: selected ? AppColors.violet : AppColors.muted,
                   ),
@@ -301,16 +301,22 @@ class _ProductPane extends StatelessWidget {
       );
     }
 
+    // Pane width ≈ screen − sidebar(96). Aim for short cards: image-forward + compact text.
+    final paneW = MediaQuery.sizeOf(context).width - 96;
+    final cellW = (paneW - 10 * 2 - 10) / 2; // padding + gap
+    final cellH = cellW * 1.05 + 68; // near-square image + text block
+    final aspect = cellW / cellH;
+
     return AnimatedSwitcher(
       duration: AppMotion.normal,
       child: GridView.builder(
         key: ValueKey('${vm.selectedCategoryId}_${vm.searchQuery}_${vm.activeFilterCount}_${vm.sort}'),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 100),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 0.58,
+          childAspectRatio: aspect.clamp(0.68, 0.82),
         ),
         itemCount: vm.products.length,
         itemBuilder: (context, index) {

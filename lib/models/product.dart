@@ -4,38 +4,58 @@ class Product {
     required this.name,
     required this.category,
     required this.categoryId,
-    required this.unitSize,
-    required this.unitLabel,
-    required this.wholesalePrice,
+    required this.unit,
     required this.moq,
-    required this.stockCount,
-    this.moqDisplay,
+    this.price,
+    this.stock,
     this.imageUrl,
+    this.batchNo,
+    this.itemCode,
     this.description,
     this.inStock = true,
   });
 
   final String id;
   final String name;
+
+  /// Display category name, e.g. "Green Vegetables".
   final String category;
+
+  /// Stable id used for filtering / navigation, e.g. "green_vegetables".
   final String categoryId;
-  final String unitSize;
-  final String unitLabel;
-  final double wholesalePrice;
+
+  /// Sell unit, e.g. "per kg", "per bunch".
+  final String unit;
+
   final int moq;
-  final String? moqDisplay;
-  final int stockCount;
+
+  /// Wholesale price — nullable until backend pricing is wired.
+  final double? price;
+
+  /// Available stock — nullable until backend inventory is wired.
+  final int? stock;
+
   final String? imageUrl;
+
+  /// Backend/admin-only — do not surface in customer UI.
+  final String? batchNo;
+
+  /// Backend/admin-only — do not surface in customer UI.
+  final String? itemCode;
+
   final String? description;
   final bool inStock;
 
-  /// Compact stamp text, e.g. "25kg" / "15L"
-  String get moqStamp {
-    if (moqDisplay != null && moqDisplay!.isNotEmpty) return moqDisplay!;
-    final parts = unitSize.split(' ');
-    if (parts.length >= 2) return '${parts[0]}${parts[1]}';
-    return unitSize;
+  /// Short noun for badges ("kg", "bunch") derived from [unit].
+  String get unitNoun {
+    final cleaned = unit.toLowerCase().replaceFirst(RegExp(r'^per\s+'), '').trim();
+    return cleaned.isEmpty ? 'unit' : cleaned;
   }
+
+  /// Price used in cart math when backend price is still a placeholder.
+  double get displayPrice => price ?? 0;
+
+  int get stockCount => stock ?? 0;
 
   /// Deterministic Picsum fallback when LoremFlickr is slow/unavailable.
   String get fallbackImageUrl {
@@ -55,13 +75,28 @@ class Product {
       name: json['name']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       categoryId: json['category_id']?.toString() ?? json['categoryId']?.toString() ?? '',
-      unitSize: json['unit_size']?.toString() ?? json['unitSize']?.toString() ?? '',
-      unitLabel: json['unit_label']?.toString() ?? json['unitLabel']?.toString() ?? 'unit',
-      wholesalePrice: ((json['wholesale_price'] ?? json['wholesalePrice'] ?? 0) as num).toDouble(),
+      unit: json['unit']?.toString() ??
+          json['unit_size']?.toString() ??
+          json['unitSize']?.toString() ??
+          'per kg',
       moq: ((json['moq'] ?? 1) as num).toInt(),
-      moqDisplay: json['moq_display']?.toString() ?? json['moqDisplay']?.toString(),
-      stockCount: ((json['stock_count'] ?? json['stockCount'] ?? 0) as num).toInt(),
+      price: json['price'] != null
+          ? (json['price'] as num).toDouble()
+          : json['wholesale_price'] != null
+              ? (json['wholesale_price'] as num).toDouble()
+              : json['wholesalePrice'] != null
+                  ? (json['wholesalePrice'] as num).toDouble()
+                  : null,
+      stock: json['stock'] != null
+          ? (json['stock'] as num).toInt()
+          : json['stock_count'] != null
+              ? (json['stock_count'] as num).toInt()
+              : json['stockCount'] != null
+                  ? (json['stockCount'] as num).toInt()
+                  : null,
       imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
+      batchNo: json['batch_no']?.toString() ?? json['batchNo']?.toString(),
+      itemCode: json['item_code']?.toString() ?? json['itemCode']?.toString(),
       description: json['description']?.toString(),
       inStock: json['in_stock'] as bool? ?? json['inStock'] as bool? ?? true,
     );
@@ -72,13 +107,13 @@ class Product {
         'name': name,
         'category': category,
         'category_id': categoryId,
-        'unit_size': unitSize,
-        'unit_label': unitLabel,
-        'wholesale_price': wholesalePrice,
+        'unit': unit,
         'moq': moq,
-        if (moqDisplay != null) 'moq_display': moqDisplay,
-        'stock_count': stockCount,
+        if (price != null) 'price': price,
+        if (stock != null) 'stock': stock,
         if (imageUrl != null) 'image_url': imageUrl,
+        if (batchNo != null) 'batch_no': batchNo,
+        if (itemCode != null) 'item_code': itemCode,
         if (description != null) 'description': description,
         'in_stock': inStock,
       };

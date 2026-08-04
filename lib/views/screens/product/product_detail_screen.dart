@@ -50,7 +50,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _loading = true;
       _error = null;
     });
-    final result = await context.read<ProductRepository>().fetchProduct(widget.productId);
+    final result = await context.read<ProductRepository>().getProductById(widget.productId);
     if (!mounted) return;
     result.when(
       success: (p) {
@@ -117,7 +117,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     final product = _product!;
-    final total = product.wholesalePrice * _qty;
+    final total = product.displayPrice * _qty;
 
     return Scaffold(
       backgroundColor: AppColors.section,
@@ -197,16 +197,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Text(product.name, style: AppTextStyles.display(fontSize: 24)),
                         const SizedBox(height: 8),
                         Text(
-                          '${product.category} · ${product.unitSize}',
+                          '${product.category} · ${product.unit}',
                           style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _priceFormat.format(product.wholesalePrice),
+                          product.price == null
+                              ? 'Price TBA'
+                              : _priceFormat.format(product.price),
                           style: AppTextStyles.price(fontSize: 28, color: AppColors.violet),
                         ),
                         Text(
-                          'per ${product.unitLabel} · wholesale',
+                          '${product.unit} · wholesale',
                           style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
                         ),
                         const SizedBox(height: 20),
@@ -232,7 +234,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Min ${product.moq} ${product.unitLabel}s',
+                                      'Min ${product.moq} ${product.unitNoun}',
                                       style: AppTextStyles.body(
                                         fontSize: 11,
                                         color: AppColors.muted,
@@ -244,7 +246,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               StepperQty(
                                 value: _qty,
                                 min: product.moq,
-                                max: product.stockCount,
+                                max: product.stockCount > 0 ? product.stockCount : 999,
                                 onChanged: _setQty,
                               ),
                             ],
@@ -263,7 +265,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '${product.stockCount} ${product.unitLabel}s available',
+                              product.stock == null
+                                  ? 'Stock available'
+                                  : '${product.stock} ${product.unitNoun} available',
                               style: AppTextStyles.body(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,

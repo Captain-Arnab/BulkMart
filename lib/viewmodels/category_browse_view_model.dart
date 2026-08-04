@@ -14,7 +14,6 @@ class CategoryBrowseViewModel extends ChangeNotifier {
   final ProductRepository _productRepository;
 
   bool isLoading = false;
-  bool isLoadingMore = false;
   String? error;
   List<Product> products = [];
   List<ProductCategory> categories = [];
@@ -28,8 +27,6 @@ class CategoryBrowseViewModel extends ChangeNotifier {
   bool inStockOnly = false;
   BrowseSort sort = BrowseSort.popularity;
 
-  int _page = 1;
-  bool hasMore = true;
   Timer? _debounce;
 
   int get activeFilterCount {
@@ -48,7 +45,7 @@ class CategoryBrowseViewModel extends ChangeNotifier {
   }
 
   Future<void> loadCategories() async {
-    final result = await _productRepository.fetchCategories();
+    final result = await _productRepository.getCategories();
     result.when(
       success: (list) {
         categories = list;
@@ -59,23 +56,24 @@ class CategoryBrowseViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    _page = 1;
-    hasMore = true;
     isLoading = true;
     error = null;
     notifyListeners();
 
-    final result = await _productRepository.fetchProducts(
-      categoryId: selectedCategoryId,
-      query: searchQuery,
-      page: _page,
-      limit: 100, // demo: pull enough then filter client-side
-    );
+    final q = searchQuery.trim();
+    final result = q.isNotEmpty
+        ? await _productRepository.searchProducts(q)
+        : selectedCategoryId != 'all'
+            ? await _productRepository.getProductsByCategory(selectedCategoryId)
+            : await _productRepository.getAllProducts();
 
     result.when(
-      success: (page) {
-        products = _applyLocalFilters(page.items);
-        hasMore = false;
+      success: (items) {
+        var list = items;
+        if (q.isNotEmpty && selectedCategoryId != 'all') {
+          list = list.where((p) => p.categoryId == selectedCategoryId).toList();
+        }
+        products = _applyLocalFilters(list);
         isLoading = false;
         notifyListeners();
       },
@@ -89,7 +87,8 @@ class CategoryBrowseViewModel extends ChangeNotifier {
 
   List<Product> _applyLocalFilters(List<Product> source) {
     var list = source.where((p) {
-      if (p.wholesalePrice < filterMinPrice || p.wholesalePrice > filterMaxPrice) {
+      final price = p.displayPrice;
+      if (price < filterMinPrice || price > filterMaxPrice) {
         return false;
       }
       if (inStockOnly && p.stockCount <= 0) return false;
@@ -98,9 +97,9 @@ class CategoryBrowseViewModel extends ChangeNotifier {
 
     switch (sort) {
       case BrowseSort.priceLowHigh:
-        list.sort((a, b) => a.wholesalePrice.compareTo(b.wholesalePrice));
+        list.sort((a, b) => a.displayPrice.compareTo(b.displayPrice));
       case BrowseSort.priceHighLow:
-        list.sort((a, b) => b.wholesalePrice.compareTo(a.wholesalePrice));
+        list.sort((a, b) => b.displayPrice.compareTo(a.displayPrice));
       case BrowseSort.popularity:
         break;
     }

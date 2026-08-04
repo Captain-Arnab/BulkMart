@@ -188,7 +188,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                         ),
                         Text(
-                          'Qty ${item.quantity.toString().padLeft(2, '0')} · ${item.product.unitSize}',
+                          'Qty ${item.quantity.toString().padLeft(2, '0')} · ${item.product.unit}',
                           style: AppTextStyles.mono(fontSize: 10, color: AppColors.slate),
                         ),
                       ],

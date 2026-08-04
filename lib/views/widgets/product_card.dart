@@ -68,8 +68,8 @@ class _ProductCardState extends State<ProductCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Image fills remaining height; text block stays compact.
                 Expanded(
-                  flex: 62,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -83,18 +83,18 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                       ),
                       Positioned(
-                        top: 10,
-                        left: 10,
+                        top: 8,
+                        left: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppColors.accent,
                             borderRadius: BorderRadius.circular(AppRadii.pill),
                           ),
                           child: Text(
-                            'MOQ ${widget.product.moq} ${widget.product.unitLabel}s',
+                            'MOQ ${widget.product.moq} ${widget.product.unitNoun}',
                             style: AppTextStyles.body(
-                              fontSize: 9.5,
+                              fontSize: 9,
                               fontWeight: FontWeight.w700,
                               color: AppColors.ink,
                             ),
@@ -102,8 +102,8 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                       ),
                       Positioned(
-                        right: 10,
-                        bottom: 10,
+                        right: 8,
+                        bottom: 8,
                         child: _QuickAddControl(
                           qty: qty,
                           inCart: inCart,
@@ -126,43 +126,43 @@ class _ProductCardState extends State<ProductCard> {
                     ],
                   ),
                 ),
-                Expanded(
-                  flex: 38,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.product.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
-                          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.body(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.15,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _priceFormat.format(widget.product.wholesalePrice),
-                          style: AppTextStyles.price(
-                            fontSize: 15,
-                            color: AppColors.green,
-                          ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        widget.product.price == null
+                            ? 'Price TBA'
+                            : _priceFormat.format(widget.product.price),
+                        style: AppTextStyles.price(
+                          fontSize: 14,
+                          color: AppColors.green,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.product.unitSize,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body(
-                            fontSize: 11,
-                            color: AppColors.muted,
-                          ),
+                      ),
+                      Text(
+                        widget.product.unit,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.body(
+                          fontSize: 10.5,
+                          color: AppColors.muted,
+                          height: 1.2,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -214,14 +214,14 @@ class _QuickAddControl extends StatelessWidget {
                 key: const ValueKey('plus'),
                 onTap: onAdd,
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: AppColors.success,
                     shape: BoxShape.circle,
                     boxShadow: AppShadows.button(color: AppColors.success),
                   ),
-                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                 ),
               ),
       ),
@@ -244,7 +244,7 @@ class _StepperPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 32,
       decoration: BoxDecoration(
         color: AppColors.success,
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -255,13 +255,13 @@ class _StepperPill extends StatelessWidget {
         children: [
           _StepIcon(icon: Icons.remove_rounded, onTap: onDecrement),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 3),
             child: AnimatedSwitcher(
               duration: AppMotion.press,
               child: Text(
                 '$qty',
                 key: ValueKey(qty),
-                style: AppTextStyles.price(fontSize: 13, color: AppColors.white),
+                style: AppTextStyles.price(fontSize: 12, color: AppColors.white),
               ),
             ),
           ),
@@ -283,9 +283,9 @@ class _StepIcon extends StatelessWidget {
     return PressableScale(
       onTap: onTap,
       child: SizedBox(
-        width: 32,
-        height: 36,
-        child: Icon(icon, color: AppColors.white, size: 18),
+        width: 28,
+        height: 32,
+        child: Icon(icon, color: AppColors.white, size: 16),
       ),
     );
   }
