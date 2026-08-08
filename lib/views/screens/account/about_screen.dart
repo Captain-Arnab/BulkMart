@@ -22,7 +22,7 @@ class AboutScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
             decoration: BoxDecoration(
               color: AppColors.greenSoft,
               borderRadius: BorderRadius.circular(AppRadii.lg),
@@ -30,22 +30,14 @@ class AboutScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.violet,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    'BM',
-                    style: AppTextStyles.display(fontSize: 22, color: AppColors.white),
-                  ),
+                Image.asset(
+                  'assets/branding/veggiicart_logo_transparent.png',
+                  width: 220,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  semanticLabel: 'VeggiiCart',
                 ),
-                const SizedBox(height: 14),
-                Text('BulkMart', style: AppTextStyles.display(fontSize: 22)),
-                const SizedBox(height: 4),
+                const SizedBox(height: 16),
                 Text(
                   'B2B bulk grocery ordering · Cash on Delivery',
                   textAlign: TextAlign.center,
@@ -57,7 +49,7 @@ class AboutScreen extends StatelessWidget {
                   style: AppTextStyles.body(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.violet,
+                    color: AppColors.green,
                   ),
                 ),
               ],
@@ -67,7 +59,7 @@ class AboutScreen extends StatelessWidget {
           const _InfoCard(
             title: 'Terms of Service',
             body:
-                'By using BulkMart you agree to place wholesale orders for business use, honour MOQs, and pay Cash on Delivery when your order arrives.',
+                'By using VeggiiCart you agree to place wholesale orders for business use, honour MOQs, and pay Cash on Delivery when your order arrives.',
           ).animate().fadeIn(delay: 60.ms, duration: 220.ms),
           const SizedBox(height: 12),
           const _InfoCard(
@@ -78,7 +70,7 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const _InfoCard(
             title: 'Payment',
-            body: 'Cash on Delivery is the only payment method on BulkMart — by design.',
+            body: 'Cash on Delivery is the only payment method on VeggiiCart — by design.',
           ).animate().fadeIn(delay: 180.ms, duration: 220.ms),
         ],
       ),

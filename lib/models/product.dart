@@ -69,6 +69,38 @@ class Product {
   String get primaryImageUrl =>
       (imageUrl != null && imageUrl!.isNotEmpty) ? imageUrl! : fallbackImageUrl;
 
+  Product copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? categoryId,
+    String? unit,
+    int? moq,
+    double? price,
+    int? stock,
+    String? imageUrl,
+    String? batchNo,
+    String? itemCode,
+    String? description,
+    bool? inStock,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
+      unit: unit ?? this.unit,
+      moq: moq ?? this.moq,
+      price: price ?? this.price,
+      stock: stock ?? this.stock,
+      imageUrl: imageUrl ?? this.imageUrl,
+      batchNo: batchNo ?? this.batchNo,
+      itemCode: itemCode ?? this.itemCode,
+      description: description ?? this.description,
+      inStock: inStock ?? this.inStock,
+    );
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id']?.toString() ?? '',

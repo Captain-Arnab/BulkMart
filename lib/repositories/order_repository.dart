@@ -79,6 +79,8 @@ class OrderRepository {
     }
 
     try {
+      // TODO: Pass `filter` as a query param when the live /orders endpoint
+      // supports status filtering (e.g. ?filter=pending|delivered|cancelled).
       final response = await _apiClient!.dio.get(
         ApiEndpoints.orders,
         queryParameters: {'page': page, 'limit': limit},
@@ -105,19 +107,24 @@ class OrderRepository {
   Future<Result<Order>> placeOrder({
     required List<Map<String, dynamic>> items,
     required String addressId,
+    String? deliveryAddress,
   }) async {
     if (AppConfig.kDemoMode) {
       await Future<void>.delayed(const Duration(milliseconds: 900));
       final stamp = DateTime.now().millisecondsSinceEpoch % 100000;
+      final addressText = (deliveryAddress != null && deliveryAddress.trim().isNotEmpty)
+          ? deliveryAddress.trim()
+          : 'Address $addressId';
       final order = Order(
-        id: 'BM-$stamp',
+        id: 'VC-$stamp',
         items: const [],
         status: OrderStatus.placed,
         subtotal: 0,
         deliveryFee: 0,
         total: 0,
         placedAt: DateTime.now(),
-        deliveryAddress: '12, Wholesale Market Road, Bengaluru 560001',
+        deliveryAddress: addressText,
+        paymentMethod: 'COD',
       );
       // Prefer reconstructing from cart payload via mock products when available.
       try {
@@ -136,6 +143,7 @@ class OrderRepository {
           total: subtotal,
           placedAt: order.placedAt,
           deliveryAddress: order.deliveryAddress,
+          paymentMethod: order.paymentMethod,
         );
         MockOrders.orders.insert(0, placed);
         return Success(placed);
@@ -150,6 +158,45 @@ class OrderRepository {
         ApiEndpoints.placeOrder,
         data: {'items': items, 'address_id': addressId, 'payment_method': 'COD'},
       );
+      final data = response.data['data'] as Map<String, dynamic>? ??
+          response.data as Map<String, dynamic>;
+      return Success(Order.fromJson(data));
+    } catch (e) {
+      return Failure(e.toString());
+    }
+  }
+
+  Future<Result<Order>> cancelOrder(String id) async {
+    if (AppConfig.kDemoMode) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      final index = MockOrders.orders.indexWhere((o) => o.id == id);
+      if (index < 0) {
+        return const Failure('Order not found', statusCode: 404);
+      }
+      final current = MockOrders.orders[index];
+      if (current.status != OrderStatus.placed &&
+          current.status != OrderStatus.confirmed) {
+        return const Failure('This order can no longer be cancelled');
+      }
+      final cancelled = Order(
+        id: current.id,
+        items: current.items,
+        status: OrderStatus.cancelled,
+        subtotal: current.subtotal,
+        deliveryFee: current.deliveryFee,
+        total: current.total,
+        placedAt: current.placedAt,
+        estimatedDeliveryDate: current.estimatedDeliveryDate,
+        deliveryAddress: current.deliveryAddress,
+        paymentMethod: current.paymentMethod,
+      );
+      MockOrders.orders[index] = cancelled;
+      return Success(cancelled);
+    }
+
+    try {
+      // TODO: Wire to PATCH/POST cancel endpoint when backend is ready.
+      final response = await _apiClient!.dio.post('${ApiEndpoints.orderDetail(id)}/cancel');
       final data = response.data['data'] as Map<String, dynamic>? ??
           response.data as Map<String, dynamic>;
       return Success(Order.fromJson(data));

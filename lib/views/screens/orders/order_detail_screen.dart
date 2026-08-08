@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/order.dart';
+import '../../../models/order_status.dart';
+import '../../../models/payment_method.dart';
 import '../../../repositories/order_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -21,6 +23,7 @@ class OrderDetailScreen extends StatefulWidget {
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _loading = true;
+  bool _cancelling = false;
   String? _error;
   Order? _order;
 
@@ -121,7 +124,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      'Cash on Delivery',
+                      order.paymentMethod.paymentMethodLabel,
                       style: AppTextStyles.body(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -206,8 +209,85 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             );
           }),
+          if (_canCancel(order)) ...[
+            const SizedBox(height: 24),
+            OutlinedButton(
+              onPressed: _cancelling ? null : () => _confirmCancel(order),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.rust,
+                side: const BorderSide(color: AppColors.rust),
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                _cancelling ? 'Cancelling…' : 'Cancel Order',
+                style: AppTextStyles.body(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.rust,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  bool _canCancel(Order order) =>
+      order.status == OrderStatus.placed || order.status == OrderStatus.confirmed;
+
+  Future<void> _confirmCancel(Order order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Cancel order?', style: AppTextStyles.display(fontSize: 18)),
+        content: Text(
+          'Cancel ${order.id}? This cannot be undone.',
+          style: AppTextStyles.body(fontSize: 14, color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Cancel order',
+              style: AppTextStyles.body(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.rust,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    final result = await context.read<OrderRepository>().cancelOrder(order.id);
+    if (!mounted) return;
+    result.when(
+      success: (updated) {
+        setState(() {
+          _order = updated;
+          _cancelling = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order cancelled')),
+        );
+      },
+      failure: (message, {statusCode}) {
+        setState(() => _cancelling = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppColors.rust),
+        );
+      },
     );
   }
 }

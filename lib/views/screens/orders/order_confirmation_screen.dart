@@ -9,6 +9,7 @@ import '../../../core/navigation/root_navigator.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/shell_controller.dart';
 import '../../../models/order.dart';
+import '../../../models/payment_method.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../widgets/primary_button.dart';
@@ -103,7 +104,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${order.items.length} items · Cash on Delivery',
+                      '${order.items.length} items · ${order.paymentMethod.paymentMethodLabel}',
                       style: AppTextStyles.body(fontSize: 12, color: AppColors.slate),
                     ),
                   ],

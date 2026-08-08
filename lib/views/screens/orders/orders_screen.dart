@@ -9,6 +9,7 @@ import '../../../core/ui/pressable_scale.dart';
 import '../../../core/ui/shell_controller.dart';
 import '../../../models/order.dart';
 import '../../../models/order_status.dart';
+import '../../../models/payment_method.dart';
 import '../../../repositories/order_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
@@ -338,7 +339,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             ),
                             const Spacer(),
                             Text(
-                              'Cash on Delivery',
+                              order.paymentMethod.paymentMethodLabel,
                               style: AppTextStyles.body(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,

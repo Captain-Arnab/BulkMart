@@ -6,6 +6,6 @@ class AppConfig {
   /// When `false`, repositories call Dio / [ApiEndpoints].
   static const bool kDemoMode = true;
 
-  static const String appName = 'BulkMart';
+  static const String appName = 'VeggiiCart';
   static const String companySlug = 'virtuousglobal';
 }

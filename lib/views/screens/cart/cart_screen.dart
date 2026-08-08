@@ -10,7 +10,9 @@ import '../../../models/cart_item.dart';
 import '../../../repositories/order_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../../../viewmodels/address_view_model.dart';
 import '../../../viewmodels/cart_view_model.dart';
+import '../../widgets/location_picker_sheet.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/product_network_image.dart';
 import '../../widgets/stepper_qty.dart';
@@ -35,7 +37,9 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _placeOrder() async {
     final cart = context.read<CartViewModel>();
-    if (cart.items.isEmpty) return;
+    final addressVm = context.read<AddressViewModel>();
+    final delivery = addressVm.defaultAddress;
+    if (cart.items.isEmpty || delivery == null) return;
 
     setState(() => _placeState = PrimaryButtonState.loading);
     HapticFeedback.lightImpact();
@@ -46,7 +50,8 @@ class _CartScreenState extends State<CartScreen> {
 
     final result = await context.read<OrderRepository>().placeOrder(
           items: payload,
-          addressId: 'addr_demo_1',
+          addressId: delivery.id,
+          deliveryAddress: delivery.fullAddress,
         );
 
     if (!mounted) return;
@@ -72,10 +77,13 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartViewModel>();
+    final addressVm = context.watch<AddressViewModel>();
+    final delivery = addressVm.defaultAddress;
     final shell = context.read<ShellController>();
     // Clearance for floating bottom nav pill (64) + gap + system inset.
     final bottomClearance =
         64 + 12 + MediaQuery.viewPaddingOf(context).bottom + 8;
+    final canPlace = delivery != null && cart.items.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -117,6 +125,29 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   child: Column(
                     children: [
+                      PressableAddressRow(
+                        label: delivery == null
+                            ? 'Select a delivery address'
+                            : '${delivery.label} · ${delivery.city}',
+                        subtitle: delivery?.fullAddress,
+                        missing: delivery == null,
+                        onTap: () => showLocationPickerSheet(context),
+                      ),
+                      if (delivery == null) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Select a delivery address to continue',
+                            style: AppTextStyles.body(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.rust,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
                       _summaryRow('Subtotal', _priceFormat.format(cart.subtotal)),
                       _summaryRow('Delivery', 'Free · COD'),
                       const SizedBox(height: 8),
@@ -177,8 +208,10 @@ class _CartScreenState extends State<CartScreen> {
                       PrimaryButton(
                         label: 'Place Order (COD)',
                         state: _placeState,
-                        backgroundColor: AppColors.success,
-                        onPressed: _placeOrder,
+                        backgroundColor: canPlace
+                            ? AppColors.success
+                            : AppColors.muted.withValues(alpha: 0.45),
+                        onPressed: canPlace ? _placeOrder : null,
                       ),
                     ],
                   ),
@@ -200,6 +233,78 @@ class _CartScreenState extends State<CartScreen> {
             style: AppTextStyles.mono(fontSize: 12, fontWeight: FontWeight.w700),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class PressableAddressRow extends StatelessWidget {
+  const PressableAddressRow({
+    super.key,
+    required this.label,
+    this.subtitle,
+    required this.missing,
+    required this.onTap,
+  });
+
+  final String label;
+  final String? subtitle;
+  final bool missing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: missing ? AppColors.rust.withValues(alpha: 0.06) : AppColors.section,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            border: Border.all(
+              color: missing ? AppColors.rust.withValues(alpha: 0.35) : AppColors.line,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                color: missing ? AppColors.rust : AppColors.green,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: missing ? AppColors.rust : AppColors.ink,
+                      ),
+                    ),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.body(fontSize: 11, color: AppColors.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+            ],
+          ),
+        ),
       ),
     );
   }

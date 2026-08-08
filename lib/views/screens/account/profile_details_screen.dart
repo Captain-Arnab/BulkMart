@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
+import '../../../models/business_type.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
@@ -23,35 +24,48 @@ class ProfileDetailsScreen extends StatefulWidget {
 }
 
 class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
-  static const _types = ['Wholesaler', 'Restaurant', 'Retailer', 'Other'];
-
   late final TextEditingController _business;
   late final TextEditingController _gst;
   late final TextEditingController _contact;
   late final TextEditingController _mobile;
+  late final TextEditingController _loginEmail;
+  late final TextEditingController _loginPassword;
+  late final TextEditingController _loginPasswordConfirm;
 
   late String _initialBusiness;
-  late String _initialType;
+  late String _initialTypeId;
   late String _initialGst;
   late String _initialContact;
-  late String _type;
+  late String _typeId;
   Object? _avatarBounceKey;
 
+  bool _setPasswordExpanded = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  String? _passwordSectionError;
+  bool _savingPassword = false;
+
   final _picker = ImagePicker();
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   void initState() {
     super.initState();
     final user = context.read<AuthViewModel>().user;
     _initialBusiness = user?.businessName ?? '';
-    _initialType = user?.businessType ?? 'Wholesaler';
+    _initialTypeId = user?.businessTypeId ??
+        BusinessTypes.byId(user?.businessType).id;
     _initialGst = user?.gstNumber ?? '';
-    _initialContact = user?.contactPerson ?? '';
-    _type = _initialType;
+    _initialContact = user?.displayOwnerName ?? '';
+    _typeId = _initialTypeId;
     _business = TextEditingController(text: _initialBusiness);
     _gst = TextEditingController(text: _initialGst);
     _contact = TextEditingController(text: _initialContact);
     _mobile = TextEditingController(text: user?.mobile ?? '');
+    _loginEmail = TextEditingController(text: user?.email ?? '');
+    _loginPassword = TextEditingController();
+    _loginPasswordConfirm = TextEditingController();
+    _setPasswordExpanded = user?.hasPassword != true;
   }
 
   @override
@@ -60,12 +74,15 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     _gst.dispose();
     _contact.dispose();
     _mobile.dispose();
+    _loginEmail.dispose();
+    _loginPassword.dispose();
+    _loginPasswordConfirm.dispose();
     super.dispose();
   }
 
   bool get _dirty {
     return _business.text.trim() != _initialBusiness ||
-        _type != _initialType ||
+        _typeId != _initialTypeId ||
         _gst.text.trim() != _initialGst ||
         _contact.text.trim() != _initialContact;
   }
@@ -74,7 +91,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     final auth = context.read<AuthViewModel>();
     final ok = await auth.updateProfile(
       businessName: _business.text,
-      businessType: _type,
+      businessType: _typeId,
       gstNumber: _gst.text,
       contactPerson: _contact.text,
     );
@@ -91,6 +108,43 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     showAppSuccessSnackBar(context, message: 'Profile updated successfully');
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _saveLoginPassword() async {
+    final email = _loginEmail.text.trim();
+    final password = _loginPassword.text;
+    final confirm = _loginPasswordConfirm.text;
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _passwordSectionError = 'Enter a valid email address');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _passwordSectionError = 'Password must be at least 6 characters');
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _passwordSectionError = 'Passwords do not match');
+      return;
+    }
+    setState(() {
+      _passwordSectionError = null;
+      _savingPassword = true;
+    });
+    final auth = context.read<AuthViewModel>();
+    final ok = await auth.setLoginPassword(email: email, password: password);
+    if (!mounted) return;
+    setState(() => _savingPassword = false);
+    if (!ok) {
+      setState(() => _passwordSectionError = auth.error ?? 'Could not set password');
+      return;
+    }
+    _loginPassword.clear();
+    _loginPasswordConfirm.clear();
+    setState(() => _setPasswordExpanded = false);
+    showAppSuccessSnackBar(
+      context,
+      message: 'Password set — you can now login with email',
+    );
   }
 
   Future<void> _openAvatarSheet() async {
@@ -204,7 +258,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                     .slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 4),
                 Text(
-                  'Update how buyers see your business on BulkMart.',
+                  'Update how buyers see your business on VeggiiCart.',
                   style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
                 ).animate().fadeIn(delay: 40.ms, duration: 200.ms),
                 const SizedBox(height: 20),
@@ -245,13 +299,13 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _types.map((t) {
-                    final selected = t == _type;
+                  children: BusinessTypes.all.map((t) {
+                    final selected = t.id == _typeId;
                     return PressableScale(
-                      onTap: () => setState(() => _type = t),
+                      onTap: () => setState(() => _typeId = t.id),
                       child: AnimatedContainer(
                         duration: AppMotion.fast,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                         decoration: BoxDecoration(
                           color: selected ? AppColors.violet : AppColors.white,
                           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -260,9 +314,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                           ),
                         ),
                         child: Text(
-                          t,
+                          t.label,
                           style: AppTextStyles.body(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: selected ? AppColors.white : AppColors.ink,
                           ),
@@ -307,6 +361,30 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   'Contact support to change',
                   style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
                 ),
+                const SizedBox(height: 28),
+                _PasswordOptInSection(
+                  hasPassword: auth.user?.hasPassword == true,
+                  expanded: _setPasswordExpanded,
+                  onToggleExpand: () =>
+                      setState(() => _setPasswordExpanded = !_setPasswordExpanded),
+                  emailController: _loginEmail,
+                  passwordController: _loginPassword,
+                  confirmController: _loginPasswordConfirm,
+                  obscurePassword: _obscurePassword,
+                  obscureConfirm: _obscureConfirm,
+                  onToggleObscurePassword: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                  onToggleObscureConfirm: () =>
+                      setState(() => _obscureConfirm = !_obscureConfirm),
+                  errorText: _passwordSectionError,
+                  isSaving: _savingPassword || auth.isLoading,
+                  onSave: _saveLoginPassword,
+                  onFieldChanged: () {
+                    if (_passwordSectionError != null) {
+                      setState(() => _passwordSectionError = null);
+                    }
+                  },
+                ).animate().fadeIn(delay: 240.ms, duration: 200.ms),
               ],
             ),
           ),
@@ -323,6 +401,172 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               onPressed: _save,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasswordOptInSection extends StatelessWidget {
+  const _PasswordOptInSection({
+    required this.hasPassword,
+    required this.expanded,
+    required this.onToggleExpand,
+    required this.emailController,
+    required this.passwordController,
+    required this.confirmController,
+    required this.obscurePassword,
+    required this.obscureConfirm,
+    required this.onToggleObscurePassword,
+    required this.onToggleObscureConfirm,
+    required this.errorText,
+    required this.isSaving,
+    required this.onSave,
+    required this.onFieldChanged,
+  });
+
+  final bool hasPassword;
+  final bool expanded;
+  final VoidCallback onToggleExpand;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController confirmController;
+  final bool obscurePassword;
+  final bool obscureConfirm;
+  final VoidCallback onToggleObscurePassword;
+  final VoidCallback onToggleObscureConfirm;
+  final String? errorText;
+  final bool isSaving;
+  final VoidCallback onSave;
+  final VoidCallback onFieldChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PressableScale(
+            onTap: onToggleExpand,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasPassword
+                            ? 'Email & password login'
+                            : 'Set a password for faster login',
+                        style: AppTextStyles.body(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.forest,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasPassword
+                            ? 'You can sign in with email on the Login screen. Tap to update.'
+                            : 'Optional — after mobile registration, opt into email + password.',
+                        style: AppTextStyles.body(fontSize: 12, color: AppColors.muted, height: 1.35),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  color: AppColors.green,
+                ),
+              ],
+            ),
+          ),
+          if (hasPassword && !expanded) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.greenSoft,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+              child: Text(
+                'Enabled',
+                style: AppTextStyles.body(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.green,
+                ),
+              ),
+            ),
+          ],
+          if (expanded) ...[
+            const SizedBox(height: 16),
+            const AuthFieldLabel('Login email'),
+            const SizedBox(height: 8),
+            PillTextField(
+              controller: emailController,
+              hint: 'you@business.com',
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => onFieldChanged(),
+            ),
+            const SizedBox(height: 14),
+            const AuthFieldLabel('Password'),
+            const SizedBox(height: 8),
+            PillTextField(
+              controller: passwordController,
+              hint: 'Min. 6 characters',
+              obscureText: obscurePassword,
+              suffix: IconButton(
+                onPressed: onToggleObscurePassword,
+                icon: Icon(
+                  obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppColors.muted,
+                  size: 22,
+                ),
+              ),
+              onChanged: (_) => onFieldChanged(),
+            ),
+            const SizedBox(height: 14),
+            const AuthFieldLabel('Confirm password'),
+            const SizedBox(height: 8),
+            PillTextField(
+              controller: confirmController,
+              hint: 'Re-enter password',
+              obscureText: obscureConfirm,
+              suffix: IconButton(
+                onPressed: onToggleObscureConfirm,
+                icon: Icon(
+                  obscureConfirm
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppColors.muted,
+                  size: 22,
+                ),
+              ),
+              onChanged: (_) => onFieldChanged(),
+            ),
+            if (errorText != null && errorText!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                errorText!,
+                style: AppTextStyles.body(fontSize: 12, color: AppColors.alert),
+              ),
+            ],
+            const SizedBox(height: 14),
+            AuthPrimaryButton(
+              label: hasPassword ? 'Update Password' : 'Enable Email Login',
+              isLoading: isSaving,
+              onPressed: onSave,
+            ),
+          ],
         ],
       ),
     );

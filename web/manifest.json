@@ -1,11 +1,11 @@
 {
-    "name": "BulkMart",
-    "short_name": "BulkMart",
+    "name": "VeggiiCart",
+    "short_name": "VeggiiCart",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#2F6D4F",
-    "theme_color": "#2F6D4F",
-    "description": "BulkMart — B2B bulk grocery ordering",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0D9F58",
+    "description": "VeggiiCart — B2B bulk grocery ordering",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -10,7 +10,7 @@ class MockOrders {
   static final List<Order> orders = [
     // Out for Delivery
     Order(
-      id: 'BM-10428',
+      id: 'VC-10428',
       items: [
         CartItem(product: MockProducts.byId('gv-01'), quantity: 20),
         CartItem(product: MockProducts.byId('rv-04'), quantity: 30),
@@ -25,7 +25,7 @@ class MockOrders {
     ),
     // Delivered
     Order(
-      id: 'BM-10391',
+      id: 'VC-10391',
       items: [
         CartItem(product: MockProducts.byId('gv-04'), quantity: 15),
         CartItem(product: MockProducts.byId('rv-03'), quantity: 20),
@@ -41,7 +41,7 @@ class MockOrders {
     ),
     // Awaiting Delivery Date (confirmed, no ETA yet)
     Order(
-      id: 'BM-10455',
+      id: 'VC-10455',
       items: [
         CartItem(product: MockProducts.byId('sf-01'), quantity: 10),
         CartItem(product: MockProducts.byId('gv-14'), quantity: 8),
@@ -56,7 +56,7 @@ class MockOrders {
     ),
     // Delivery date set — waiting for dispatch
     Order(
-      id: 'BM-10440',
+      id: 'VC-10440',
       items: [
         CartItem(product: MockProducts.byId('rv-05'), quantity: 25),
         CartItem(product: MockProducts.byId('hl-01'), quantity: 10),
@@ -72,7 +72,7 @@ class MockOrders {
     ),
     // Cancelled
     Order(
-      id: 'BM-10350',
+      id: 'VC-10350',
       items: [
         CartItem(product: MockProducts.byId('sf-02'), quantity: 6),
       ],

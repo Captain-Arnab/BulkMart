@@ -8,9 +8,11 @@ import 'core/navigation/app_page_route.dart';
 import 'core/navigation/root_navigator.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/ui/shell_controller.dart';
+import 'repositories/address_repository.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/order_repository.dart';
 import 'repositories/product_repository.dart';
+import 'repositories/support_repository.dart';
 import 'services/api/api_client.dart';
 import 'theme/app_theme.dart';
 import 'viewmodels/address_view_model.dart';
@@ -37,6 +39,8 @@ Future<void> main() async {
   final authRepository = AuthRepository(storage: storage);
   final productRepository = ProductRepository(apiClient: apiClient);
   final orderRepository = OrderRepository(apiClient: apiClient);
+  final addressRepository = AddressRepository(apiClient: apiClient);
+  final supportRepository = SupportRepository(apiClient: apiClient);
 
   runApp(
     MultiProvider(
@@ -46,6 +50,8 @@ Future<void> main() async {
         Provider.value(value: authRepository),
         Provider.value(value: productRepository),
         Provider.value(value: orderRepository),
+        Provider.value(value: addressRepository),
+        Provider.value(value: supportRepository),
         ChangeNotifierProvider(create: (_) => ShellController()),
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authRepository: authRepository),
@@ -54,9 +60,11 @@ Future<void> main() async {
           create: (_) => HomeViewModel(productRepository: productRepository),
         ),
         ChangeNotifierProvider(create: (_) => CartViewModel()),
-        ChangeNotifierProvider(create: (_) => AddressViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => AddressViewModel(addressRepository: addressRepository),
+        ),
       ],
-      child: const BulkMartApp(),
+      child: const VeggiiCartApp(),
     ),
   );
 
@@ -76,14 +84,14 @@ Future<void> _preloadFonts() async {
   }
 }
 
-class BulkMartApp extends StatelessWidget {
-  const BulkMartApp({super.key});
+class VeggiiCartApp extends StatelessWidget {
+  const VeggiiCartApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      title: 'BulkMart',
+      title: 'VeggiiCart',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const SplashScreen(),

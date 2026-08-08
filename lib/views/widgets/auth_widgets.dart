@@ -70,6 +70,7 @@ class PillTextField extends StatefulWidget {
     this.keyboardType,
     this.inputFormatters,
     this.prefix,
+    this.suffix,
     this.maxLines = 1,
     this.minLines,
     this.errorText,
@@ -78,6 +79,8 @@ class PillTextField extends StatefulWidget {
     this.tall = false,
     this.enabled = true,
     this.readOnly = false,
+    this.obscureText = false,
+    this.autofillHints,
   });
 
   final TextEditingController controller;
@@ -86,6 +89,7 @@ class PillTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? prefix;
+  final Widget? suffix;
   final int maxLines;
   final int? minLines;
   final String? errorText;
@@ -94,6 +98,8 @@ class PillTextField extends StatefulWidget {
   final bool tall;
   final bool enabled;
   final bool readOnly;
+  final bool obscureText;
+  final Iterable<String>? autofillHints;
 
   @override
   State<PillTextField> createState() => _PillTextFieldState();
@@ -198,6 +204,8 @@ class _PillTextFieldState extends State<PillTextField>
                       minLines: widget.minLines,
                       textCapitalization: widget.textCapitalization,
                       onChanged: widget.onChanged,
+                      obscureText: widget.obscureText,
+                      autofillHints: widget.autofillHints,
                       cursorColor: AppColors.violet,
                       style: AppTextStyles.body(
                         fontSize: 16,
@@ -225,6 +233,7 @@ class _PillTextFieldState extends State<PillTextField>
                       ),
                     ),
                   ),
+                  if (widget.suffix != null) widget.suffix!,
                 ],
               ),
             ),

@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 
-/// Circular dashed "stamp" badge — signature BulkMart element (MOQ / B2B / stock).
+/// Circular dashed "stamp" badge — signature VeggiiCart element (MOQ / B2B / stock).
 class MoqBadge extends StatelessWidget {
   const MoqBadge({
     super.key,
     required this.label,
     this.title = 'MOQ',
     this.size = 42,
-    this.color = AppColors.rust,
+    this.color = AppColors.accent,
     this.fontSize = 9,
     this.rotation = -0.16,
   });

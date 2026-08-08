@@ -51,7 +51,7 @@ class ApiClient {
   }
 
   /// Placeholder — replace when staging/production URL is shared.
-  static const String kDefaultBaseUrl = 'https://api.bulkmart.example/v1';
+  static const String kDefaultBaseUrl = 'https://api.veggiicart.example/v1';
 
   final SecureStorageService _storage;
   UnauthorizedCallback? onUnauthorized;

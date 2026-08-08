@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>BulkMart</string>
+	<string>VeggiiCart</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>BulkMart</string>
+	<string>VeggiiCart</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,8 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>BulkMart needs camera access to set your business profile photo.</string>
+	<string>VeggiiCart needs camera access to set your business profile photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BulkMart needs photo library access to set your business profile photo.</string>
+	<string>VeggiiCart needs photo library access to set your business profile photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VeggiiCart uses your location to pin your shop for COD deliveries.</string>
 </dict>
 </plist>

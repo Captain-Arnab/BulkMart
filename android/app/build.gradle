@@ -2,7 +2,7 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    // Google Services removed until a BulkMart Firebase project is created.
+    // Google Services removed until a VeggiiCart Firebase project is created.
     // Re-add: id "com.google.gms.google-services"
 }
 
@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.virtuousglobal.bulkmart"
+    namespace "com.virtuousglobal.veggiicart"
     compileSdk 36
     ndkVersion "27.0.12077973"
 
@@ -40,7 +40,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.virtuousglobal.bulkmart"
+        applicationId "com.virtuousglobal.veggiicart"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()

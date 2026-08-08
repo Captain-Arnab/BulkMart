@@ -409,8 +409,8 @@ class _CategoryProductSection extends StatelessWidget {
         Builder(
           builder: (context) {
             final screenW = MediaQuery.sizeOf(context).width;
-            // ~2.35 cards visible so the next card peeks; clamps for tiny/large phones.
-            final cardW = (screenW / 2.35).clamp(128.0, 168.0);
+            // ~3.4 cards in the initial viewport (glimpse, not a catalog).
+            final cardW = (screenW / 3.4).clamp(100.0, 132.0);
             // Compact ratio: square-ish image + fixed text block (~1.38 overall).
             final cardH = cardW * 1.38;
             return SizedBox(
@@ -453,16 +453,16 @@ class _HomeBannerCarouselState extends State<_HomeBannerCarousel> {
   static const _banners = [
     _BannerData(
       title: 'Flat 10% off on bulk\norders above ₹10,000',
-      colors: [AppColors.green, AppColors.greenLight],
+      colors: [AppColors.forest, AppColors.green],
     ),
     _BannerData(
       title: 'Fresh greens delivered\nin bulk this week',
-      colors: [Color(0xFFFFC93C), Color(0xFFFFB347)],
+      colors: [AppColors.accent, Color(0xFFE8940A)],
       textColor: AppColors.ink,
     ),
     _BannerData(
       title: 'Free delivery\nthis week',
-      colors: [Color(0xFF0A7A44), Color(0xFF0D9F58)],
+      colors: [AppColors.green, AppColors.greenLight],
     ),
   ];
 

@@ -24,8 +24,19 @@ class MockProducts {
 
   // ---------------------------------------------------------------------------
   // Prices below (₹20–₹120) are DUMMY placeholders pending backend pricing.
+  // Descriptions are representative copy for the Product Detail info section.
   // ---------------------------------------------------------------------------
-  static const List<Product> products = [
+  static final List<Product> products = List.unmodifiable(
+    _rawProducts.map((p) => p.copyWith(description: _descriptionFor(p))),
+  );
+
+  static String _descriptionFor(Product p) {
+    return 'Wholesale-grade ${p.name} sourced for restaurants, retailers, and '
+        'bulk kitchens. Sold ${p.unit}. Minimum order quantity: ${p.moq} ${p.unitNoun}. '
+        'Fresh produce packed for B2B COD delivery.';
+  }
+
+  static const List<Product> _rawProducts = [
     // —— Green Vegetables (17) ——
     Product(
       id: 'gv-01',

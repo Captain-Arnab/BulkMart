@@ -11,6 +11,7 @@ import '../../../repositories/product_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/cart_view_model.dart';
+import '../../widgets/moq_badge.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_network_image.dart';
 import '../../widgets/stepper_qty.dart';
@@ -165,6 +166,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                       ),
+                      Positioned(
+                        bottom: 16,
+                        right: 28,
+                        child: MoqBadge(
+                          label: '${product.moq} ${product.unitNoun}',
+                          color: AppColors.ink,
+                          size: 52,
+                          fontSize: 9,
+                        ),
+                      ),
                       if (product.inStock)
                         Positioned(
                           top: MediaQuery.paddingOf(context).top + 20,
@@ -276,6 +287,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                           ],
                         ),
+                        if (product.description != null &&
+                            product.description!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Text(
+                            'Product Description',
+                            style: AppTextStyles.body(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(AppRadii.lg),
+                              border: Border.all(color: AppColors.line),
+                            ),
+                            child: Text(
+                              product.description!,
+                              style: AppTextStyles.body(
+                                fontSize: 13,
+                                color: AppColors.muted,
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

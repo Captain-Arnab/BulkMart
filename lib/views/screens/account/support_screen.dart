@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../models/order.dart';
+import '../../../models/support_ticket.dart';
 import '../../../repositories/order_repository.dart';
+import '../../../repositories/support_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../widgets/app_snackbar.dart';
@@ -23,6 +25,8 @@ class _SupportScreenState extends State<SupportScreen> {
   final _search = TextEditingController();
   int? _expandedFaq;
   String? _ticketId;
+  List<SupportTicket> _tickets = [];
+  bool _loadingTickets = true;
 
   static const _faqs = [
     (
@@ -35,7 +39,7 @@ class _SupportScreenState extends State<SupportScreen> {
     ),
     (
       q: 'How does Cash on Delivery work?',
-      a: 'BulkMart is COD-only. Pay the delivery partner in cash when your order arrives — no cards or UPI needed.',
+      a: 'VeggiiCart is COD-only. Pay the delivery partner in cash when your order arrives — no cards or UPI needed.',
     ),
     (
       q: 'Can I cancel an order?',
@@ -44,9 +48,28 @@ class _SupportScreenState extends State<SupportScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadTickets();
+  }
+
+  @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTickets() async {
+    setState(() => _loadingTickets = true);
+    final result = await context.read<SupportRepository>().fetchTickets();
+    if (!mounted) return;
+    result.when(
+      success: (list) => setState(() {
+        _tickets = list;
+        _loadingTickets = false;
+      }),
+      failure: (_, {statusCode}) => setState(() => _loadingTickets = false),
+    );
   }
 
   List<({String q, String a})> get _filteredFaqs {
@@ -65,7 +88,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> _whatsApp() async {
-    final uri = Uri.parse('https://wa.me/918000000000?text=Hi%20BulkMart%20Support');
+    final uri = Uri.parse('https://wa.me/918000000000?text=Hi%20VeggiiCart%20Support');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -79,7 +102,10 @@ class _SupportScreenState extends State<SupportScreen> {
       builder: (_) => const _TicketSheet(),
     );
     if (result == null || !mounted) return;
-    setState(() => _ticketId = result.id);
+    setState(() {
+      _ticketId = result.ticket.id;
+      _tickets = [result.ticket, ..._tickets.where((t) => t.id != result.ticket.id)];
+    });
     showAppSuccessSnackBar(context, message: 'Support ticket submitted');
   }
 
@@ -245,6 +271,89 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ).animate().fadeIn(delay: 120.ms, duration: 220.ms),
           const SizedBox(height: 24),
+          Text('My Tickets', style: AppTextStyles.display(fontSize: 16)),
+          const SizedBox(height: 10),
+          if (_loadingTickets)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.violet),
+                ),
+              ),
+            )
+          else if (_tickets.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Text(
+                'No tickets yet. Raise one above if you need help.',
+                style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
+              ),
+            )
+          else
+            ..._tickets.map((t) {
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(AppRadii.lg),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            t.id,
+                            style: AppTextStyles.mono(fontSize: 11, color: AppColors.slate),
+                          ),
+                        ),
+                        Text(
+                          t.status.toUpperCase(),
+                          style: AppTextStyles.body(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.violet,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      t.subject,
+                      style: AppTextStyles.body(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      t.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
+                    ),
+                    if (t.relatedOrderId != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Order ${t.relatedOrderId}',
+                        style: AppTextStyles.mono(fontSize: 10, color: AppColors.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          const SizedBox(height: 24),
           Text('Still need help?', style: AppTextStyles.display(fontSize: 16)),
           const SizedBox(height: 12),
           Row(
@@ -317,8 +426,8 @@ class _SupportScreenState extends State<SupportScreen> {
 }
 
 class _TicketResult {
-  const _TicketResult(this.id);
-  final String id;
+  const _TicketResult(this.ticket);
+  final SupportTicket ticket;
 }
 
 class _TicketSheet extends StatefulWidget {
@@ -371,10 +480,21 @@ class _TicketSheetState extends State<_TicketSheet> {
   Future<void> _submit() async {
     if (_desc.text.trim().isEmpty) return;
     setState(() => _submitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final result = await context.read<SupportRepository>().submitTicket(
+          subject: _subject,
+          description: _desc.text.trim(),
+          relatedOrderId: _relatedOrderId,
+        );
     if (!mounted) return;
-    final id = 'SPT-${1000 + DateTime.now().millisecond % 9000}';
-    Navigator.of(context).pop(_TicketResult(id));
+    result.when(
+      success: (ticket) => Navigator.of(context).pop(_TicketResult(ticket)),
+      failure: (message, {statusCode}) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppColors.rust),
+        );
+      },
+    );
   }
 
   @override

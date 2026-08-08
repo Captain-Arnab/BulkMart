@@ -1,8 +1,6 @@
-# BulkMart — B2B Bulk Ordering App
+# VeggiiCart — B2B Bulk Ordering App
 
 Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delivery only.
-
-> Working name: **BulkMart** (final brand TBD).
 
 ## Stack
 
@@ -14,7 +12,7 @@ Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delive
 | Networking | Dio + `Result<T>` |
 | Auth storage | `flutter_secure_storage` |
 | Images | `cached_network_image` |
-| Fonts | Roboto Slab · Inter · Space Mono |
+| Fonts | Plus Jakarta Sans · Inter |
 
 ## Demo mode
 
@@ -39,21 +37,20 @@ flutter run
 
 | Key | Value |
 |-----|--------|
-| App name | BulkMart |
-| Android applicationId | `com.virtuousglobal.bulkmart` |
-| iOS bundle id | `com.virtuousglobal.bulkmart` |
+| App name | VeggiiCart |
+| Android applicationId | `com.virtuousglobal.veggiicart` |
+| iOS bundle id | `com.virtuousglobal.veggiicart` |
 
 ## Layout
 
 ```
 lib/
 ├── core/config/          # kDemoMode
-├── data/mock/            # mock_products, mock_orders
+├── data/mock/            # Demo catalog & orders
 ├── models/
 ├── repositories/
 ├── services/api/
+├── theme/
 ├── viewmodels/
-├── views/screens/
-├── views/widgets/
-└── theme/
+└── views/
 ```

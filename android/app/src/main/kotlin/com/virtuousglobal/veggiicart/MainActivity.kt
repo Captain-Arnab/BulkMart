@@ -1,4 +1,4 @@
-package com.virtuousglobal.bulkmart
+﻿package com.virtuousglobal.veggiicart
 
 import io.flutter.embedding.android.FlutterActivity
 
