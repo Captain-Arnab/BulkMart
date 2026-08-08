@@ -34,7 +34,7 @@ class AppPageRoute<T> extends PageRouteBuilder<T> {
   final bool slide;
 
   static Future<T?> push<T>(BuildContext context, Widget page, {bool slide = true}) {
-    return Navigator.of(context).push<T>(
+    return Navigator.of(context, rootNavigator: true).push<T>(
       AppPageRoute<T>(builder: (_) => page, slide: slide),
     );
   }

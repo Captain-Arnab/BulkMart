@@ -44,12 +44,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Routes catalog entry points through the Categories tab (not a stack push).
+  /// Routes catalog entry points through the Products tab (not a stack push).
   void _openBrowse({String? categoryId, String? query}) {
     context.read<ShellController>().goToCategories(
           categoryId: categoryId ?? 'all',
           query: query,
         );
+  }
+
+  void _openSaved() {
+    AppPageRoute.push(context, const WishlistScreen());
+  }
+
+  void _openAlerts() {
+    AppPageRoute.push(context, const NotificationsScreen());
   }
 
   @override
@@ -72,162 +80,96 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: Column(
           children: [
-            // Top bar — location + profile + Products shortcut
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                boxShadow: AppShadows.soft(opacity: 0.04),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: PressableScale(
-                      onTap: () => showLocationPickerSheet(context),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.location_on_rounded, color: AppColors.violet, size: 22),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Delivering to',
-                                  style: AppTextStyles.body(
-                                    fontSize: 10,
-                                    color: AppColors.muted,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Row(
+            // Top bar — location + actions + profile
+            Material(
+              color: AppColors.white,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  boxShadow: AppShadows.soft(opacity: 0.04),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => showLocationPickerSheet(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded, color: AppColors.violet, size: 22),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        deliveryLabel,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.body(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                    Text(
+                                      'Delivering to',
+                                      style: AppTextStyles.body(
+                                        fontSize: 10,
+                                        color: AppColors.muted,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      size: 18,
-                                      color: AppColors.muted,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            deliveryLabel,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTextStyles.body(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          size: 18,
+                                          color: AppColors.muted,
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  PressableScale(
-                    onTap: () => _openBrowse(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.grid_view_rounded, color: AppColors.violet, size: 20),
-                          Text(
-                            'Products',
-                            style: AppTextStyles.body(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.violet,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  PressableScale(
-                    onTap: () => AppPageRoute.push(context, const WishlistScreen()),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.favorite_border_rounded,
-                            color: AppColors.violet,
-                            size: 20,
-                          ),
-                          Text(
-                            'Saved',
-                            style: AppTextStyles.body(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.violet,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  PressableScale(
-                    onTap: () => AppPageRoute.push(context, const NotificationsScreen()),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Icon(
-                                Icons.notifications_none_rounded,
-                                color: AppColors.violet,
-                                size: 22,
                               ),
-                              if (unread > 0)
-                                Positioned(
-                                  right: -4,
-                                  top: -4,
-                                  child: Container(
-                                    constraints: const BoxConstraints(minWidth: 16),
-                                    height: 16,
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.alert,
-                                      borderRadius: BorderRadius.circular(99),
-                                    ),
-                                    child: Text(
-                                      unread > 9 ? '9+' : '$unread',
-                                      style: AppTextStyles.body(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
                             ],
                           ),
-                          Text(
-                            'Alerts',
-                            style: AppTextStyles.body(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.violet,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  PressableScale(
-                    onTap: shell.goToAccount,
-                    child: ProfileAvatar(user: user, size: 36),
-                  ),
-                ],
+                    _HomeTopAction(
+                      icon: Icons.grid_view_rounded,
+                      label: 'Products',
+                      onTap: () => _openBrowse(),
+                    ),
+                    _HomeTopAction(
+                      icon: Icons.favorite_border_rounded,
+                      label: 'Saved',
+                      onTap: _openSaved,
+                    ),
+                    _HomeTopAction(
+                      icon: Icons.notifications_none_rounded,
+                      label: 'Alerts',
+                      badgeCount: unread,
+                      onTap: _openAlerts,
+                    ),
+                    const SizedBox(width: 2),
+                    InkWell(
+                      onTap: shell.goToAccount,
+                      customBorder: const CircleBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: ProfileAvatar(user: user, size: 36),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -519,6 +461,82 @@ class _CategoryProductSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+class _HomeTopAction extends StatelessWidget {
+  const _HomeTopAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.badgeCount = 0,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(icon, color: AppColors.violet, size: 22),
+                    if (badgeCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -5,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 16),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.alert,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            badgeCount > 9 ? '9+' : '$badgeCount',
+                            style: AppTextStyles.body(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: AppTextStyles.body(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.violet,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

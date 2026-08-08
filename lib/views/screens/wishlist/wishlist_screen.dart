@@ -40,8 +40,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return Scaffold(
       backgroundColor: AppColors.section,
       appBar: AppBar(
-        backgroundColor: AppColors.section,
+        backgroundColor: AppColors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text('Wishlist', style: AppTextStyles.display(fontSize: 18)),
       ),
