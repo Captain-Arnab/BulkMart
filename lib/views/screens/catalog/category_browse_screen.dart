@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
+import '../../../core/ui/shell_controller.dart';
 import '../../../models/product.dart';
 import '../../../repositories/product_repository.dart';
 import '../../../theme/colors.dart';
@@ -22,10 +23,14 @@ class CategoryBrowseScreen extends StatefulWidget {
     super.key,
     this.initialCategoryId,
     this.initialQuery,
+    this.asTab = false,
   });
 
   final String? initialCategoryId;
   final String? initialQuery;
+
+  /// When true, used as MainShell tab content (no back button; listens for shell intents).
+  final bool asTab;
 
   @override
   State<CategoryBrowseScreen> createState() => _CategoryBrowseScreenState();
@@ -34,6 +39,8 @@ class CategoryBrowseScreen extends StatefulWidget {
 class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
   late final CategoryBrowseViewModel _vm;
   late final TextEditingController _search;
+  ShellController? _shell;
+  int _lastIntentSeq = 0;
 
   @override
   void initState() {
@@ -46,13 +53,43 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
       categoryId: widget.initialCategoryId,
       query: widget.initialQuery,
     );
+    if (widget.asTab) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _shell = context.read<ShellController>();
+        _shell!.addListener(_onShellChanged);
+        _applyPendingIntent();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _shell?.removeListener(_onShellChanged);
     _search.dispose();
     _vm.dispose();
     super.dispose();
+  }
+
+  void _onShellChanged() {
+    if (!mounted || _shell == null) return;
+    if (_shell!.tabIndex != ShellController.categoriesTab) return;
+    _applyPendingIntent();
+  }
+
+  void _applyPendingIntent() {
+    final shell = _shell;
+    if (shell == null) return;
+    if (shell.categoriesIntentSeq == _lastIntentSeq) return;
+    _lastIntentSeq = shell.categoriesIntentSeq;
+    final cat = shell.pendingCategoryId;
+    final q = shell.pendingBrowseQuery;
+    shell.clearCategoriesIntent();
+    if (cat == null && q == null) return;
+    if (q != null && _search.text != q) {
+      _search.text = q;
+    }
+    _vm.applyBrowseIntent(categoryId: cat, query: q);
   }
 
   Future<void> _openFilters() async {
@@ -89,12 +126,16 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
                     height: 52,
                     child: Row(
                       children: [
-                        const SizedBox(width: 4),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          color: AppColors.ink,
-                        ),
+                        if (widget.asTab)
+                          const SizedBox(width: 16)
+                        else ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            color: AppColors.ink,
+                          ),
+                        ],
                         Text(
                           'Products',
                           style: AppTextStyles.display(fontSize: 18),

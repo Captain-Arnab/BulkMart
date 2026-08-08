@@ -5,12 +5,13 @@ import 'package:provider/provider.dart';
 
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
+import '../../../models/kyc_status.dart';
 import '../../../theme/colors.dart';
+import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../auth/login_screen.dart';
 import '../auth/verification_status_screen.dart';
 import '../home/main_shell.dart';
-import '../../../models/kyc_status.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -66,37 +67,59 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Stack(
             children: [
               Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 36),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 28,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/branding/veggiicart_logo_transparent.png',
-                      width: 240,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      semanticLabel: 'VeggiiCart',
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(duration: 180.ms)
-                      .scale(
-                        begin: const Offset(0.92, 0.92),
-                        end: const Offset(1, 1),
-                        duration: 280.ms,
-                        curve: AppMotion.pop,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Symbol-only mark in a circle — never the wide wordmark logo.
+                    Container(
+                      width: 128,
+                      height: 128,
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 28,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
+                      child: Image.asset(
+                        'assets/branding/veggiicart_icon_mark.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        semanticLabel: 'VeggiiCart',
+                      ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 200.ms)
+                        .scale(
+                          begin: const Offset(0.88, 0.88),
+                          end: const Offset(1, 1),
+                          duration: 300.ms,
+                          curve: AppMotion.pop,
+                        ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'VeggiiCart',
+                      style: AppTextStyles.display(
+                        fontSize: 28,
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    )
+                        .animate()
+                        .fadeIn(delay: 80.ms, duration: 260.ms)
+                        .slideY(
+                          begin: 0.18,
+                          end: 0,
+                          delay: 80.ms,
+                          duration: 280.ms,
+                          curve: AppMotion.ease,
+                        ),
+                  ],
                 ),
               ),
               Positioned(

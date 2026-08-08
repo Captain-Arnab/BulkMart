@@ -11,6 +11,7 @@ import '../../../repositories/product_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/cart_view_model.dart';
+import '../../../viewmodels/wishlist_view_model.dart';
 import '../../widgets/moq_badge.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_network_image.dart';
@@ -167,18 +168,49 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       Positioned(
+                        top: MediaQuery.paddingOf(context).top + 16,
+                        right: 24,
+                        child: Consumer<WishlistViewModel>(
+                          builder: (context, wishlist, _) {
+                            final saved = wishlist.contains(product.id);
+                            return PressableScale(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                wishlist.toggle(product.id);
+                              },
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: AppShadows.soft(opacity: 0.12),
+                                ),
+                                child: Icon(
+                                  saved
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  size: 20,
+                                  color: saved ? AppColors.alert : AppColors.ink,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
                         bottom: 16,
                         right: 28,
                         child: MoqBadge(
                           label: '${product.moq} ${product.unitNoun}',
-                          color: AppColors.ink,
+                          color: AppColors.accent,
                           size: 52,
                           fontSize: 9,
                         ),
                       ),
                       if (product.inStock)
                         Positioned(
-                          top: MediaQuery.paddingOf(context).top + 20,
+                          top: MediaQuery.paddingOf(context).top + 64,
                           right: 28,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

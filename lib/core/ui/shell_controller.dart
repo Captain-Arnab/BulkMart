@@ -7,10 +7,23 @@ import '../../theme/colors.dart';
 import 'app_motion.dart';
 
 /// Coordinates bottom-nav tab index + cart icon / sticky bar targets.
+///
+/// Tab order: 0 Home · 1 Categories · 2 Cart · 3 Orders · 4 Account
 class ShellController extends ChangeNotifier {
+  static const int homeTab = 0;
+  static const int categoriesTab = 1;
+  static const int cartTab = 2;
+  static const int ordersTab = 3;
+  static const int accountTab = 4;
+
   int tabIndex = 0;
   final GlobalKey cartIconKey = GlobalKey(debugLabel: 'cart_nav_icon');
   final GlobalKey stickyCartKey = GlobalKey(debugLabel: 'sticky_cart_bar');
+
+  /// Bumped whenever Home (or elsewhere) requests Categories with a filter.
+  int categoriesIntentSeq = 0;
+  String? pendingCategoryId;
+  String? pendingBrowseQuery;
 
   void goToTab(int index) {
     if (tabIndex == index) return;
@@ -18,9 +31,25 @@ class ShellController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void goToCart() => goToTab(1);
-  void goToHome() => goToTab(0);
-  void goToOrders() => goToTab(2);
+  /// Opens the Categories tab, optionally pre-filtered.
+  /// Pass [categoryId] `'all'` (default) for the unfiltered catalog.
+  void goToCategories({String? categoryId, String? query}) {
+    pendingCategoryId = categoryId ?? 'all';
+    pendingBrowseQuery = query ?? '';
+    categoriesIntentSeq++;
+    tabIndex = categoriesTab;
+    notifyListeners();
+  }
+
+  void clearCategoriesIntent() {
+    pendingCategoryId = null;
+    pendingBrowseQuery = null;
+  }
+
+  void goToHome() => goToTab(homeTab);
+  void goToCart() => goToTab(cartTab);
+  void goToOrders() => goToTab(ordersTab);
+  void goToAccount() => goToTab(accountTab);
 
   Offset? cartIconGlobalCenter() {
     final sticky = stickyCartKey.currentContext?.findRenderObject() as RenderBox?;

@@ -1,8 +1,6 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/navigation/app_page_route.dart';
@@ -15,6 +13,7 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/address_view_model.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../../widgets/auth_widgets.dart';
+import '../../widgets/document_source_sheet.dart';
 import 'otp_screen.dart';
 import 'verification_status_screen.dart';
 
@@ -36,6 +35,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _gstController = TextEditingController();
   final _fssaiController = TextEditingController();
   final _panController = TextEditingController();
+  final _otherTypeController = TextEditingController();
   final _shopController = TextEditingController();
   final _deliveryController = TextEditingController();
   final _cityController = TextEditingController();
@@ -46,6 +46,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _businessError;
   String? _ownerError;
   String? _emailError;
+  String? _otherTypeError;
   String? _shopError;
   String? _deliveryError;
   String? _cityError;
@@ -66,6 +67,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _ownerController,
       _emailController,
       _gstController,
+      _fssaiController,
+      _panController,
+      _otherTypeController,
       _shopController,
       _deliveryController,
       _cityController,
@@ -108,6 +112,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _gstController,
       _fssaiController,
       _panController,
+      _otherTypeController,
       _shopController,
       _deliveryController,
       _cityController,
@@ -133,6 +138,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     auth.setGstNumber(_gstController.text.trim());
     auth.setFssaiNumber(_fssaiController.text.trim());
     auth.setPanNumber(_panController.text.trim());
+    auth.setBusinessTypeOther(_otherTypeController.text.trim());
     auth.setShopAddress(_shopController.text.trim());
     auth.setDeliveryAddress(
       auth.sameAsShopAddress
@@ -151,7 +157,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       1 =>
         _businessController.text.trim().isNotEmpty &&
             _ownerController.text.trim().isNotEmpty &&
-            _isValidEmail(_emailController.text),
+            _isValidEmail(_emailController.text) &&
+            (!BusinessTypes.isOther(auth.businessTypeId) ||
+                _otherTypeController.text.trim().isNotEmpty),
       2 =>
         _shopController.text.trim().isNotEmpty &&
             (auth.sameAsShopAddress ||
@@ -213,6 +221,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ok = false;
       } else {
         _emailError = null;
+      }
+      if (BusinessTypes.isOther(auth.businessTypeId) &&
+          _otherTypeController.text.trim().isEmpty) {
+        _otherTypeError = 'Please describe your business type';
+        ok = false;
+      } else {
+        _otherTypeError = null;
       }
       setState(() {});
       if (!ok) return;
@@ -317,65 +332,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _pickDocument(RegistrationDocumentType type) async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + MediaQuery.paddingOf(ctx).bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.line,
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(type.label, style: AppTextStyles.display(fontSize: 18)),
-            const SizedBox(height: 12),
-            _DocSheetTile(
-              icon: Icons.photo_camera_rounded,
-              label: 'Take Photo',
-              onTap: () => Navigator.pop(ctx, 'camera'),
-            ),
-            _DocSheetTile(
-              icon: Icons.photo_library_rounded,
-              label: 'Choose from Gallery',
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            _DocSheetTile(
-              icon: Icons.picture_as_pdf_rounded,
-              label: 'Upload PDF',
-              onTap: () => Navigator.pop(ctx, 'pdf'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null || !mounted) return;
-
-    String? path;
-    if (choice == 'pdf') {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['pdf'],
-      );
-      path = result?.files.single.path;
-    } else {
-      final picker = ImagePicker();
-      final file = await picker.pickImage(
-        source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 85,
-      );
-      path = file?.path;
-    }
+    final path = await pickRegistrationDocument(context, type);
     if (path == null || !mounted) return;
     context.read<AuthViewModel>().setDocument(type, path);
     _recomputeValid();
@@ -447,12 +404,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               gstController: _gstController,
                               fssaiController: _fssaiController,
                               panController: _panController,
+                              otherTypeController: _otherTypeController,
                               businessError: _businessError,
                               ownerError: _ownerError,
                               emailError: _emailError,
+                              otherTypeError: _otherTypeError,
                               selectedTypeId: auth.businessTypeId,
                               onType: (id) {
                                 auth.setBusinessTypeId(id);
+                                if (!BusinessTypes.isOther(id)) {
+                                  _otherTypeError = null;
+                                }
                                 _recomputeValid();
                               },
                               onChanged: () {
@@ -460,6 +422,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   _businessError = null;
                                   _ownerError = null;
                                   _emailError = null;
+                                  _otherTypeError = null;
                                 });
                                 _recomputeValid();
                               },
@@ -663,9 +626,11 @@ class _BusinessStep extends StatelessWidget {
     required this.gstController,
     required this.fssaiController,
     required this.panController,
+    required this.otherTypeController,
     required this.businessError,
     required this.ownerError,
     required this.emailError,
+    required this.otherTypeError,
     required this.selectedTypeId,
     required this.onType,
     required this.onChanged,
@@ -677,15 +642,19 @@ class _BusinessStep extends StatelessWidget {
   final TextEditingController gstController;
   final TextEditingController fssaiController;
   final TextEditingController panController;
+  final TextEditingController otherTypeController;
   final String? businessError;
   final String? ownerError;
   final String? emailError;
+  final String? otherTypeError;
   final String selectedTypeId;
   final ValueChanged<String> onType;
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final showOtherField = BusinessTypes.isOther(selectedTypeId);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -762,6 +731,18 @@ class _BusinessStep extends StatelessWidget {
             );
           }).toList(),
         ),
+        if (showOtherField) ...[
+          const SizedBox(height: 14),
+          const AuthFieldLabel('Specify business type'),
+          const SizedBox(height: 8),
+          PillTextField(
+            controller: otherTypeController,
+            hint: 'e.g. Cloud kitchen, Bakery wholesale…',
+            textCapitalization: TextCapitalization.words,
+            errorText: otherTypeError,
+            onChanged: (_) => onChanged(),
+          ),
+        ],
         const SizedBox(height: 20),
         const AuthFieldLabel('GSTIN', optional: true),
         const SizedBox(height: 8),
@@ -1309,23 +1290,4 @@ class _ReviewCard extends StatelessWidget {
   }
 }
 
-class _DocSheetTile extends StatelessWidget {
-  const _DocSheetTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.violet),
-      title: Text(label, style: AppTextStyles.body(fontSize: 14, fontWeight: FontWeight.w600)),
-      onTap: onTap,
-    );
-  }
-}

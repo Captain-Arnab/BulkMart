@@ -112,6 +112,14 @@ class CategoryBrowseViewModel extends ChangeNotifier {
     refresh();
   }
 
+  /// Apply an external intent (shell tab deep-link) even if values are unchanged.
+  void applyBrowseIntent({String? categoryId, String? query}) {
+    if (categoryId != null) selectedCategoryId = categoryId;
+    if (query != null) searchQuery = query;
+    refresh();
+    notifyListeners();
+  }
+
   void onSearchChanged(String value) {
     searchQuery = value;
     _debounce?.cancel();

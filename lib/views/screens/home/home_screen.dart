@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/mock/mock_offers.dart';
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
@@ -14,12 +15,16 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/address_view_model.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../../../viewmodels/home_view_model.dart';
+import '../../../viewmodels/notification_view_model.dart';
+import '../../../viewmodels/offer_view_model.dart';
 import '../../widgets/category_icons.dart';
 import '../../widgets/location_picker_sheet.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/profile_avatar.dart';
-import '../catalog/category_browse_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../offers/offers_screen.dart';
 import '../product/product_detail_screen.dart';
+import '../wishlist/wishlist_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,17 +39,17 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().init();
+      context.read<OfferViewModel>().load();
+      context.read<NotificationViewModel>().load();
     });
   }
 
+  /// Routes catalog entry points through the Categories tab (not a stack push).
   void _openBrowse({String? categoryId, String? query}) {
-    AppPageRoute.push(
-      context,
-      CategoryBrowseScreen(
-        initialCategoryId: categoryId,
-        initialQuery: query,
-      ),
-    );
+    context.read<ShellController>().goToCategories(
+          categoryId: categoryId ?? 'all',
+          query: query,
+        );
   }
 
   @override
@@ -59,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     final shell = context.read<ShellController>();
     final categories = home.categories.where((c) => c.id != 'all').toList();
+    final unread = context.select<NotificationViewModel, int>((n) => n.unreadCount);
 
     return Scaffold(
       backgroundColor: AppColors.section,
@@ -124,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   PressableScale(
                     onTap: () => _openBrowse(),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -142,7 +148,83 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   PressableScale(
-                    onTap: () => shell.goToTab(3),
+                    onTap: () => AppPageRoute.push(context, const WishlistScreen()),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.favorite_border_rounded,
+                            color: AppColors.violet,
+                            size: 20,
+                          ),
+                          Text(
+                            'Saved',
+                            style: AppTextStyles.body(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.violet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  PressableScale(
+                    onTap: () => AppPageRoute.push(context, const NotificationsScreen()),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(
+                                Icons.notifications_none_rounded,
+                                color: AppColors.violet,
+                                size: 22,
+                              ),
+                              if (unread > 0)
+                                Positioned(
+                                  right: -4,
+                                  top: -4,
+                                  child: Container(
+                                    constraints: const BoxConstraints(minWidth: 16),
+                                    height: 16,
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.alert,
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(
+                                      unread > 9 ? '9+' : '$unread',
+                                      style: AppTextStyles.body(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          Text(
+                            'Alerts',
+                            style: AppTextStyles.body(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.violet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  PressableScale(
+                    onTap: shell.goToAccount,
                     child: ProfileAvatar(user: user, size: 36),
                   ),
                 ],
@@ -187,63 +269,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Banner carousel (isolated so auto-play doesn't rebuild Home)
                     const _HomeBannerCarousel(),
                     const SizedBox(height: 18),
-
-                    // Browse entry card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: PressableScale(
-                        onTap: () => _openBrowse(),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
-                            borderRadius: BorderRadius.circular(AppRadii.lg),
-                            boxShadow: AppShadows.card,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: AppColors.greenSoft,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  Icons.storefront_rounded,
-                                  color: AppColors.green,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Browse All Products',
-                                      style: AppTextStyles.body(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${home.products.isEmpty ? '33' : home.products.length} produce items · bulk wholesale',
-                                      style: AppTextStyles.body(
-                                        fontSize: 12,
-                                        color: AppColors.muted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right_rounded, color: AppColors.green),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
 
                     // Category chips
                     if (categories.isNotEmpty)
@@ -314,6 +339,64 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                     else
                       ..._buildCategorySections(home),
+
+                    // Browse entry — last on Home so discovery rows come first
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: PressableScale(
+                        onTap: () => _openBrowse(),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(AppRadii.lg),
+                            boxShadow: AppShadows.card,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: AppColors.greenSoft,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.storefront_rounded,
+                                  color: AppColors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Browse All Products',
+                                      style: AppTextStyles.body(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${home.products.isEmpty ? '33' : home.products.length} produce items · bulk wholesale',
+                                      style: AppTextStyles.body(
+                                        fontSize: 12,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: AppColors.green),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -450,92 +533,129 @@ class _HomeBannerCarousel extends StatefulWidget {
 class _HomeBannerCarouselState extends State<_HomeBannerCarousel> {
   int _bannerIndex = 0;
 
-  static const _banners = [
-    _BannerData(
-      title: 'Flat 10% off on bulk\norders above ₹10,000',
-      colors: [AppColors.forest, AppColors.green],
-    ),
-    _BannerData(
-      title: 'Fresh greens delivered\nin bulk this week',
-      colors: [AppColors.accent, Color(0xFFE8940A)],
-      textColor: AppColors.ink,
-    ),
-    _BannerData(
-      title: 'Free delivery\nthis week',
-      colors: [AppColors.green, AppColors.greenLight],
-    ),
-  ];
+  void _openOffers() {
+    AppPageRoute.push(context, const OffersScreen());
+  }
 
   @override
   Widget build(BuildContext context) {
+    final featured = context.watch<OfferViewModel>().featured;
+    if (featured.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: _ViewAllOffersLink(onTap: _openOffers),
+        ),
+      );
+    }
+
     return Column(
       children: [
-        CarouselSlider.builder(
-          itemCount: _banners.length,
-          itemBuilder: (context, index, _) {
-            final b = _banners[index];
-            return Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadii.md),
-                gradient: LinearGradient(
-                  colors: b.colors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        // Clip so enlargeCenterPage overflow can't steal taps from the link below.
+        ClipRect(
+          child: CarouselSlider.builder(
+            itemCount: featured.length,
+            itemBuilder: (context, index, _) {
+              final offer = featured[index];
+              final colors = MockOffers.colorsOf(offer);
+              final textColor = MockOffers.textColorOf(offer);
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                  onTap: _openOffers,
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                      gradient: LinearGradient(
+                        colors: colors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      offer.title,
+                      style: AppTextStyles.display(
+                        fontSize: 18,
+                        color: textColor,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                b.title,
-                style: AppTextStyles.display(
-                  fontSize: 18,
-                  color: b.textColor,
-                  height: 1.25,
-                ),
-              ),
-            );
-          },
-          options: CarouselOptions(
-            height: 120,
-            autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 4),
-            enlargeCenterPage: true,
-            viewportFraction: 0.9,
-            onPageChanged: (i, _) => setState(() => _bannerIndex = i),
+              );
+            },
+            options: CarouselOptions(
+              height: 120,
+              autoPlay: true,
+              autoPlayInterval: const Duration(seconds: 4),
+              enlargeCenterPage: true,
+              viewportFraction: 0.9,
+              onPageChanged: (i, _) => setState(() => _bannerIndex = i),
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (i) {
-            final active = i == _bannerIndex;
-            return AnimatedContainer(
-              duration: AppMotion.fast,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 6,
-              width: active ? 18 : 6,
-              decoration: BoxDecoration(
-                color: active ? AppColors.green : AppColors.line,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(featured.length, (i) {
+                    final active = i == _bannerIndex;
+                    return AnimatedContainer(
+                      duration: AppMotion.fast,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      height: 6,
+                      width: active ? 18 : 6,
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.green : AppColors.line,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    );
+                  }),
+                ),
               ),
-            );
-          }),
+              _ViewAllOffersLink(onTap: _openOffers),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _BannerData {
-  const _BannerData({
-    required this.title,
-    required this.colors,
-    this.textColor = AppColors.white,
-  });
+class _ViewAllOffersLink extends StatelessWidget {
+  const _ViewAllOffersLink({required this.onTap});
 
-  final String title;
-  final List<Color> colors;
-  final Color textColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Text(
+            'View all offers →',
+            style: AppTextStyles.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.green,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

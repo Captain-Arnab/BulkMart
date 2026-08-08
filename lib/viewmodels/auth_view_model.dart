@@ -19,6 +19,7 @@ class AuthViewModel extends ChangeNotifier {
   String mobile = '';
   String businessName = '';
   String businessTypeId = BusinessTypes.defaultId;
+  String businessTypeOther = '';
   String gstNumber = '';
   String ownerName = '';
   String email = '';
@@ -38,8 +39,14 @@ class AuthViewModel extends ChangeNotifier {
   final Map<String, String> documents = {};
   bool acceptedTerms = false;
 
-  /// Legacy alias used by older screens.
-  String get businessType => BusinessTypes.byId(businessTypeId).label;
+  /// Display label — custom text when type is Other.
+  String get businessType {
+    if (BusinessTypes.isOther(businessTypeId)) {
+      final custom = businessTypeOther.trim();
+      return custom.isNotEmpty ? custom : 'Other';
+    }
+    return BusinessTypes.byId(businessTypeId).label;
+  }
   String get address =>
       deliveryAddress.isNotEmpty ? deliveryAddress : shopAddress;
 
@@ -65,6 +72,11 @@ class AuthViewModel extends ChangeNotifier {
 
   void setBusinessTypeId(String id) {
     businessTypeId = id;
+    notifyListeners();
+  }
+
+  void setBusinessTypeOther(String value) {
+    businessTypeOther = value;
     notifyListeners();
   }
 
@@ -159,6 +171,7 @@ class AuthViewModel extends ChangeNotifier {
       final loggedIn = await _authRepository.isLoggedIn();
       if (loggedIn) {
         user = await _authRepository.currentUser();
+        _hydrateFromUser(user);
         isLoading = false;
         notifyListeners();
         return user != null;
@@ -172,6 +185,24 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void _hydrateFromUser(User? u) {
+    if (u == null) return;
+    businessName = u.businessName;
+    businessTypeId = u.businessTypeId ?? BusinessTypes.byId(u.businessType).id;
+    if (BusinessTypes.isOther(businessTypeId)) {
+      businessTypeOther = u.businessType ?? '';
+    }
+    gstNumber = u.gstNumber ?? '';
+    ownerName = u.ownerName ?? '';
+    email = u.email ?? '';
+    fssaiNumber = u.fssaiNumber ?? '';
+    panNumber = u.panNumber ?? '';
+    mobile = u.mobile;
+    documents
+      ..clear()
+      ..addAll(u.documents);
   }
 
   Future<bool> sendOtp() async {
@@ -216,6 +247,7 @@ class AuthViewModel extends ChangeNotifier {
         if (persistSession) {
           user = u;
           businessName = u.businessName;
+          _hydrateFromUser(u);
         }
         isLoading = false;
         notifyListeners();
@@ -249,6 +281,7 @@ class AuthViewModel extends ChangeNotifier {
         businessName = u.businessName;
         this.email = u.email ?? email;
         mobile = u.mobile;
+        _hydrateFromUser(u);
         isLoading = false;
         notifyListeners();
         return true;
@@ -325,8 +358,7 @@ class AuthViewModel extends ChangeNotifier {
       success: (u) {
         user = u;
         businessName = u.businessName;
-        businessTypeId = u.businessTypeId ?? businessTypeId;
-        gstNumber = u.gstNumber ?? gstNumber;
+        _hydrateFromUser(u);
         isLoading = false;
         notifyListeners();
         return true;
@@ -370,8 +402,13 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> updateProfile({
     required String businessName,
     required String businessType,
+    String? businessTypeOther,
     String? gstNumber,
     String? contactPerson,
+    String? ownerName,
+    String? email,
+    String? fssaiNumber,
+    String? panNumber,
   }) async {
     if (user == null) return false;
     isLoading = true;
@@ -379,25 +416,42 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     final type = BusinessTypes.byId(businessType);
+    final label = BusinessTypes.isOther(type.id)
+        ? ((businessTypeOther ?? '').trim().isNotEmpty
+            ? businessTypeOther!.trim()
+            : 'Other')
+        : type.label;
     final u = user!;
+    final gstTrim = gstNumber?.trim() ?? '';
+    final emailTrim = email?.trim() ?? '';
+    final contactTrim = contactPerson?.trim() ?? '';
+    final ownerTrim = ownerName?.trim() ?? '';
+    final fssaiTrim = fssaiNumber?.trim() ?? '';
+    final panTrim = panNumber?.trim() ?? '';
     final updated = u.copyWith(
       businessName: businessName.trim(),
-      businessType: type.label,
+      businessType: label,
       businessTypeId: type.id,
-      gstNumber: (gstNumber == null || gstNumber.trim().isEmpty) ? null : gstNumber.trim(),
-      contactPerson:
-          (contactPerson == null || contactPerson.trim().isEmpty) ? null : contactPerson.trim(),
-      ownerName:
-          (contactPerson == null || contactPerson.trim().isEmpty) ? u.ownerName : contactPerson.trim(),
+      gstNumber: gstTrim.isEmpty ? null : gstTrim,
+      clearGst: gstTrim.isEmpty,
+      email: emailTrim.isEmpty ? null : emailTrim,
+      clearEmail: emailTrim.isEmpty,
+      contactPerson: contactTrim.isEmpty ? null : contactTrim,
+      clearContactPerson: contactTrim.isEmpty,
+      ownerName: ownerTrim.isEmpty ? null : ownerTrim,
+      clearOwnerName: ownerTrim.isEmpty,
+      fssaiNumber: fssaiTrim.isEmpty ? null : fssaiTrim,
+      clearFssai: fssaiTrim.isEmpty,
+      panNumber: panTrim.isEmpty ? null : panTrim,
+      clearPan: panTrim.isEmpty,
+      documents: Map<String, String>.from(documents),
     );
 
     final result = await _authRepository.updateProfile(user: updated);
     return result.when(
       success: (u) {
         user = u;
-        this.businessName = u.businessName;
-        businessTypeId = u.businessTypeId ?? type.id;
-        this.gstNumber = u.gstNumber ?? '';
+        _hydrateFromUser(u);
         isLoading = false;
         notifyListeners();
         return true;
@@ -405,6 +459,29 @@ class AuthViewModel extends ChangeNotifier {
       failure: (message, {statusCode}) {
         error = message;
         isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  /// Draft during registration; persists to [User.documents] when already signed in.
+  Future<bool> saveDocument(RegistrationDocumentType type, String path) async {
+    setDocument(type, path);
+    if (user == null) return true;
+    final updated = user!.copyWith(documents: Map<String, String>.from(documents));
+    final result = await _authRepository.updateProfile(user: updated);
+    return result.when(
+      success: (u) {
+        user = u;
+        documents
+          ..clear()
+          ..addAll(u.documents);
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode}) {
+        error = message;
         notifyListeners();
         return false;
       },
@@ -461,6 +538,7 @@ class AuthViewModel extends ChangeNotifier {
     mobile = '';
     businessName = '';
     businessTypeId = BusinessTypes.defaultId;
+    businessTypeOther = '';
     gstNumber = '';
     ownerName = '';
     email = '';

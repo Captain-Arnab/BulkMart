@@ -66,6 +66,13 @@ class User {
           : (contactPerson ?? '');
 
   String get businessTypeLabel {
+    if (BusinessTypes.isOther(businessTypeId)) {
+      final custom = businessType?.trim();
+      if (custom != null && custom.isNotEmpty && custom.toLowerCase() != 'other') {
+        return custom;
+      }
+      return 'Other';
+    }
     if (businessTypeId != null) return BusinessTypes.byId(businessTypeId).label;
     return businessType ?? BusinessTypes.byId(BusinessTypes.defaultId).label;
   }
@@ -177,21 +184,28 @@ class User {
     bool? hasPassword,
     bool clearAvatar = false,
     bool clearRejectionReason = false,
+    bool clearGst = false,
+    bool clearEmail = false,
+    bool clearContactPerson = false,
+    bool clearOwnerName = false,
+    bool clearFssai = false,
+    bool clearPan = false,
   }) {
     return User(
       id: id ?? this.id,
       mobile: mobile ?? this.mobile,
       businessName: businessName ?? this.businessName,
       address: address ?? this.address,
-      gstNumber: gstNumber ?? this.gstNumber,
-      email: email ?? this.email,
-      contactPerson: contactPerson ?? this.contactPerson,
-      ownerName: ownerName ?? this.ownerName,
+      gstNumber: clearGst ? null : (gstNumber ?? this.gstNumber),
+      email: clearEmail ? null : (email ?? this.email),
+      contactPerson:
+          clearContactPerson ? null : (contactPerson ?? this.contactPerson),
+      ownerName: clearOwnerName ? null : (ownerName ?? this.ownerName),
       businessType: businessType ?? this.businessType,
       businessTypeId: businessTypeId ?? this.businessTypeId,
       avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
-      fssaiNumber: fssaiNumber ?? this.fssaiNumber,
-      panNumber: panNumber ?? this.panNumber,
+      fssaiNumber: clearFssai ? null : (fssaiNumber ?? this.fssaiNumber),
+      panNumber: clearPan ? null : (panNumber ?? this.panNumber),
       shopAddress: shopAddress ?? this.shopAddress,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       city: city ?? this.city,

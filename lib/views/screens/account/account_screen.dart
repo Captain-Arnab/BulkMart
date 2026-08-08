@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/navigation/app_page_route.dart';
@@ -55,11 +54,7 @@ class AccountScreen extends StatelessWidget {
                       children: [
                         Text(
                           user?.businessName ?? 'Your business',
-                          style: GoogleFonts.sora(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink,
-                          ),
+                          style: AppTextStyles.display(fontSize: 18),
                         ),
                         const SizedBox(height: 4),
                         Text(

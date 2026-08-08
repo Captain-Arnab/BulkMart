@@ -25,6 +25,9 @@ class BusinessTypes {
   ];
 
   static const String defaultId = 'retail_shop';
+  static const String otherId = 'other';
+
+  static bool isOther(String? id) => id == otherId;
 
   static BusinessTypeOption byId(String? id) {
     return all.firstWhere(

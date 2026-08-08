@@ -122,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   width: 88,
                   height: 88,
+                  padding: const EdgeInsets.all(16),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppColors.white,
@@ -130,8 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Image.asset(
                     'assets/branding/veggiicart_icon_mark.png',
-                    width: 56,
-                    height: 56,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                     errorBuilder: (_, __, ___) => Icon(

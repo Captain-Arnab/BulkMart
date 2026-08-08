@@ -10,15 +10,21 @@ import 'core/storage/secure_storage_service.dart';
 import 'core/ui/shell_controller.dart';
 import 'repositories/address_repository.dart';
 import 'repositories/auth_repository.dart';
+import 'repositories/notification_repository.dart';
+import 'repositories/offer_repository.dart';
 import 'repositories/order_repository.dart';
 import 'repositories/product_repository.dart';
 import 'repositories/support_repository.dart';
+import 'repositories/wishlist_repository.dart';
 import 'services/api/api_client.dart';
 import 'theme/app_theme.dart';
 import 'viewmodels/address_view_model.dart';
 import 'viewmodels/auth_view_model.dart';
 import 'viewmodels/cart_view_model.dart';
 import 'viewmodels/home_view_model.dart';
+import 'viewmodels/notification_view_model.dart';
+import 'viewmodels/offer_view_model.dart';
+import 'viewmodels/wishlist_view_model.dart';
 import 'views/screens/auth/login_screen.dart';
 import 'views/screens/splash/splash_screen.dart';
 
@@ -41,6 +47,9 @@ Future<void> main() async {
   final orderRepository = OrderRepository(apiClient: apiClient);
   final addressRepository = AddressRepository(apiClient: apiClient);
   final supportRepository = SupportRepository(apiClient: apiClient);
+  final wishlistRepository = WishlistRepository(apiClient: apiClient);
+  final notificationRepository = NotificationRepository(apiClient: apiClient);
+  final offerRepository = OfferRepository(apiClient: apiClient);
 
   runApp(
     MultiProvider(
@@ -52,6 +61,9 @@ Future<void> main() async {
         Provider.value(value: orderRepository),
         Provider.value(value: addressRepository),
         Provider.value(value: supportRepository),
+        Provider.value(value: wishlistRepository),
+        Provider.value(value: notificationRepository),
+        Provider.value(value: offerRepository),
         ChangeNotifierProvider(create: (_) => ShellController()),
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authRepository: authRepository),
@@ -62,6 +74,19 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CartViewModel()),
         ChangeNotifierProvider(
           create: (_) => AddressViewModel(addressRepository: addressRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WishlistViewModel(
+            wishlistRepository: wishlistRepository,
+            productRepository: productRepository,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              NotificationViewModel(repository: notificationRepository)..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OfferViewModel(repository: offerRepository)..load(),
         ),
       ],
       child: const VeggiiCartApp(),

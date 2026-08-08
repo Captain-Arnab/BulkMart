@@ -20,7 +20,7 @@ class StickyCartBar extends StatelessWidget {
     final itemCount = context.select<CartViewModel, int>((c) => c.itemCount);
     final total = context.select<CartViewModel, double>((c) => c.total);
     final tabIndex = context.select<ShellController, int>((s) => s.tabIndex);
-    final visible = itemCount > 0 && tabIndex != 1;
+    final visible = itemCount > 0 && tabIndex != ShellController.cartTab;
     final shell = context.read<ShellController>();
 
     return AnimatedSlide(

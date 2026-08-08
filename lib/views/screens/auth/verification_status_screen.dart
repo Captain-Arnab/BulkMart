@@ -14,7 +14,11 @@ import '../home/main_shell.dart';
 import 'registration_screen.dart';
 
 class VerificationStatusScreen extends StatelessWidget {
-  const VerificationStatusScreen({super.key});
+  const VerificationStatusScreen({super.key, this.fromProfile = false});
+
+  /// When opened from Profile Details — offer back navigation instead of
+  /// forcing Home / re-registration flows.
+  final bool fromProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -52,9 +56,17 @@ class VerificationStatusScreen extends StatelessWidget {
       backgroundColor: AppColors.section,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Column(
             children: [
+              if (fromProfile || Navigator.of(context).canPop())
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+                  ),
+                ),
               const Spacer(),
               Container(
                 width: 88,
@@ -87,15 +99,19 @@ class VerificationStatusScreen extends StatelessWidget {
               const Spacer(),
               if (status == KycStatus.pending && AppConfig.kDemoMode) ...[
                 AuthPrimaryButton(
-                  label: 'Continue in Demo Mode',
+                  label: fromProfile ? 'Mark Approved (Demo)' : 'Continue in Demo Mode',
                   isLoading: auth.isLoading,
                   onPressed: () async {
                     final ok = await auth.approveKycDemo();
                     if (!context.mounted || !ok) return;
-                    await AppPageRoute.pushAndRemoveUntil(
-                      context,
-                      const MainShell(),
-                    );
+                    if (fromProfile) {
+                      Navigator.of(context).pop();
+                    } else {
+                      await AppPageRoute.pushAndRemoveUntil(
+                        context,
+                        const MainShell(),
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 10),
@@ -107,19 +123,28 @@ class VerificationStatusScreen extends StatelessWidget {
               ],
               if (status == KycStatus.approved)
                 AuthPrimaryButton(
-                  label: 'Go to Home',
-                  onPressed: () => AppPageRoute.pushAndRemoveUntil(
-                    context,
-                    const MainShell(),
-                  ),
+                  label: fromProfile ? 'Done' : 'Go to Home',
+                  onPressed: () {
+                    if (fromProfile) {
+                      Navigator.of(context).pop();
+                    } else {
+                      AppPageRoute.pushAndRemoveUntil(context, const MainShell());
+                    }
+                  },
                 ),
               if (status == KycStatus.rejected)
                 AuthPrimaryButton(
-                  label: 'Re-upload Documents',
-                  onPressed: () => AppPageRoute.pushReplacement(
-                    context,
-                    const RegistrationScreen(initialStep: 3),
-                  ),
+                  label: fromProfile ? 'Back to Documents' : 'Re-upload Documents',
+                  onPressed: () {
+                    if (fromProfile) {
+                      Navigator.of(context).pop();
+                    } else {
+                      AppPageRoute.pushReplacement(
+                        context,
+                        const RegistrationScreen(initialStep: 3),
+                      );
+                    }
+                  },
                 ),
             ],
           ),

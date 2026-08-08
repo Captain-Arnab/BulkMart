@@ -9,6 +9,7 @@ import '../../models/product.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
 import '../../viewmodels/cart_view_model.dart';
+import '../../viewmodels/wishlist_view_model.dart';
 import 'product_network_image.dart';
 
 class ProductCard extends StatefulWidget {
@@ -99,6 +100,41 @@ class _ProductCardState extends State<ProductCard> {
                               color: AppColors.ink,
                             ),
                           ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Consumer<WishlistViewModel>(
+                          builder: (context, wishlist, _) {
+                            final saved = wishlist.contains(widget.product.id);
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  wishlist.toggle(widget.product.id);
+                                },
+                                customBorder: const CircleBorder(),
+                                child: Ink(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white.withValues(alpha: 0.92),
+                                    shape: BoxShape.circle,
+                                    boxShadow: AppShadows.soft(opacity: 0.08),
+                                  ),
+                                  child: Icon(
+                                    saved
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    size: 17,
+                                    color: saved ? AppColors.alert : AppColors.muted,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       Positioned(

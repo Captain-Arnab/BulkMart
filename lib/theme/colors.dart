@@ -37,6 +37,9 @@ class AppColors {
 
   static const Color line = Color(0xFFE2EEE6);
 
+  /// Visible control borders (OTP boxes, subtle outlines) — stronger than [line]
+  static const Color border = Color(0xFFD9DDD7);
+
   // --- Compatibility aliases (screens still reference these names) ---
   /// Maps to Primary Green — former violet CTAs / chips / links.
   static const Color violet = green;

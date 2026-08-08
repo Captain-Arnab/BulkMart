@@ -193,54 +193,13 @@ class _OtpScreenState extends State<OtpScreen> {
                       )
                     : Row(
                         key: const ValueKey('boxes'),
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(_length, (i) {
-                          final filled = _controllers[i].text.isNotEmpty;
-                          final focused = _focusNodes[i].hasFocus;
-                          return AnimatedScale(
-                            scale: focused ? 1.05 : 1,
-                            duration: AppMotion.fast,
-                            curve: AppMotion.pop,
-                            child: AnimatedContainer(
-                              duration: AppMotion.fast,
-                              width: 56,
-                              height: 64,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: focused
-                                      ? AppColors.violet
-                                      : filled
-                                          ? AppColors.ink.withValues(alpha: 0.25)
-                                          : AppColors.line,
-                                  width: focused ? 2 : 1.2,
-                                ),
-                                boxShadow: focused
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.violet.withValues(alpha: 0.18),
-                                          blurRadius: 12,
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: TextField(
+                        children: [
+                          for (var i = 0; i < _length; i++) ...[
+                            if (i > 0) const SizedBox(width: 12),
+                            Expanded(
+                              child: _OtpDigitBox(
                                 controller: _controllers[i],
                                 focusNode: _focusNodes[i],
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                maxLength: 1,
-                                style: AppTextStyles.price(fontSize: 24),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                ],
-                                decoration: const InputDecoration(
-                                  counterText: '',
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
                                 onChanged: (v) async {
                                   if (v.isEmpty) {
                                     if (i > 0) {
@@ -253,8 +212,8 @@ class _OtpScreenState extends State<OtpScreen> {
                                 },
                               ),
                             ),
-                          );
-                        }),
+                          ],
+                        ],
                       ),
               ),
               if (auth.error != null && !_showSuccessFlash) ...[
@@ -301,6 +260,108 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Single OTP digit cell — equal [Expanded] slots + identical square size;
+/// focus scale stays inside so gaps remain uniform.
+class _OtpDigitBox extends StatelessWidget {
+  const _OtpDigitBox({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+
+  static const double _radius = 12;
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = controller.text.isNotEmpty;
+    final focused = focusNode.hasFocus;
+
+    final Color borderColor;
+    final double borderWidth;
+    if (focused) {
+      borderColor = AppColors.green;
+      borderWidth = 2;
+    } else {
+      borderColor = AppColors.border;
+      borderWidth = 1.5;
+    }
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: AnimatedScale(
+        scale: focused ? 1.05 : 1,
+        duration: AppMotion.fast,
+        curve: AppMotion.pop,
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.ease,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: focused
+                ? [
+                    BoxShadow(
+                      color: AppColors.green.withValues(alpha: 0.18),
+                      blurRadius: 12,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: AppColors.ink.withValues(alpha: 0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 1,
+            cursorColor: AppColors.green,
+            style: AppTextStyles.price(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            decoration: const InputDecoration(
+              counterText: '',
+              filled: true,
+              fillColor: Colors.transparent,
+              isDense: true,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: onChanged,
+          )
+              .animate(key: ValueKey('otp_pop_${controller.text}'))
+              .scale(
+                begin: filled ? const Offset(0.72, 0.72) : const Offset(1, 1),
+                end: const Offset(1, 1),
+                duration: filled ? 180.ms : 0.ms,
+                curve: AppMotion.pop,
+              ),
         ),
       ),
     );
