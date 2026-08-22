@@ -28,18 +28,50 @@ class Offer {
             ?.map((e) => (e as num).toInt())
             .toList() ??
         const [0xFF0B5C27, 0xFF12833B];
+
+    final discountType = json['discount_type']?.toString() ?? '';
+    final discountValue = json['discount_value'];
+    String label = json['discount_label']?.toString() ??
+        json['discountLabel']?.toString() ??
+        '';
+    if (label.isEmpty && discountValue != null) {
+      if (discountType == 'percentage') {
+        label = '${(discountValue as num).toInt()}% OFF';
+      } else if (discountType == 'flat') {
+        label = '₹${(discountValue as num).toInt()} OFF';
+      } else {
+        label = discountValue.toString();
+      }
+    }
+
+    final coupon = json['coupon_code']?.toString();
+    final categoryName = json['category_name']?.toString();
+    final minQty =
+        (json['min_qty'] as num?)?.toInt() ?? (json['minQty'] as num?)?.toInt();
+    final subtitle = json['subtitle']?.toString() ??
+        [
+          if (coupon != null && coupon.isNotEmpty) 'Code: $coupon',
+          if (categoryName != null && categoryName.isNotEmpty)
+            'On $categoryName',
+          if (minQty != null && minQty > 1) 'Min qty $minQty',
+        ].join(' · ');
+
+    final validRaw = json['valid_until']?.toString() ??
+        json['valid_till']?.toString() ??
+        json['validUntil']?.toString() ??
+        '';
+
     return Offer(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
-      subtitle: json['subtitle']?.toString() ?? '',
-      discountLabel: json['discount_label']?.toString() ??
-          json['discountLabel']?.toString() ??
-          '',
-      validUntil: DateTime.tryParse(json['valid_until']?.toString() ?? '') ??
+      subtitle: subtitle,
+      discountLabel: label.isEmpty ? 'OFFER' : label,
+      validUntil: DateTime.tryParse(validRaw) ??
           DateTime.now().add(const Duration(days: 14)),
       gradientColors: colors,
-      categoryId: json['category_id']?.toString() ?? json['categoryId']?.toString(),
-      minQty: (json['min_qty'] as num?)?.toInt() ?? (json['minQty'] as num?)?.toInt(),
+      categoryId:
+          json['category_id']?.toString() ?? json['categoryId']?.toString(),
+      minQty: minQty,
       textColor: (json['text_color'] as num?)?.toInt(),
       featured: json['featured'] != false,
     );

@@ -65,7 +65,7 @@ class _CartScreenState extends State<CartScreen> {
         await AppPageRoute.push(context, OrderConfirmationScreen(order: order));
         if (mounted) setState(() => _placeState = PrimaryButtonState.idle);
       },
-      failure: (message, {statusCode}) async {
+      failure: (message, {statusCode, code, fields}) async {
         setState(() => _placeState = PrimaryButtonState.idle);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: AppColors.rust),

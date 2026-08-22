@@ -14,13 +14,13 @@ class HomeViewModel extends ChangeNotifier {
   List<Product> products = [];
   List<ProductCategory> categories = [];
 
-  /// Home section order (exclude "All").
-  static const homeSectionCategoryIds = [
-    'green_vegetables',
-    'root_vegetables',
-    'seasonal_fruits',
-    'herbs_leafy',
-  ];
+  /// Home section order — prefer live category ids from API.
+  List<String> get homeSectionCategoryIds {
+    if (categories.isNotEmpty) {
+      return categories.map((c) => c.id).toList();
+    }
+    return const ['1', '2', '3', '4'];
+  }
 
   Future<void> init() async {
     await Future.wait([loadCategories(), refresh()]);
@@ -33,7 +33,7 @@ class HomeViewModel extends ChangeNotifier {
         categories = list;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         // Non-fatal — chips can fall back
       },
     );
@@ -51,7 +51,7 @@ class HomeViewModel extends ChangeNotifier {
         isLoading = false;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();

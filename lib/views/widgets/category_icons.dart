@@ -26,10 +26,10 @@ class CategoryIcon extends StatelessWidget {
     }
 
     final painter = switch (categoryId) {
-      'green_vegetables' => _LeafPainter(c),
-      'root_vegetables' => _CarrotPainter(c),
-      'seasonal_fruits' => _ApplePainter(c),
-      'herbs_leafy' => _HerbPainter(c),
+      '1' || 'green_vegetables' => _LeafPainter(c),
+      '2' || 'root_vegetables' => _CarrotPainter(c),
+      '3' || 'seasonal_fruits' => _ApplePainter(c),
+      '4' || 'herbs_leafy' => _HerbPainter(c),
       _ => _LeafPainter(c),
     };
 
@@ -44,10 +44,10 @@ class CategoryIcon extends StatelessWidget {
 String categoryShortLabel(ProductCategory cat) {
   return switch (cat.id) {
     'all' => 'All',
-    'green_vegetables' => 'Greens',
-    'root_vegetables' => 'Roots',
-    'seasonal_fruits' => 'Fruits',
-    'herbs_leafy' => 'Herbs',
+    '1' || 'green_vegetables' => 'Greens',
+    '2' || 'root_vegetables' => 'Roots',
+    '3' || 'seasonal_fruits' => 'Fruits',
+    '4' || 'herbs_leafy' => 'Herbs',
     _ => cat.name.split(RegExp(r'[\s&]+')).first,
   };
 }

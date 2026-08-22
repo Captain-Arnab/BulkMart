@@ -36,7 +36,7 @@ class WishlistViewModel extends ChangeNotifier {
         isLoading = false;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -54,7 +54,7 @@ class WishlistViewModel extends ChangeNotifier {
       success: (list) {
         products = list.where((p) => _ids.contains(p.id)).toList();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         products = [];
       },
     );
@@ -70,7 +70,7 @@ class WishlistViewModel extends ChangeNotifier {
         await _resolveProducts();
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         notifyListeners();
       },
@@ -87,7 +87,7 @@ class WishlistViewModel extends ChangeNotifier {
         await _resolveProducts();
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         notifyListeners();
       },

@@ -51,7 +51,7 @@ class CategoryBrowseViewModel extends ChangeNotifier {
         categories = list;
         notifyListeners();
       },
-      failure: (_, {statusCode}) {},
+      failure: (_, {statusCode, code, fields}) {},
     );
   }
 
@@ -77,7 +77,7 @@ class CategoryBrowseViewModel extends ChangeNotifier {
         isLoading = false;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();

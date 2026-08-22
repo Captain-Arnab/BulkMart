@@ -205,9 +205,15 @@ class AuthViewModel extends ChangeNotifier {
       ..addAll(u.documents);
   }
 
+  /// DEV-MODE OTP from last send (if backend returns `dev_otp`).
+  String? get lastDevOtp => _authRepository.lastDevOtp;
+
+  Map<String, String>? fieldErrors;
+
   Future<bool> sendOtp() async {
     isLoading = true;
     error = null;
+    fieldErrors = null;
     notifyListeners();
 
     final result = await _authRepository.sendOtp(
@@ -221,8 +227,9 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
+        fieldErrors = fields;
         isLoading = false;
         notifyListeners();
         return false;
@@ -233,27 +240,49 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> verifyOtp(String otp, {bool persistSession = true}) async {
     isLoading = true;
     error = null;
+    fieldErrors = null;
     notifyListeners();
 
+    // Always persist JWT — registration / KYC calls need the access token.
     final result = await _authRepository.verifyOtp(
       mobile: mobile,
       otp: otp,
       businessName: businessName.isEmpty ? 'Bulk Buyer' : businessName,
-      persistSession: persistSession,
+      persistSession: true,
     );
 
     return result.when(
       success: (u) {
-        if (persistSession) {
-          user = u;
-          businessName = u.businessName;
-          _hydrateFromUser(u);
-        }
+        user = u;
+        businessName = u.businessName;
+        _hydrateFromUser(u);
         isLoading = false;
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
+        error = message;
+        fieldErrors = fields;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  Future<bool> refreshVerificationStatus() async {
+    isLoading = true;
+    notifyListeners();
+    final result = await _authRepository.refreshVerificationStatus();
+    return result.when(
+      success: (u) {
+        user = u;
+        _hydrateFromUser(u);
+        isLoading = false;
+        notifyListeners();
+        return true;
+      },
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -286,7 +315,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -316,7 +345,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -363,7 +392,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -388,7 +417,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -456,7 +485,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -480,7 +509,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         notifyListeners();
         return false;
@@ -501,7 +530,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isUploadingAvatar = false;
         notifyListeners();
@@ -523,7 +552,7 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isUploadingAvatar = false;
         notifyListeners();

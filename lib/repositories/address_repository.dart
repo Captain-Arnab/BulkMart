@@ -2,9 +2,9 @@ import '../core/config/app_config.dart';
 import '../models/saved_address.dart';
 import '../services/api/api_client.dart';
 import '../services/api/api_endpoints.dart';
+import '../services/api/api_envelope.dart';
 import '../services/api/result.dart';
 
-/// Address repository. Demo vs live is controlled by [AppConfig.kDemoMode].
 abstract class AddressRepository {
   factory AddressRepository({ApiClient? apiClient}) {
     if (AppConfig.kDemoMode) {
@@ -24,7 +24,6 @@ abstract class AddressRepository {
   Future<Result<SavedAddress?>> getById(String id);
 }
 
-/// Demo implementation — in-memory list (seeded for walkthrough).
 class MockAddressRepository implements AddressRepository {
   MockAddressRepository() {
     _addresses = [
@@ -34,6 +33,7 @@ class MockAddressRepository implements AddressRepository {
         line1: '12, Wholesale Market Road',
         line2: 'Near Mandi Gate',
         city: 'Bengaluru',
+        state: 'Karnataka',
         pincode: '560001',
         isDefault: true,
       ),
@@ -42,6 +42,7 @@ class MockAddressRepository implements AddressRepository {
         label: 'Warehouse',
         line1: 'Plot 44, Industrial Area Phase 2',
         city: 'Bengaluru',
+        state: 'Karnataka',
         pincode: '560058',
       ),
     ];
@@ -78,7 +79,8 @@ class MockAddressRepository implements AddressRepository {
     if (!_addresses.any((e) => e.id == id)) {
       return const Failure('Address not found', statusCode: 404);
     }
-    _addresses = _addresses.map((e) => e.copyWith(isDefault: e.id == id)).toList();
+    _addresses =
+        _addresses.map((e) => e.copyWith(isDefault: e.id == id)).toList();
     return const Success(null);
   }
 
@@ -104,7 +106,6 @@ class MockAddressRepository implements AddressRepository {
   }
 }
 
-/// Live API stub — wire when backend `/addresses` is ready.
 class ApiAddressRepository implements AddressRepository {
   ApiAddressRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
@@ -114,37 +115,114 @@ class ApiAddressRepository implements AddressRepository {
   Future<Result<List<SavedAddress>>> fetchAddresses() async {
     try {
       final response = await _apiClient.dio.get(ApiEndpoints.addresses);
-      final raw =
-          response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
-      final list =
-          raw.map((e) => SavedAddress.fromJson(e as Map<String, dynamic>)).toList();
-      return Success(list);
+      return ApiEnvelope.parse(response, (data) {
+        final raw = data is Map && data['addresses'] is List
+            ? data['addresses'] as List
+            : data is List
+                ? data
+                : const [];
+        return raw
+            .map(
+              (e) =>
+                  SavedAddress.fromJson(Map<String, dynamic>.from(e as Map)),
+            )
+            .toList();
+      });
     } catch (e) {
-      return Failure(e.toString());
+      return ApiEnvelope.fromDio(e);
     }
   }
 
   @override
   Future<Result<SavedAddress>> upsert(SavedAddress address) async {
-    // TODO: Wire to POST/PUT /addresses when backend is ready.
-    throw UnimplementedError('ApiAddressRepository.upsert');
+    try {
+      final body = {
+        'label': address.label,
+        'line1': address.line1,
+        if (address.line2 != null) 'line2': address.line2,
+        'city': address.city,
+        'state': address.state.isNotEmpty ? address.state : 'Karnataka',
+        'pincode': address.pincode,
+        if (address.landmark != null) 'landmark': address.landmark,
+        if (address.geoLat != null) 'geo_lat': address.geoLat,
+        if (address.geoLng != null) 'geo_lng': address.geoLng,
+        'is_default': address.isDefault,
+      };
+      final isNew =
+          address.id.isEmpty || int.tryParse(address.id) == null;
+      final response = isNew
+          ? await _apiClient.dio.post(ApiEndpoints.addresses, data: body)
+          : await _apiClient.dio.put(
+              ApiEndpoints.addressDetail(address.id),
+              data: body,
+            );
+      return ApiEnvelope.parse(response, (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final raw = map['address'] ?? map;
+        return SavedAddress.fromJson(Map<String, dynamic>.from(raw as Map));
+      });
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<void>> setDefault(String id) async {
-    // TODO: Wire to PATCH /addresses/{id}/default when backend is ready.
-    throw UnimplementedError('ApiAddressRepository.setDefault');
+    try {
+      final response =
+          await _apiClient.dio.post(ApiEndpoints.addressDefault(id));
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) => const Success(null),
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<void>> delete(String id) async {
-    // TODO: Wire to DELETE /addresses/{id} when backend is ready.
-    throw UnimplementedError('ApiAddressRepository.delete');
+    try {
+      final response =
+          await _apiClient.dio.delete(ApiEndpoints.addressDetail(id));
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) => const Success(null),
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<SavedAddress?>> getById(String id) async {
-    // TODO: Wire to GET /addresses/{id} when backend is ready.
-    throw UnimplementedError('ApiAddressRepository.getById');
+    final all = await fetchAddresses();
+    return all.when(
+      success: (list) {
+        try {
+          return Success(list.firstWhere((e) => e.id == id));
+        } catch (_) {
+          return const Success(null);
+        }
+      },
+      failure: (message, {statusCode, code, fields}) => Failure(
+        message,
+        statusCode: statusCode,
+        code: code,
+        fields: fields,
+      ),
+    );
   }
 }

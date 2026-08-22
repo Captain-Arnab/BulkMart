@@ -2,9 +2,10 @@ import 'dart:collection';
 
 import '../core/config/app_config.dart';
 import '../services/api/api_client.dart';
+import '../services/api/api_endpoints.dart';
+import '../services/api/api_envelope.dart';
 import '../services/api/result.dart';
 
-/// Session-scoped wishlist of product ids (demo).
 abstract class WishlistRepository {
   factory WishlistRepository({ApiClient? apiClient}) {
     if (AppConfig.kDemoMode) return MockWishlistRepository();
@@ -51,26 +52,97 @@ class MockWishlistRepository implements WishlistRepository {
 class ApiWishlistRepository implements WishlistRepository {
   ApiWishlistRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
-  // ignore: unused_field — reserved for live wishlist endpoints
   final ApiClient _apiClient;
+  final LinkedHashSet<String> _cache = LinkedHashSet<String>();
+
+  List<String> _idsFromData(dynamic data) {
+    final items = data is Map && data['items'] is List
+        ? data['items'] as List
+        : const [];
+    return items
+        .map((e) {
+          if (e is Map) {
+            return e['product_id']?.toString() ?? '';
+          }
+          return '';
+        })
+        .where((id) => id.isNotEmpty)
+        .toList();
+  }
 
   @override
   Future<Result<List<String>>> getProductIds() async {
-    throw UnimplementedError('ApiWishlistRepository.getProductIds');
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.wishlist);
+      return ApiEnvelope.parse(response, (data) {
+        final ids = _idsFromData(data);
+        _cache
+          ..clear()
+          ..addAll(ids);
+        return ids;
+      });
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<List<String>>> toggle(String productId) async {
-    throw UnimplementedError('ApiWishlistRepository.toggle');
+    if (_cache.isEmpty) {
+      await getProductIds();
+    }
+    if (_cache.contains(productId)) {
+      return remove(productId);
+    }
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.wishlist,
+        data: {
+          'product_id': int.tryParse(productId) ?? productId,
+        },
+      );
+      final parsed = ApiEnvelope.parse(response, (_) => null);
+      if (parsed is Failure<Null>) {
+        return Failure(
+          parsed.message,
+          statusCode: parsed.statusCode,
+          code: parsed.code,
+          fields: parsed.fields,
+        );
+      }
+      _cache.add(productId);
+      return Success(_cache.toList());
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<List<String>>> remove(String productId) async {
-    throw UnimplementedError('ApiWishlistRepository.remove');
+    try {
+      final response =
+          await _apiClient.dio.delete(ApiEndpoints.wishlistItem(productId));
+      final parsed = ApiEnvelope.parse(response, (_) => null);
+      if (parsed is Failure<Null>) {
+        return Failure(
+          parsed.message,
+          statusCode: parsed.statusCode,
+          code: parsed.code,
+          fields: parsed.fields,
+        );
+      }
+      _cache.remove(productId);
+      return Success(_cache.toList());
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<bool> contains(String productId) async {
-    throw UnimplementedError('ApiWishlistRepository.contains');
+    if (_cache.isEmpty) {
+      await getProductIds();
+    }
+    return _cache.contains(productId);
   }
 }

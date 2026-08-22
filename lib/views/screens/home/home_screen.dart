@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/mock/mock_offers.dart';
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../core/ui/shell_controller.dart';
+import '../../../models/offer_style.dart';
 import '../../../models/product.dart';
 import '../../../models/user.dart';
 import '../../../theme/colors.dart';
@@ -21,6 +21,7 @@ import '../../widgets/category_icons.dart';
 import '../../widgets/location_picker_sheet.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/ui_states.dart';
 import '../notifications/notifications_screen.dart';
 import '../offers/offers_screen.dart';
 import '../product/product_detail_screen.dart';
@@ -265,7 +266,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 8),
 
                     // Category-wise horizontal sections
-                    if (home.isLoading && home.products.isEmpty)
+                    if (home.error != null && home.products.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 32),
+                        child: ErrorState(
+                          message: home.error!,
+                          onRetry: () => home.refresh(),
+                        ),
+                      )
+                    else if (home.isLoading && home.products.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
                         child: Center(
@@ -353,16 +363,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final widgets = <Widget>[];
     var sectionIndex = 0;
 
-    for (final categoryId in HomeViewModel.homeSectionCategoryIds) {
+    for (final categoryId in home.homeSectionCategoryIds) {
       final items = home.productsForCategory(categoryId, limit: 8);
       if (items.isEmpty) continue;
 
       final title = home.categoryById(categoryId)?.name ??
           switch (categoryId) {
-            'green_vegetables' => 'Green Vegetables',
-            'root_vegetables' => 'Root Vegetables',
-            'seasonal_fruits' => 'Seasonal Fruits',
-            'herbs_leafy' => 'Herbs & Leafy',
+            '1' || 'green_vegetables' => 'Green Vegetables',
+            '2' || 'root_vegetables' => 'Root Vegetables',
+            '3' || 'seasonal_fruits' => 'Seasonal Fruits',
+            '4' || 'herbs_leafy' => 'Herbs & Leafy',
             _ => categoryId,
           };
 
@@ -576,8 +586,8 @@ class _HomeBannerCarouselState extends State<_HomeBannerCarousel> {
             itemCount: featured.length,
             itemBuilder: (context, index, _) {
               final offer = featured[index];
-              final colors = MockOffers.colorsOf(offer);
-              final textColor = MockOffers.textColorOf(offer);
+              final colors = OfferStyle.colorsOf(offer);
+              final textColor = OfferStyle.textColorOf(offer);
               return Material(
                 color: Colors.transparent,
                 child: InkWell(

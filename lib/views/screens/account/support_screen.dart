@@ -68,7 +68,7 @@ class _SupportScreenState extends State<SupportScreen> {
         _tickets = list;
         _loadingTickets = false;
       }),
-      failure: (_, {statusCode}) => setState(() => _loadingTickets = false),
+      failure: (_, {statusCode, code, fields}) => setState(() => _loadingTickets = false),
     );
   }
 
@@ -467,7 +467,7 @@ class _TicketSheetState extends State<_TicketSheet> {
         _orders = page.items;
         _loadingOrders = false;
       }),
-      failure: (_, {statusCode}) => setState(() => _loadingOrders = false),
+      failure: (_, {statusCode, code, fields}) => setState(() => _loadingOrders = false),
     );
   }
 
@@ -488,7 +488,7 @@ class _TicketSheetState extends State<_TicketSheet> {
     if (!mounted) return;
     result.when(
       success: (ticket) => Navigator.of(context).pop(_TicketResult(ticket)),
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: AppColors.rust),

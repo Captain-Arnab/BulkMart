@@ -102,11 +102,16 @@ class Product {
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    final categoryName = json['category_name']?.toString() ??
+        json['category']?.toString() ??
+        '';
     return Product(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      category: json['category']?.toString() ?? '',
-      categoryId: json['category_id']?.toString() ?? json['categoryId']?.toString() ?? '',
+      category: categoryName,
+      categoryId: json['category_id']?.toString() ??
+          json['categoryId']?.toString() ??
+          '',
       unit: json['unit']?.toString() ??
           json['unit_size']?.toString() ??
           json['unitSize']?.toString() ??
@@ -118,7 +123,9 @@ class Product {
               ? (json['wholesale_price'] as num).toDouble()
               : json['wholesalePrice'] != null
                   ? (json['wholesalePrice'] as num).toDouble()
-                  : null,
+                  : json['unit_price'] != null
+                      ? (json['unit_price'] as num).toDouble()
+                      : null,
       stock: json['stock'] != null
           ? (json['stock'] as num).toInt()
           : json['stock_count'] != null

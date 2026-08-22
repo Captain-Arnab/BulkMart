@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../models/kyc_status.dart';
@@ -13,12 +14,41 @@ import '../../widgets/auth_widgets.dart';
 import '../home/main_shell.dart';
 import 'registration_screen.dart';
 
-class VerificationStatusScreen extends StatelessWidget {
+class VerificationStatusScreen extends StatefulWidget {
   const VerificationStatusScreen({super.key, this.fromProfile = false});
 
   /// When opened from Profile Details — offer back navigation instead of
   /// forcing Home / re-registration flows.
   final bool fromProfile;
+
+  @override
+  State<VerificationStatusScreen> createState() =>
+      _VerificationStatusScreenState();
+}
+
+class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthViewModel>().refreshVerificationStatus();
+    });
+    _poll = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted) return;
+      final auth = context.read<AuthViewModel>();
+      if (auth.user?.kycStatus == KycStatus.pending) {
+        auth.refreshVerificationStatus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,12 +89,13 @@ class VerificationStatusScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Column(
             children: [
-              if (fromProfile || Navigator.of(context).canPop())
+              if (widget.fromProfile || Navigator.of(context).canPop())
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded, color: AppColors.ink),
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: AppColors.ink),
                   ),
                 ),
               const Spacer(),
@@ -79,7 +110,8 @@ class VerificationStatusScreen extends StatelessWidget {
               )
                   .animate()
                   .fadeIn(duration: 220.ms)
-                  .scale(begin: const Offset(0.86, 0.86), curve: AppMotion.pop),
+                  .scale(
+                      begin: const Offset(0.86, 0.86), curve: AppMotion.pop),
               const SizedBox(height: 24),
               Text(
                 title,
@@ -97,46 +129,33 @@ class VerificationStatusScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (status == KycStatus.pending && AppConfig.kDemoMode) ...[
+              if (status == KycStatus.pending) ...[
                 AuthPrimaryButton(
-                  label: fromProfile ? 'Mark Approved (Demo)' : 'Continue in Demo Mode',
+                  label: 'Check status',
                   isLoading: auth.isLoading,
-                  onPressed: () async {
-                    final ok = await auth.approveKycDemo();
-                    if (!context.mounted || !ok) return;
-                    if (fromProfile) {
-                      Navigator.of(context).pop();
-                    } else {
-                      await AppPageRoute.pushAndRemoveUntil(
-                        context,
-                        const MainShell(),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Demo only — hidden when kDemoMode is false',
-                  style: AppTextStyles.body(fontSize: 11, color: AppColors.muted),
+                  onPressed: () => auth.refreshVerificationStatus(),
                 ),
                 const SizedBox(height: 16),
               ],
               if (status == KycStatus.approved)
                 AuthPrimaryButton(
-                  label: fromProfile ? 'Done' : 'Go to Home',
+                  label: widget.fromProfile ? 'Done' : 'Go to Home',
                   onPressed: () {
-                    if (fromProfile) {
+                    if (widget.fromProfile) {
                       Navigator.of(context).pop();
                     } else {
-                      AppPageRoute.pushAndRemoveUntil(context, const MainShell());
+                      AppPageRoute.pushAndRemoveUntil(
+                          context, const MainShell());
                     }
                   },
                 ),
               if (status == KycStatus.rejected)
                 AuthPrimaryButton(
-                  label: fromProfile ? 'Back to Documents' : 'Re-upload Documents',
+                  label: widget.fromProfile
+                      ? 'Back to Documents'
+                      : 'Re-upload Documents',
                   onPressed: () {
-                    if (fromProfile) {
+                    if (widget.fromProfile) {
                       Navigator.of(context).pop();
                     } else {
                       AppPageRoute.pushReplacement(

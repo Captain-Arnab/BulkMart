@@ -1,9 +1,10 @@
 import '../core/config/app_config.dart';
 import '../models/support_ticket.dart';
 import '../services/api/api_client.dart';
+import '../services/api/api_endpoints.dart';
+import '../services/api/api_envelope.dart';
 import '../services/api/result.dart';
 
-/// Support tickets. Demo vs live is controlled by [AppConfig.kDemoMode].
 abstract class SupportRepository {
   factory SupportRepository({ApiClient? apiClient}) {
     if (AppConfig.kDemoMode) {
@@ -56,13 +57,27 @@ class MockSupportRepository implements SupportRepository {
 class ApiSupportRepository implements SupportRepository {
   ApiSupportRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
-  // ignore: unused_field — reserved for live /support endpoints
   final ApiClient _apiClient;
 
   @override
   Future<Result<List<SupportTicket>>> fetchTickets() async {
-    // TODO: Wire to GET /support/tickets when backend is ready.
-    throw UnimplementedError('ApiSupportRepository.fetchTickets');
+    try {
+      final response =
+          await _apiClient.dio.get(ApiEndpoints.supportTickets);
+      return ApiEnvelope.parse(response, (data) {
+        final raw = data is Map && data['tickets'] is List
+            ? data['tickets'] as List
+            : const [];
+        return raw
+            .map(
+              (e) =>
+                  SupportTicket.fromJson(Map<String, dynamic>.from(e as Map)),
+            )
+            .toList();
+      });
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
@@ -71,7 +86,25 @@ class ApiSupportRepository implements SupportRepository {
     required String description,
     String? relatedOrderId,
   }) async {
-    // TODO: Wire to POST /support/tickets when backend is ready.
-    throw UnimplementedError('ApiSupportRepository.submitTicket');
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.supportTickets,
+        data: {
+          'subject': subject.trim(),
+          'subject_type': subject.trim(),
+          'description': description.trim(),
+          if (relatedOrderId != null && relatedOrderId.isNotEmpty)
+            'related_order_id':
+                int.tryParse(relatedOrderId) ?? relatedOrderId,
+        },
+      );
+      return ApiEnvelope.parse(response, (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final raw = map['ticket'] ?? map;
+        return SupportTicket.fromJson(Map<String, dynamic>.from(raw as Map));
+      });
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 }

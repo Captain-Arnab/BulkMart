@@ -2,6 +2,8 @@ import '../core/config/app_config.dart';
 import '../data/mock/mock_notifications.dart';
 import '../models/app_notification.dart';
 import '../services/api/api_client.dart';
+import '../services/api/api_endpoints.dart';
+import '../services/api/api_envelope.dart';
 import '../services/api/result.dart';
 
 abstract class NotificationRepository {
@@ -45,23 +47,75 @@ class MockNotificationRepository implements NotificationRepository {
 }
 
 class ApiNotificationRepository implements NotificationRepository {
-  ApiNotificationRepository({required ApiClient apiClient}) : _apiClient = apiClient;
+  ApiNotificationRepository({required ApiClient apiClient})
+      : _apiClient = apiClient;
 
-  // ignore: unused_field — reserved for live notification endpoints
   final ApiClient _apiClient;
+  List<AppNotification> _cache = [];
 
   @override
   Future<Result<List<AppNotification>>> fetchAll() async {
-    throw UnimplementedError('ApiNotificationRepository.fetchAll');
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.notifications);
+      return ApiEnvelope.parse(response, (data) {
+        final raw = data is Map && data['notifications'] is List
+            ? data['notifications'] as List
+            : const [];
+        _cache = raw
+            .map(
+              (e) => AppNotification.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
+            .toList();
+        return List.unmodifiable(_cache);
+      });
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<List<AppNotification>>> markRead(String id) async {
-    throw UnimplementedError('ApiNotificationRepository.markRead');
+    try {
+      final response =
+          await _apiClient.dio.post(ApiEndpoints.notificationRead(id));
+      final parsed = ApiEnvelope.parse(response, (_) => null);
+      if (parsed is Failure<Null>) {
+        return Failure(
+          parsed.message,
+          statusCode: parsed.statusCode,
+          code: parsed.code,
+          fields: parsed.fields,
+        );
+      }
+      _cache = _cache
+          .map((n) => n.id == id ? n.copyWith(read: true) : n)
+          .toList();
+      return Success(List.unmodifiable(_cache));
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 
   @override
   Future<Result<List<AppNotification>>> markAllRead() async {
-    throw UnimplementedError('ApiNotificationRepository.markAllRead');
+    try {
+      final response =
+          await _apiClient.dio.post(ApiEndpoints.notificationsReadAll);
+      final parsed = ApiEnvelope.parse(response, (_) => null);
+      if (parsed is Failure<Null>) {
+        return Failure(
+          parsed.message,
+          statusCode: parsed.statusCode,
+          code: parsed.code,
+          fields: parsed.fields,
+        );
+      }
+      _cache = _cache.map((n) => n.copyWith(read: true)).toList();
+      return Success(List.unmodifiable(_cache));
+    } catch (e) {
+      return ApiEnvelope.fromDio(e);
+    }
   }
 }

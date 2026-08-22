@@ -26,7 +26,7 @@ class NotificationViewModel extends ChangeNotifier {
         isLoading = false;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
@@ -41,7 +41,7 @@ class NotificationViewModel extends ChangeNotifier {
         items = list;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {},
+      failure: (message, {statusCode, code, fields}) {},
     );
   }
 
@@ -52,7 +52,7 @@ class NotificationViewModel extends ChangeNotifier {
         items = list;
         notifyListeners();
       },
-      failure: (message, {statusCode}) {},
+      failure: (message, {statusCode, code, fields}) {},
     );
   }
 }

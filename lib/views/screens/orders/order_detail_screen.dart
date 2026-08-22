@@ -53,7 +53,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _loading = false;
         });
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         setState(() {
           _error = message;
           _loading = false;
@@ -282,7 +282,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SnackBar(content: Text('Order cancelled')),
         );
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         setState(() => _cancelling = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: AppColors.rust),

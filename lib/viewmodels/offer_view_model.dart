@@ -21,11 +21,11 @@ class OfferViewModel extends ChangeNotifier {
     final feat = await _repository.getFeatured();
     all.when(
       success: (list) => offers = list,
-      failure: (message, {statusCode}) => error = message,
+      failure: (message, {statusCode, code, fields}) => error = message,
     );
     feat.when(
       success: (list) => featured = list,
-      failure: (message, {statusCode}) {},
+      failure: (message, {statusCode, code, fields}) {},
     );
     isLoading = false;
     notifyListeners();

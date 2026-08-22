@@ -28,24 +28,48 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
+    String? addressText = json['delivery_address']?.toString() ??
+        json['deliveryAddress']?.toString();
+    final addr = json['address'];
+    if ((addressText == null || addressText.isEmpty) && addr is Map) {
+      final parts = [
+        addr['line1'],
+        addr['line2'],
+        addr['city'],
+        addr['state'],
+        addr['pincode'],
+      ].where((e) => e != null && e.toString().trim().isNotEmpty);
+      addressText = parts.join(', ');
+    }
     return Order(
-      id: json['id']?.toString() ?? json['order_id']?.toString() ?? '',
+      id: json['id']?.toString() ??
+          json['order_id']?.toString() ??
+          json['order_number']?.toString() ??
+          '',
       items: rawItems
           .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       status: OrderStatus.fromApi(json['status']?.toString()),
       subtotal: ((json['subtotal'] ?? 0) as num).toDouble(),
-      deliveryFee: ((json['delivery_fee'] ?? json['deliveryFee'] ?? 0) as num).toDouble(),
+      deliveryFee:
+          ((json['delivery_fee'] ?? json['deliveryFee'] ?? 0) as num)
+              .toDouble(),
       total: ((json['total'] ?? 0) as num).toDouble(),
-      placedAt: DateTime.tryParse(json['placed_at']?.toString() ?? json['placedAt']?.toString() ?? '') ??
+      placedAt: DateTime.tryParse(
+            json['placed_at']?.toString() ??
+                json['placedAt']?.toString() ??
+                '',
+          ) ??
           DateTime.now(),
       estimatedDeliveryDate: DateTime.tryParse(
         json['estimated_delivery_date']?.toString() ??
             json['estimatedDeliveryDate']?.toString() ??
             '',
       ),
-      deliveryAddress: json['delivery_address']?.toString() ?? json['deliveryAddress']?.toString(),
-      paymentMethod: json['payment_method']?.toString() ?? json['paymentMethod']?.toString() ?? 'COD',
+      deliveryAddress: addressText,
+      paymentMethod: json['payment_method']?.toString() ??
+          json['paymentMethod']?.toString() ??
+          'COD',
     );
   }
 

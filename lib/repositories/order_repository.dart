@@ -6,6 +6,7 @@ import '../models/order.dart';
 import '../models/order_status.dart';
 import '../services/api/api_client.dart';
 import '../services/api/api_endpoints.dart';
+import '../services/api/api_envelope.dart';
 import '../services/api/result.dart';
 
 class PaginatedOrders {
@@ -79,31 +80,54 @@ class OrderRepository {
     }
 
     try {
-      // TODO: Pass `filter` as a query param when the live /orders endpoint
-      // supports status filtering (e.g. ?filter=pending|delivered|cancelled).
       final response = await _apiClient!.dio.get(
         ApiEndpoints.orders,
-        queryParameters: {'page': page, 'limit': limit},
+        queryParameters: {'page': page, 'per_page': limit},
       );
-      final data = response.data['data'] as Map<String, dynamic>? ??
-          response.data as Map<String, dynamic>;
-      final raw = data['items'] as List<dynamic>? ?? data['orders'] as List<dynamic>? ?? [];
-      final items = raw.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
-      final total = (data['total'] as num?)?.toInt() ?? items.length;
-      return Success(
-        PaginatedOrders(
+      return ApiEnvelope.parse(response, (data) {
+        final map = data is Map ? Map<String, dynamic>.from(data as Map) : null;
+        final raw = map?['orders'] as List? ?? const [];
+        var items = raw
+            .map((e) => Order.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        switch (filter) {
+          case 'pending':
+            items = items
+                .where(
+                  (o) =>
+                      o.status != OrderStatus.delivered &&
+                      o.status != OrderStatus.cancelled,
+                )
+                .toList();
+          case 'delivered':
+            items =
+                items.where((o) => o.status == OrderStatus.delivered).toList();
+          case 'cancelled':
+            items =
+                items.where((o) => o.status == OrderStatus.cancelled).toList();
+        }
+        final pagination = map?['pagination'] as Map?;
+        final total =
+            (pagination?['total'] as num?)?.toInt() ?? items.length;
+        final perPage =
+            (pagination?['per_page'] as num?)?.toInt() ?? limit;
+        final currentPage =
+            (pagination?['page'] as num?)?.toInt() ?? page;
+        final pages = (pagination?['pages'] as num?)?.toInt() ?? 1;
+        return PaginatedOrders(
           items: items,
-          page: page,
-          limit: limit,
+          page: currentPage,
+          limit: perPage,
           total: total,
-          hasMore: page * limit < total,
-        ),
-      );
+          hasMore: currentPage < pages,
+        );
+      });
     } catch (e) {
-      return Failure(e.toString());
+      return ApiEnvelope.fromDio(e);
     }
   }
 
+  /// Syncs [items] into the server cart, then places a COD order.
   Future<Result<Order>> placeOrder({
     required List<Map<String, dynamic>> items,
     required String addressId,
@@ -112,9 +136,10 @@ class OrderRepository {
     if (AppConfig.kDemoMode) {
       await Future<void>.delayed(const Duration(milliseconds: 900));
       final stamp = DateTime.now().millisecondsSinceEpoch % 100000;
-      final addressText = (deliveryAddress != null && deliveryAddress.trim().isNotEmpty)
-          ? deliveryAddress.trim()
-          : 'Address $addressId';
+      final addressText =
+          (deliveryAddress != null && deliveryAddress.trim().isNotEmpty)
+              ? deliveryAddress.trim()
+              : 'Address $addressId';
       final order = Order(
         id: 'VC-$stamp',
         items: const [],
@@ -126,7 +151,6 @@ class OrderRepository {
         deliveryAddress: addressText,
         paymentMethod: 'COD',
       );
-      // Prefer reconstructing from cart payload via mock products when available.
       try {
         final builtItems = items.map((raw) {
           final product = MockProducts.byId(raw['product_id'].toString());
@@ -154,15 +178,49 @@ class OrderRepository {
     }
 
     try {
+      // Server checkout reads from cart — replace server cart with local lines.
+      try {
+        final cartRes = await _apiClient!.dio.get(ApiEndpoints.cart);
+        final cartData = cartRes.data is Map ? cartRes.data['data'] : null;
+        final existing = cartData is Map && cartData['items'] is List
+            ? cartData['items'] as List
+            : const [];
+        for (final row in existing) {
+          if (row is Map && row['id'] != null) {
+            await _apiClient!.dio
+                .delete(ApiEndpoints.cartItem(row['id'].toString()));
+          }
+        }
+      } catch (_) {
+        // Continue — add items anyway.
+      }
+
+      for (final raw in items) {
+        await _apiClient!.dio.post(
+          ApiEndpoints.cartItems,
+          data: {
+            'product_id': int.tryParse(raw['product_id'].toString()) ??
+                raw['product_id'],
+            'quantity': raw['quantity'],
+            'replace': true,
+          },
+        );
+      }
+
       final response = await _apiClient!.dio.post(
         ApiEndpoints.placeOrder,
-        data: {'items': items, 'address_id': addressId, 'payment_method': 'COD'},
+        data: {
+          'address_id': int.tryParse(addressId) ?? addressId,
+          'payment_method': 'COD',
+        },
       );
-      final data = response.data['data'] as Map<String, dynamic>? ??
-          response.data as Map<String, dynamic>;
-      return Success(Order.fromJson(data));
+      return ApiEnvelope.parse(response, (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final orderRaw = map['order'] ?? map;
+        return Order.fromJson(Map<String, dynamic>.from(orderRaw as Map));
+      });
     } catch (e) {
-      return Failure(e.toString());
+      return ApiEnvelope.fromDio(e);
     }
   }
 
@@ -195,13 +253,15 @@ class OrderRepository {
     }
 
     try {
-      // TODO: Wire to PATCH/POST cancel endpoint when backend is ready.
-      final response = await _apiClient!.dio.post('${ApiEndpoints.orderDetail(id)}/cancel');
-      final data = response.data['data'] as Map<String, dynamic>? ??
-          response.data as Map<String, dynamic>;
-      return Success(Order.fromJson(data));
+      final response =
+          await _apiClient!.dio.post(ApiEndpoints.orderCancel(id));
+      return ApiEnvelope.parse(response, (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final orderRaw = map['order'] ?? map;
+        return Order.fromJson(Map<String, dynamic>.from(orderRaw as Map));
+      });
     } catch (e) {
-      return Failure(e.toString());
+      return ApiEnvelope.fromDio(e);
     }
   }
 
@@ -217,12 +277,15 @@ class OrderRepository {
     }
 
     try {
-      final response = await _apiClient!.dio.get(ApiEndpoints.orderDetail(id));
-      final data = response.data['data'] as Map<String, dynamic>? ??
-          response.data as Map<String, dynamic>;
-      return Success(Order.fromJson(data));
+      final response =
+          await _apiClient!.dio.get(ApiEndpoints.orderDetail(id));
+      return ApiEnvelope.parse(response, (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final orderRaw = map['order'] ?? map;
+        return Order.fromJson(Map<String, dynamic>.from(orderRaw as Map));
+      });
     } catch (e) {
-      return Failure(e.toString());
+      return ApiEnvelope.fromDio(e);
     }
   }
 }

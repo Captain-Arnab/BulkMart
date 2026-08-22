@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
-import '../../../repositories/auth_repository.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
@@ -26,7 +25,7 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  static const _length = 4;
+  static const _length = 6;
   final _controllers = List.generate(_length, (_) => TextEditingController());
   final _focusNodes = List.generate(_length, (_) => FocusNode());
   int _seconds = 28;
@@ -43,6 +42,13 @@ class _OtpScreenState extends State<OtpScreen> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNodes.first.requestFocus();
+      final hint = context.read<AuthViewModel>().lastDevOtp;
+      if (hint != null && hint.length == _length) {
+        for (var i = 0; i < _length; i++) {
+          _controllers[i].text = hint[i];
+        }
+        setState(() {});
+      }
     });
   }
 
@@ -131,13 +137,22 @@ class _OtpScreenState extends State<OtpScreen> {
     await auth.sendOtp();
     if (!mounted) return;
     _startTimer();
+    final hint = auth.lastDevOtp;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('OTP resent (demo: 1234)'),
+      SnackBar(
+        content: Text(
+          hint != null ? 'OTP resent (dev: $hint)' : 'OTP resent',
+        ),
         backgroundColor: AppColors.violet,
         behavior: SnackBarBehavior.floating,
       ),
     );
+    if (hint != null && hint.length == _length) {
+      for (var i = 0; i < _length; i++) {
+        _controllers[i].text = hint[i];
+      }
+      setState(() {});
+    }
   }
 
   @override
@@ -165,7 +180,13 @@ class _OtpScreenState extends State<OtpScreen> {
               ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.1, end: 0),
               const SizedBox(height: 8),
               Text(
-                'Sent to +91 $masked  ·  Demo: ${AuthRepository.demoOtp}',
+                () {
+                  final hint = auth.lastDevOtp;
+                  if (hint != null) {
+                    return 'Sent to +91 $masked  ·  Dev OTP: $hint';
+                  }
+                  return 'Sent to +91 $masked';
+                }(),
                 style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
               ).animate().fadeIn(delay: 60.ms, duration: 200.ms),
               const SizedBox(height: 36),

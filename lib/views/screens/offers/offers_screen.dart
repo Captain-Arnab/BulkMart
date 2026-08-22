@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../core/ui/shell_controller.dart';
-import '../../../data/mock/mock_offers.dart';
 import '../../../models/offer.dart';
+import '../../../models/offer_style.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/offer_view_model.dart';
@@ -95,8 +95,8 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = MockOffers.colorsOf(offer);
-    final textColor = MockOffers.textColorOf(offer);
+    final colors = OfferStyle.colorsOf(offer);
+    final textColor = OfferStyle.textColorOf(offer);
 
     return PressableScale(
       onTap: onTap,

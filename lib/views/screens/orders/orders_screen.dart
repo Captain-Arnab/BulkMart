@@ -111,7 +111,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _loading = false;
         });
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         setState(() {
           _error = message;
           _loading = false;
@@ -138,7 +138,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _loadingMore = false;
         });
       },
-      failure: (_, {statusCode}) {
+      failure: (_, {statusCode, code, fields}) {
         setState(() => _loadingMore = false);
       },
     );

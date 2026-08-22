@@ -18,7 +18,9 @@ class SupportTicket {
   factory SupportTicket.fromJson(Map<String, dynamic> json) {
     return SupportTicket(
       id: json['id']?.toString() ?? '',
-      subject: json['subject']?.toString() ?? '',
+      subject: json['subject']?.toString() ??
+          json['subject_type']?.toString() ??
+          '',
       description: json['description']?.toString() ?? '',
       relatedOrderId:
           json['related_order_id']?.toString() ?? json['relatedOrderId']?.toString(),

@@ -35,19 +35,33 @@ class AppNotification {
   }
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
+    final type = (json['type'] ?? json['kind'] ?? 'general').toString();
+    final kind = switch (type.toLowerCase()) {
+      'order' || 'orders' => NotificationKind.order,
+      'offer' || 'offers' || 'promo' => NotificationKind.offer,
+      'kyc' || 'verification' => NotificationKind.kyc,
+      _ => NotificationKind.values.firstWhere(
+          (k) => k.name == type,
+          orElse: () => NotificationKind.general,
+        ),
+    };
+    final relatedId = json['related_id']?.toString();
     return AppNotification(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
-      kind: NotificationKind.values.firstWhere(
-        (k) => k.name == (json['kind']?.toString() ?? 'general'),
-        orElse: () => NotificationKind.general,
-      ),
-      read: json['read'] == true,
-      orderId: json['order_id']?.toString() ?? json['orderId']?.toString(),
-      offerId: json['offer_id']?.toString() ?? json['offerId']?.toString(),
+      kind: kind,
+      read: json['read'] == true ||
+          json['is_read'] == true ||
+          json['is_read']?.toString() == '1',
+      orderId: json['order_id']?.toString() ??
+          json['orderId']?.toString() ??
+          (kind == NotificationKind.order ? relatedId : null),
+      offerId: json['offer_id']?.toString() ??
+          json['offerId']?.toString() ??
+          (kind == NotificationKind.offer ? relatedId : null),
     );
   }
 

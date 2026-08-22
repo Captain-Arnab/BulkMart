@@ -62,7 +62,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _loading = false;
         });
       },
-      failure: (message, {statusCode}) {
+      failure: (message, {statusCode, code, fields}) {
         setState(() {
           _error = message;
           _loading = false;

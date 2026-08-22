@@ -41,8 +41,15 @@ Future<void> main() async {
       (_) => false,
     );
   };
+  apiClient.onAccountBlocked = (message) {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+    );
+  };
 
-  final authRepository = AuthRepository(storage: storage);
+  final authRepository = AuthRepository(storage: storage, apiClient: apiClient);
   final productRepository = ProductRepository(apiClient: apiClient);
   final orderRepository = OrderRepository(apiClient: apiClient);
   final addressRepository = AddressRepository(apiClient: apiClient);
