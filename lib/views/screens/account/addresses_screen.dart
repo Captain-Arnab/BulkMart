@@ -13,8 +13,25 @@ import '../../../viewmodels/address_view_model.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/auth_widgets.dart';
 
-class AddressesScreen extends StatelessWidget {
-  const AddressesScreen({super.key});
+class AddressesScreen extends StatefulWidget {
+  const AddressesScreen({super.key, this.openAddOnMount = false});
+
+  final bool openAddOnMount;
+
+  @override
+  State<AddressesScreen> createState() => _AddressesScreenState();
+}
+
+class _AddressesScreenState extends State<AddressesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openAddOnMount) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openSheet(context);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,7 +325,9 @@ class _AddressSheetState extends State<_AddressSheet> {
   Future<void> _fetchCurrentLocation() async {
     setState(() => _fetchingLocation = true);
     try {
-      final details = await _locationService.detectAddressFromCurrentLocation();
+      final details = await _locationService
+          .detectAddressFromCurrentLocation()
+          .timeout(const Duration(seconds: 12), onTimeout: () => null);
       if (!mounted) return;
       if (details == null) {
         ScaffoldMessenger.of(context).showSnackBar(

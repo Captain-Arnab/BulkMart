@@ -34,6 +34,14 @@ class AppNotification {
     );
   }
 
+  static DateTime _parseCreatedAt(dynamic raw) {
+    final value = raw?.toString().trim() ?? '';
+    if (value.isEmpty) return DateTime.now();
+    return DateTime.tryParse(value) ??
+        DateTime.tryParse(value.replaceFirst(' ', 'T')) ??
+        DateTime.now();
+  }
+
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     final type = (json['type'] ?? json['kind'] ?? 'general').toString();
     final kind = switch (type.toLowerCase()) {
@@ -50,8 +58,7 @@ class AppNotification {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: _parseCreatedAt(json['created_at']),
       kind: kind,
       read: json['read'] == true ||
           json['is_read'] == true ||

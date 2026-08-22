@@ -43,7 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().init();
       context.read<BannerViewModel>().load();
-      context.read<NotificationViewModel>().load();
+      if (context.read<NotificationViewModel>().items.isEmpty) {
+        context.read<NotificationViewModel>().load();
+      }
     });
   }
 

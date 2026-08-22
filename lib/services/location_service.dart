@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -73,10 +75,24 @@ class LocationService {
   }
 
   Future<AddressLocationDetails?> detectAddressFromCurrentLocation() async {
+    try {
+      return await _detectAddressFromCurrentLocationImpl().timeout(
+        const Duration(seconds: 12),
+        onTimeout: () => null,
+      );
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  Future<AddressLocationDetails?> _detectAddressFromCurrentLocationImpl() async {
     if (!await ensurePermission()) return null;
 
     final pos = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 8),
+      ),
     ).timeout(const Duration(seconds: 8));
 
     return _reverseGeocodeAddress(pos.latitude, pos.longitude);
@@ -87,20 +103,22 @@ class LocationService {
     double lon,
   ) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        'https://nominatim.openstreetmap.org/reverse',
-        queryParameters: {
-          'lat': lat,
-          'lon': lon,
-          'format': 'json',
-          'addressdetails': 1,
-        },
-        options: Options(
-          headers: {'User-Agent': 'VeggiiCart/1.0 (delivery-location)'},
-          receiveTimeout: const Duration(seconds: 8),
-          sendTimeout: const Duration(seconds: 8),
-        ),
-      );
+      final response = await _dio
+          .get<Map<String, dynamic>>(
+            'https://nominatim.openstreetmap.org/reverse',
+            queryParameters: {
+              'lat': lat,
+              'lon': lon,
+              'format': 'json',
+              'addressdetails': 1,
+            },
+            options: Options(
+              headers: {'User-Agent': 'VeggiiCart/1.0 (delivery-location)'},
+              receiveTimeout: const Duration(seconds: 6),
+              sendTimeout: const Duration(seconds: 6),
+            ),
+          )
+          .timeout(const Duration(seconds: 7));
       final data = response.data;
       if (data == null) return null;
 

@@ -317,8 +317,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      ).timeout(const Duration(seconds: 10));
       if (!mounted) return;
       context.read<AuthViewModel>().setGeo(pos.latitude, pos.longitude);
     } catch (e) {

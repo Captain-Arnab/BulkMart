@@ -12,21 +12,28 @@ import '../../../viewmodels/address_view_model.dart';
 import '../screens/account/addresses_screen.dart';
 
 Future<void> showLocationPickerSheet(BuildContext context) {
+  final hostContext = context;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (sheetContext) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        sheetContext.read<AddressViewModel>().detectCurrentLocation();
+        if (!sheetContext.mounted) return;
+        final vm = sheetContext.read<AddressViewModel>();
+        if (!vm.isDetectingLocation) {
+          vm.detectCurrentLocation();
+        }
       });
-      return const _LocationPickerSheet();
+      return _LocationPickerSheet(hostContext: hostContext);
     },
   );
 }
 
 class _LocationPickerSheet extends StatelessWidget {
-  const _LocationPickerSheet();
+  const _LocationPickerSheet({required this.hostContext});
+
+  final BuildContext hostContext;
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +117,8 @@ class _LocationPickerSheet extends StatelessWidget {
           const SizedBox(height: 12),
           PressableScale(
             onTap: () {
-              Navigator.pop(context);
-              AppPageRoute.push(context, const AddressesScreen());
+              Navigator.of(context).pop();
+              AppPageRoute.push(hostContext, const AddressesScreen(openAddOnMount: true));
             },
             child: Container(
               width: double.infinity,

@@ -9,17 +9,23 @@ class NotificationViewModel extends ChangeNotifier {
 
   final NotificationRepository _repository;
 
+  bool _inFlight = false;
   List<AppNotification> items = [];
   bool isLoading = false;
   String? error;
 
   int get unreadCount => items.where((n) => !n.read).length;
 
-  Future<void> load() async {
-    isLoading = true;
+  Future<void> load({bool refresh = false}) async {
+    if (_inFlight) return;
+    if (!refresh && items.isNotEmpty) return;
+
+    _inFlight = true;
+    isLoading = items.isEmpty;
     error = null;
     notifyListeners();
     final result = await _repository.fetchAll();
+    _inFlight = false;
     result.when(
       success: (list) {
         items = list;

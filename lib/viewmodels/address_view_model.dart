@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -24,6 +26,7 @@ class AddressViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool isDetectingLocation = false;
   String? error;
+  Future<void>? _detectTask;
 
   List<SavedAddress> get addresses => List.unmodifiable(_addresses);
 
@@ -70,23 +73,45 @@ class AddressViewModel extends ChangeNotifier {
 
   Future<void> detectCurrentLocation() => _detectAndMatchLocation();
 
-  Future<void> _detectAndMatchLocation() async {
+  Future<void> _detectAndMatchLocation() {
+    final inFlight = _detectTask;
+    if (inFlight != null) return inFlight;
+
+    final task = _runDetectAndMatch();
+    _detectTask = task;
+    return task.whenComplete(() {
+      if (identical(_detectTask, task)) {
+        _detectTask = null;
+      }
+    });
+  }
+
+  Future<void> _runDetectAndMatch() async {
     isDetectingLocation = true;
     notifyListeners();
 
+    DetectedLocation? detected;
     try {
-      final detected = await _locationService
+      detected = await _locationService
           .detectCurrentLocation()
-          .timeout(const Duration(seconds: 10), onTimeout: () => null);
+          .timeout(const Duration(seconds: 12), onTimeout: () => null);
       detectedLocation = detected;
-      if (detected != null) {
-        await _autoSelectNearestAddress(detected);
-      }
     } catch (_) {
       // Keep last known label / saved addresses.
     } finally {
       isDetectingLocation = false;
       notifyListeners();
+    }
+
+    if (detected == null) return;
+
+    try {
+      await _autoSelectNearestAddress(detected).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {},
+      );
+    } catch (_) {
+      // Non-fatal — saved addresses remain usable.
     }
   }
 
