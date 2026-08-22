@@ -51,8 +51,7 @@ class AuthRepository {
         data: {'mobile': mobile.trim()},
       );
       return ApiEnvelope.parse(response, (data) {
-        final map =
-            data is Map ? Map<String, dynamic>.from(data as Map) : null;
+        final map = data is Map ? Map<String, dynamic>.from(data) : null;
         final otp = map?['dev_otp']?.toString();
         lastDevOtp = otp;
         return SendOtpResult(devOtp: otp);
@@ -491,7 +490,7 @@ class AuthRepository {
         : const User(
             id: '',
             mobile: '',
-            businessName: 'Bulk Buyer',
+            businessName: 'My Business',
             kycStatus: KycStatus.pending,
           );
 

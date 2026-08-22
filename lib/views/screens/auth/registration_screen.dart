@@ -83,7 +83,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final auth = context.read<AuthViewModel>();
       auth.startRegisterFlow();
       if (auth.mobile.isNotEmpty) _mobileController.text = auth.mobile;
-      if (auth.businessName.isNotEmpty && auth.businessName != 'Bulk Buyer') {
+      if (auth.businessName.isNotEmpty && auth.businessName != 'My Business') {
         _businessController.text = auth.businessName;
       }
       if (auth.ownerName.isNotEmpty) _ownerController.text = auth.ownerName;
@@ -348,7 +348,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   String get _subtitle => switch (_step) {
         0 => 'We’ll send a one-time code to confirm it’s you.',
-        1 => 'This helps us show the right wholesale catalogue.',
+        1 => 'This helps us show the right VeggiiCart catalogue.',
         2 => 'Used for COD deliveries to your business.',
         3 => 'Aadhaar and Shop Front Photo are required to continue.',
         _ => 'Confirm details before we send your application for review.',
@@ -1202,7 +1202,7 @@ class _ReviewStep extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
-                    'I agree to the Terms of Service and Privacy Policy for wholesale COD ordering on VeggiiCart.',
+                    'I agree to the Terms of Service and Privacy Policy for COD ordering on VeggiiCart.',
                     style: AppTextStyles.body(fontSize: 13, height: 1.4),
                   ),
                 ),

@@ -1,4 +1,4 @@
-# VeggiiCart — B2B Bulk Ordering App
+# VeggiiCart
 
 Flutter Android app for **wholesale / restaurant / bulk buyers**. Cash on Delivery only.
 

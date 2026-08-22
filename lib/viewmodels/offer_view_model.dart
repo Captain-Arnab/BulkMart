@@ -25,7 +25,11 @@ class OfferViewModel extends ChangeNotifier {
     );
     feat.when(
       success: (list) => featured = list,
-      failure: (message, {statusCode, code, fields}) {},
+      failure: (message, {statusCode, code, fields}) {
+        if (kDebugMode) {
+          debugPrint('[OfferViewModel] featured load failed: $message');
+        }
+      },
     );
     isLoading = false;
     notifyListeners();

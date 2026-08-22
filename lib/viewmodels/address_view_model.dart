@@ -1,20 +1,28 @@
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../models/saved_address.dart';
 import '../repositories/address_repository.dart';
+import '../services/location_service.dart';
 
 class AddressViewModel extends ChangeNotifier {
-  AddressViewModel({required AddressRepository addressRepository})
-      : _addressRepository = addressRepository {
+  AddressViewModel({
+    required AddressRepository addressRepository,
+    LocationService? locationService,
+  })  : _addressRepository = addressRepository,
+        _locationService = locationService ?? LocationService() {
     load();
   }
 
   final AddressRepository _addressRepository;
+  final LocationService _locationService;
 
   List<SavedAddress> _addresses = [];
   SavedAddress? _lastDeleted;
   int? _lastDeletedIndex;
+  DetectedLocation? detectedLocation;
   bool isLoading = false;
+  bool isDetectingLocation = false;
   String? error;
 
   List<SavedAddress> get addresses => List.unmodifiable(_addresses);
@@ -24,6 +32,19 @@ class AddressViewModel extends ChangeNotifier {
       if (a.isDefault) return a;
     }
     return _addresses.isEmpty ? null : _addresses.first;
+  }
+
+  /// Header label for home / cart delivery row.
+  String get deliveryLocationLabel {
+    if (isDetectingLocation) return 'Detecting location…';
+    final delivery = defaultAddress;
+    if (delivery != null) {
+      return '${delivery.label} · ${delivery.city}';
+    }
+    if (detectedLocation != null) {
+      return detectedLocation!.displayLabel;
+    }
+    return 'Add delivery address';
   }
 
   Future<void> load() async {
@@ -36,13 +57,77 @@ class AddressViewModel extends ChangeNotifier {
         _addresses = List.from(list);
         isLoading = false;
         notifyListeners();
+        _detectAndMatchLocation();
       },
       failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
+        _detectAndMatchLocation();
       },
     );
+  }
+
+  Future<void> detectCurrentLocation() => _detectAndMatchLocation();
+
+  Future<void> _detectAndMatchLocation() async {
+    isDetectingLocation = true;
+    notifyListeners();
+
+    try {
+      final detected = await _locationService
+          .detectCurrentLocation()
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
+      detectedLocation = detected;
+      if (detected != null) {
+        await _autoSelectNearestAddress(detected);
+      }
+    } catch (_) {
+      // Keep last known label / saved addresses.
+    } finally {
+      isDetectingLocation = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _autoSelectNearestAddress(DetectedLocation detected) async {
+    if (_addresses.isEmpty) return;
+
+    SavedAddress? nearest;
+    double nearestDistance = double.infinity;
+
+    for (final address in _addresses) {
+      if (address.geoLat == null || address.geoLng == null) continue;
+      final distance = Geolocator.distanceBetween(
+        detected.latitude,
+        detected.longitude,
+        address.geoLat!,
+        address.geoLng!,
+      );
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = address;
+      }
+    }
+
+    if (nearest != null && nearestDistance <= 2000 && !nearest.isDefault) {
+      await setDefault(nearest.id);
+      return;
+    }
+
+    if (nearest == null && detected.locality != null) {
+      final city = detected.locality!.toLowerCase();
+      SavedAddress? match;
+      for (final address in _addresses) {
+        if (address.city.toLowerCase() == city) {
+          match = address;
+          break;
+        }
+      }
+      if (match != null && !match.isDefault) {
+        await setDefault(match.id);
+      }
+    }
   }
 
   Future<void> setDefault(String id) async {

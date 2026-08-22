@@ -46,6 +46,7 @@ class ApiOfferRepository implements OfferRepository {
             : const [];
         return raw
             .map((e) => Offer.fromJson(Map<String, dynamic>.from(e as Map)))
+            .where((o) => o.isActive)
             .toList();
       });
     } catch (e) {
@@ -60,7 +61,10 @@ class ApiOfferRepository implements OfferRepository {
   Future<Result<List<Offer>>> getFeatured() async {
     final all = await _load();
     return all.when(
-      success: (list) => Success(list.where((o) => o.featured).toList()),
+      success: (list) {
+        final featured = list.where((o) => o.featured).toList();
+        return Success(featured.isNotEmpty ? featured : list);
+      },
       failure: (message, {statusCode, code, fields}) => Failure(
         message,
         statusCode: statusCode,

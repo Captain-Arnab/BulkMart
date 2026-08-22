@@ -39,7 +39,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'B2B bulk grocery ordering · Cash on Delivery',
+                  'VeggiiCart · Cash on Delivery',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
                 ),
@@ -59,7 +59,7 @@ class AboutScreen extends StatelessWidget {
           const _InfoCard(
             title: 'Terms of Service',
             body:
-                'By using VeggiiCart you agree to place wholesale orders for business use, honour MOQs, and pay Cash on Delivery when your order arrives.',
+                'By using VeggiiCart you agree to place orders for business use, honour MOQs, and pay Cash on Delivery when your order arrives.',
           ).animate().fadeIn(delay: 60.ms, duration: 220.ms),
           const SizedBox(height: 12),
           const _InfoCard(

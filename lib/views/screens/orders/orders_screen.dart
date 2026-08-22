@@ -248,7 +248,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           const SizedBox(height: 24),
           EmptyState(
             title: 'No orders yet',
-            subtitle: 'Your COD order history will appear here once you place your first bulk order.',
+            subtitle: 'Your COD order history will appear here once you place your first order.',
             lottieAsset: 'assets/lottie/empty_cart.json',
             icon: Icons.receipt_long_outlined,
             ctaLabel: 'Start Shopping',

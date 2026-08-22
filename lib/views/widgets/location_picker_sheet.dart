@@ -16,7 +16,12 @@ Future<void> showLocationPickerSheet(BuildContext context) {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _LocationPickerSheet(),
+    builder: (sheetContext) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        sheetContext.read<AddressViewModel>().detectCurrentLocation();
+      });
+      return const _LocationPickerSheet();
+    },
   );
 }
 
@@ -53,10 +58,37 @@ class _LocationPickerSheet extends StatelessWidget {
           Text('Delivering to', style: AppTextStyles.display(fontSize: 20)),
           const SizedBox(height: 4),
           Text(
-            'Choose a saved address for COD deliveries',
+            'Choose a saved address or use your current location',
             style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 16),
+          if (addresses.isDetectingLocation)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Detecting your location…',
+                    style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+          if (addresses.detectedLocation != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _CurrentLocationTile(
+                label: addresses.detectedLocation!.displayLabel,
+                selected: addresses.defaultAddress == null,
+                onTap: () => Navigator.pop(context),
+              ),
+            ),
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
@@ -102,6 +134,60 @@ class _LocationPickerSheet extends StatelessWidget {
         ],
       ),
     ).animate().slideY(begin: 0.12, end: 0, duration: 320.ms, curve: Curves.easeOutBack);
+  }
+}
+
+class _CurrentLocationTile extends StatelessWidget {
+  const _CurrentLocationTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.greenSoft : AppColors.section,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(color: selected ? AppColors.violet : AppColors.line),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.my_location_rounded, color: AppColors.violet),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current location',
+                    style: AppTextStyles.body(fontSize: 14, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded, color: AppColors.violet, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }
 

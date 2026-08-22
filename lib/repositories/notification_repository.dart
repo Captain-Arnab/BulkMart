@@ -80,19 +80,21 @@ class ApiNotificationRepository implements NotificationRepository {
     try {
       final response =
           await _apiClient.dio.post(ApiEndpoints.notificationRead(id));
-      final parsed = ApiEnvelope.parse(response, (_) => null);
-      if (parsed is Failure<Null>) {
-        return Failure(
-          parsed.message,
-          statusCode: parsed.statusCode,
-          code: parsed.code,
-          fields: parsed.fields,
-        );
-      }
-      _cache = _cache
-          .map((n) => n.id == id ? n.copyWith(read: true) : n)
-          .toList();
-      return Success(List.unmodifiable(_cache));
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) {
+          _cache = _cache
+              .map((n) => n.id == id ? n.copyWith(read: true) : n)
+              .toList();
+          return Success(List.unmodifiable(_cache));
+        },
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }
@@ -103,17 +105,19 @@ class ApiNotificationRepository implements NotificationRepository {
     try {
       final response =
           await _apiClient.dio.post(ApiEndpoints.notificationsReadAll);
-      final parsed = ApiEnvelope.parse(response, (_) => null);
-      if (parsed is Failure<Null>) {
-        return Failure(
-          parsed.message,
-          statusCode: parsed.statusCode,
-          code: parsed.code,
-          fields: parsed.fields,
-        );
-      }
-      _cache = _cache.map((n) => n.copyWith(read: true)).toList();
-      return Success(List.unmodifiable(_cache));
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) {
+          _cache = _cache.map((n) => n.copyWith(read: true)).toList();
+          return Success(List.unmodifiable(_cache));
+        },
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }

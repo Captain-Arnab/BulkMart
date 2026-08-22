@@ -61,21 +61,38 @@ class Offer {
         json['validUntil']?.toString() ??
         '';
 
+    final rawTitle = json['title']?.toString() ?? '';
+
     return Offer(
       id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? '',
+      title: _sanitizeTitle(rawTitle),
       subtitle: subtitle,
       discountLabel: label.isEmpty ? 'OFFER' : label,
-      validUntil: DateTime.tryParse(validRaw) ??
+      validUntil: _parseApiDate(validRaw) ??
           DateTime.now().add(const Duration(days: 14)),
       gradientColors: colors,
       categoryId:
           json['category_id']?.toString() ?? json['categoryId']?.toString(),
       minQty: minQty,
       textColor: (json['text_color'] as num?)?.toInt(),
-      featured: json['featured'] != false,
+      featured: json['featured'] == true ||
+          json['is_featured'] == true ||
+          json['is_banner'] == true,
     );
   }
+
+  static String _sanitizeTitle(String raw) {
+    return raw
+        .replaceFirst(RegExp(r'^DEMO\s*[—\-]\s*', caseSensitive: false), '')
+        .trim();
+  }
+
+  static DateTime? _parseApiDate(String raw) {
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw) ?? DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+  }
+
+  bool get isActive => validUntil.isAfter(DateTime.now());
 
   Map<String, dynamic> toJson() => {
         'id': id,

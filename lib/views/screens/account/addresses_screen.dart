@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/ui/app_motion.dart';
 import '../../../core/ui/pressable_scale.dart';
 import '../../../models/saved_address.dart';
+import '../../../services/location_service.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../../viewmodels/address_view_model.dart';
@@ -281,6 +282,11 @@ class _AddressSheetState extends State<_AddressSheet> {
   late final TextEditingController _pincode;
   late String _label;
   late bool _isDefault;
+  late String _state;
+  double? _geoLat;
+  double? _geoLng;
+  bool _fetchingLocation = false;
+  final LocationService _locationService = LocationService();
 
   @override
   void initState() {
@@ -288,10 +294,48 @@ class _AddressSheetState extends State<_AddressSheet> {
     final e = widget.existing;
     _label = e?.label ?? 'Shop';
     _isDefault = e?.isDefault ?? false;
+    _state = e?.state ?? '';
+    _geoLat = e?.geoLat;
+    _geoLng = e?.geoLng;
     _line1 = TextEditingController(text: e?.line1 ?? '');
     _line2 = TextEditingController(text: e?.line2 ?? '');
     _city = TextEditingController(text: e?.city ?? '');
     _pincode = TextEditingController(text: e?.pincode ?? '');
+  }
+
+  bool get _hasGeo => _geoLat != null && _geoLng != null;
+
+  Future<void> _fetchCurrentLocation() async {
+    setState(() => _fetchingLocation = true);
+    try {
+      final details = await _locationService.detectAddressFromCurrentLocation();
+      if (!mounted) return;
+      if (details == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not get location. Allow location permission and try again.',
+            ),
+          ),
+        );
+        return;
+      }
+      _line1.text = details.line1;
+      _line2.text = details.line2 ?? '';
+      _city.text = details.city;
+      _pincode.text = details.pincode;
+      _state = details.state;
+      _geoLat = details.latitude;
+      _geoLng = details.longitude;
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not fetch location: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
   }
 
   @override
@@ -315,7 +359,10 @@ class _AddressSheetState extends State<_AddressSheet> {
       line1: _line1.text.trim(),
       line2: _line2.text.trim().isEmpty ? null : _line2.text.trim(),
       city: _city.text.trim(),
+      state: _state,
       pincode: _pincode.text.trim(),
+      geoLat: _geoLat,
+      geoLng: _geoLng,
       isDefault: _isDefault,
     );
     context.read<AddressViewModel>().upsert(address);
@@ -407,6 +454,82 @@ class _AddressSheetState extends State<_AddressSheet> {
                     ),
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 16),
+              PressableScale(
+                onTap: _fetchingLocation ? null : _fetchCurrentLocation,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.greenSoft,
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.my_location_rounded,
+                        color: _hasGeo ? AppColors.success : AppColors.violet,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Use current location',
+                              style: AppTextStyles.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _fetchingLocation
+                                  ? 'Fetching GPS & address…'
+                                  : _hasGeo
+                                      ? 'Location captured — review fields below'
+                                      : 'Auto-fill address from your device GPS',
+                              style: AppTextStyles.body(
+                                fontSize: 11,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_fetchingLocation)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.violet,
+                          ),
+                        )
+                      else if (_hasGeo)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Text(
+                            'Captured',
+                            style: AppTextStyles.body(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               const AuthFieldLabel('Address line 1'),

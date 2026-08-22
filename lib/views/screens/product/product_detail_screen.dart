@@ -251,7 +251,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           style: AppTextStyles.price(fontSize: 28, color: AppColors.violet),
                         ),
                         Text(
-                          '${product.unit} · wholesale',
+                          product.unit,
                           style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
                         ),
                         const SizedBox(height: 20),

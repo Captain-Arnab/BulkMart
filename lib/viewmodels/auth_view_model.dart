@@ -247,7 +247,7 @@ class AuthViewModel extends ChangeNotifier {
     final result = await _authRepository.verifyOtp(
       mobile: mobile,
       otp: otp,
-      businessName: businessName.isEmpty ? 'Bulk Buyer' : businessName,
+      businessName: businessName.isEmpty ? 'My Business' : businessName,
       persistSession: true,
     );
 

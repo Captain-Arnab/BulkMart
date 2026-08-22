@@ -151,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                'Bulk ordering,\nsorted.',
+                'VeggiiCart,\nsorted.',
                 style: AppTextStyles.display(fontSize: 32, height: 1.15),
               )
                   .animate()
@@ -312,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: Border.all(color: AppColors.line),
                 ),
                 child: Text(
-                  'B2B only — verified wholesale, restaurant and bulk-purchase accounts.',
+                  'Verified business accounts for restaurants and retailers on VeggiiCart.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.body(fontSize: 12, color: AppColors.muted, height: 1.4),
                 ),

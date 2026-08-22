@@ -57,17 +57,7 @@ class Product {
 
   int get stockCount => stock ?? 0;
 
-  /// Deterministic Picsum fallback when LoremFlickr is slow/unavailable.
-  String get fallbackImageUrl {
-    final slug = name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
-    return 'https://picsum.photos/seed/$slug/400/400';
-  }
-
-  String get primaryImageUrl =>
-      (imageUrl != null && imageUrl!.isNotEmpty) ? imageUrl! : fallbackImageUrl;
+  bool get hasImage => imageUrl != null && imageUrl!.trim().isNotEmpty;
 
   Product copyWith({
     String? id,
@@ -159,15 +149,23 @@ class Product {
 }
 
 class ProductCategory {
-  const ProductCategory({required this.id, required this.name});
+  const ProductCategory({
+    required this.id,
+    required this.name,
+    this.imageUrl,
+  });
 
   final String id;
   final String name;
+  final String? imageUrl;
+
+  bool get hasImage => imageUrl != null && imageUrl!.trim().isNotEmpty;
 
   factory ProductCategory.fromJson(Map<String, dynamic> json) {
     return ProductCategory(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
+      imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
     );
   }
 }

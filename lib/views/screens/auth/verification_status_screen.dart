@@ -72,7 +72,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
         icon = Icons.verified_rounded;
         color = AppColors.success;
         title = "You're verified!";
-        body = 'Start ordering in bulk with wholesale MOQs and COD delivery.';
+        body = 'Start shopping on VeggiiCart with MOQs and COD delivery.';
       case KycStatus.rejected:
         icon = Icons.cancel_rounded;
         color = AppColors.alert;

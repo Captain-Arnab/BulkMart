@@ -53,7 +53,7 @@ class _OffersScreenState extends State<OffersScreen> {
           : vm.offers.isEmpty
               ? const EmptyState(
                   title: 'No offers right now',
-                  subtitle: 'Check back soon for bulk discounts and seasonal deals.',
+                  subtitle: 'Check back soon for discounts and seasonal deals on VeggiiCart.',
                   icon: Icons.local_offer_outlined,
                 )
               : ListView.separated(

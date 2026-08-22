@@ -1,6 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../models/product.dart';
+import '../../theme/colors.dart';
 
 /// Produce-themed category icon (leaf / carrot / apple / herb sprig).
 /// Prefer this over Material farm/flower icons which read as tractor / florist.
@@ -37,6 +40,65 @@ class CategoryIcon extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(painter: painter),
+    );
+  }
+}
+
+/// Circular category image from API [ProductCategory.imageUrl], with icon fallback.
+class CategoryCircleImage extends StatelessWidget {
+  const CategoryCircleImage({
+    super.key,
+    required this.category,
+    required this.size,
+    this.iconSize,
+    this.fallbackColor,
+  });
+
+  final ProductCategory category;
+  final double size;
+  final double? iconSize;
+  final Color? fallbackColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!category.hasImage) {
+      return CategoryIcon(
+        categoryId: category.id,
+        size: iconSize ?? size * 0.46,
+        color: fallbackColor,
+      );
+    }
+
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cacheSize = (size * dpr).round().clamp(48, 256);
+
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CachedNetworkImage(
+          imageUrl: category.imageUrl!,
+          fit: BoxFit.cover,
+          memCacheWidth: cacheSize,
+          memCacheHeight: cacheSize,
+          fadeInDuration: const Duration(milliseconds: 120),
+          placeholder: (_, __) => Shimmer.fromColors(
+            baseColor: AppColors.paper2,
+            highlightColor: AppColors.white,
+            child: const ColoredBox(color: AppColors.paper2),
+          ),
+          errorWidget: (_, __, ___) => ColoredBox(
+            color: AppColors.paper2,
+            child: Center(
+              child: CategoryIcon(
+                categoryId: category.id,
+                size: iconSize ?? size * 0.46,
+                color: fallbackColor ?? AppColors.green,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

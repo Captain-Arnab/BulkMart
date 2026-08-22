@@ -85,7 +85,7 @@ class OrderRepository {
         queryParameters: {'page': page, 'per_page': limit},
       );
       return ApiEnvelope.parse(response, (data) {
-        final map = data is Map ? Map<String, dynamic>.from(data as Map) : null;
+        final map = data is Map ? Map<String, dynamic>.from(data) : null;
         final raw = map?['orders'] as List? ?? const [];
         var items = raw
             .map((e) => Order.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -187,7 +187,7 @@ class OrderRepository {
             : const [];
         for (final row in existing) {
           if (row is Map && row['id'] != null) {
-            await _apiClient!.dio
+            await _apiClient.dio
                 .delete(ApiEndpoints.cartItem(row['id'].toString()));
           }
         }

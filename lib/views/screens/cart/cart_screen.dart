@@ -93,7 +93,7 @@ class _CartScreenState extends State<CartScreen> {
       body: cart.items.isEmpty
           ? EmptyState(
               title: 'Your cart is empty',
-              subtitle: 'Browse the catalog and add bulk items to place a COD order.',
+              subtitle: 'Browse the catalog and add items to place a COD order on VeggiiCart.',
               lottieAsset: 'assets/lottie/empty_cart.json',
               icon: Icons.shopping_bag_outlined,
               ctaLabel: 'Browse Catalog',

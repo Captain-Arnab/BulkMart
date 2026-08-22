@@ -101,17 +101,19 @@ class ApiWishlistRepository implements WishlistRepository {
           'product_id': int.tryParse(productId) ?? productId,
         },
       );
-      final parsed = ApiEnvelope.parse(response, (_) => null);
-      if (parsed is Failure<Null>) {
-        return Failure(
-          parsed.message,
-          statusCode: parsed.statusCode,
-          code: parsed.code,
-          fields: parsed.fields,
-        );
-      }
-      _cache.add(productId);
-      return Success(_cache.toList());
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) {
+          _cache.add(productId);
+          return Success(_cache.toList());
+        },
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }
@@ -122,17 +124,19 @@ class ApiWishlistRepository implements WishlistRepository {
     try {
       final response =
           await _apiClient.dio.delete(ApiEndpoints.wishlistItem(productId));
-      final parsed = ApiEnvelope.parse(response, (_) => null);
-      if (parsed is Failure<Null>) {
-        return Failure(
-          parsed.message,
-          statusCode: parsed.statusCode,
-          code: parsed.code,
-          fields: parsed.fields,
-        );
-      }
-      _cache.remove(productId);
-      return Success(_cache.toList());
+      final parsed = ApiEnvelope.parse(response, (_) => true);
+      return parsed.when(
+        success: (_) {
+          _cache.remove(productId);
+          return Success(_cache.toList());
+        },
+        failure: (message, {statusCode, code, fields}) => Failure(
+          message,
+          statusCode: statusCode,
+          code: code,
+          fields: fields,
+        ),
+      );
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }

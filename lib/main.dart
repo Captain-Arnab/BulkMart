@@ -8,6 +8,7 @@ import 'core/navigation/app_page_route.dart';
 import 'core/navigation/root_navigator.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/ui/shell_controller.dart';
+import 'repositories/banner_repository.dart';
 import 'repositories/address_repository.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/notification_repository.dart';
@@ -18,6 +19,7 @@ import 'repositories/support_repository.dart';
 import 'repositories/wishlist_repository.dart';
 import 'services/api/api_client.dart';
 import 'theme/app_theme.dart';
+import 'viewmodels/banner_view_model.dart';
 import 'viewmodels/address_view_model.dart';
 import 'viewmodels/auth_view_model.dart';
 import 'viewmodels/cart_view_model.dart';
@@ -57,6 +59,7 @@ Future<void> main() async {
   final wishlistRepository = WishlistRepository(apiClient: apiClient);
   final notificationRepository = NotificationRepository(apiClient: apiClient);
   final offerRepository = OfferRepository(apiClient: apiClient);
+  final bannerRepository = BannerRepository(apiClient: apiClient);
 
   runApp(
     MultiProvider(
@@ -71,6 +74,7 @@ Future<void> main() async {
         Provider.value(value: wishlistRepository),
         Provider.value(value: notificationRepository),
         Provider.value(value: offerRepository),
+        Provider.value(value: bannerRepository),
         ChangeNotifierProvider(create: (_) => ShellController()),
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authRepository: authRepository),
@@ -94,6 +98,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => OfferViewModel(repository: offerRepository)..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BannerViewModel(repository: bannerRepository)..load(),
         ),
       ],
       child: const VeggiiCartApp(),

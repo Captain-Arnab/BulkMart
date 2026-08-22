@@ -56,7 +56,7 @@ class RegistrationSuccessScreen extends StatelessWidget {
                   .slideY(begin: 0.1, end: 0, delay: 80.ms),
               const SizedBox(height: 10),
               Text(
-                'Your account is ready — start ordering in bulk.',
+                'Your account is ready — start shopping on VeggiiCart.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.body(
                   fontSize: 14,

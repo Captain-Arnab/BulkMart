@@ -288,10 +288,12 @@ class _CategorySidebar extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  CategoryIcon(
-                    categoryId: cat.id,
-                    size: 22,
-                    color: selected ? AppColors.violet : AppColors.muted,
+                  CategoryCircleImage(
+                    category: cat,
+                    size: 40,
+                    iconSize: 22,
+                    fallbackColor:
+                        selected ? AppColors.violet : AppColors.muted,
                   ),
                   const SizedBox(height: 6),
                   Text(
