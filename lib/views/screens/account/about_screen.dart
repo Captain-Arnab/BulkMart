@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../core/navigation/app_page_route.dart';
 import '../../../core/ui/app_motion.dart';
+import '../../../core/ui/pressable_scale.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
+import '../cancellation_policy_screen.dart';
+import '../terms_conditions_screen.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -56,10 +60,33 @@ class AboutScreen extends StatelessWidget {
             ),
           ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.1, end: 0),
           const SizedBox(height: 16),
-          const _InfoCard(
-            title: 'Terms of Service',
-            body:
-                'By using VeggiiCart you agree to place orders for business use, honour MOQs, and pay Cash on Delivery when your order arrives.',
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              boxShadow: AppShadows.card,
+            ),
+            child: Column(
+              children: [
+                _LegalNavRow(
+                  icon: Icons.description_outlined,
+                  label: 'Terms & Conditions',
+                  onTap: () => AppPageRoute.push(
+                    context,
+                    const TermsConditionsScreen(),
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.line),
+                _LegalNavRow(
+                  icon: Icons.cancel_outlined,
+                  label: 'Cancellation Policy',
+                  onTap: () => AppPageRoute.push(
+                    context,
+                    const CancellationPolicyScreen(),
+                  ),
+                ),
+              ],
+            ),
           ).animate().fadeIn(delay: 60.ms, duration: 220.ms),
           const SizedBox(height: 12),
           const _InfoCard(
@@ -70,9 +97,56 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const _InfoCard(
             title: 'Payment',
-            body: 'Cash on Delivery is the only payment method on VeggiiCart — by design.',
+            body:
+                'Cash on Delivery is the only payment method on VeggiiCart — by design.',
           ).animate().fadeIn(delay: 180.ms, duration: 220.ms),
         ],
+      ),
+    );
+  }
+}
+
+class _LegalNavRow extends StatelessWidget {
+  const _LegalNavRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.greenSoft,
+                borderRadius: BorderRadius.circular(AppRadii.md),
+              ),
+              child: Icon(icon, size: 18, color: AppColors.forest),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.body(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+          ],
+        ),
       ),
     );
   }
@@ -97,11 +171,18 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.body(fontSize: 15, fontWeight: FontWeight.w800)),
+          Text(
+            title,
+            style: AppTextStyles.body(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 8),
           Text(
             body,
-            style: AppTextStyles.body(fontSize: 13, color: AppColors.muted, height: 1.45),
+            style: AppTextStyles.body(
+              fontSize: 13,
+              color: AppColors.muted,
+              height: 1.45,
+            ),
           ),
         ],
       ),

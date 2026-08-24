@@ -3,11 +3,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_config.dart';
 import '../../models/user.dart';
 import '../../theme/colors.dart';
 import '../../theme/text_styles.dart';
+import 'remote_network_image.dart';
 
-/// Circular profile avatar — initials / photo / loading ring.
+/// Circular profile avatar — initials / local photo / remote URL / loading ring.
 class ProfileAvatar extends StatefulWidget {
   const ProfileAvatar({
     super.key,
@@ -37,21 +39,6 @@ class _ProfileAvatarState extends State<ProfileAvatar>
   late final AnimationController _bounce;
   Object? _lastBounceKey;
 
-  String? _resolvedPath;
-  bool _hasFile = false;
-
-  void _resolveAvatarFile() {
-    final path = widget.user?.avatarPath;
-    if (path == null || path.isEmpty) {
-      _resolvedPath = null;
-      _hasFile = false;
-      return;
-    }
-    if (path == _resolvedPath) return;
-    _resolvedPath = path;
-    _hasFile = File(path).existsSync();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -60,7 +47,6 @@ class _ProfileAvatarState extends State<ProfileAvatar>
       duration: const Duration(milliseconds: 420),
     );
     _lastBounceKey = widget.bounceKey;
-    _resolveAvatarFile();
   }
 
   @override
@@ -69,9 +55,6 @@ class _ProfileAvatarState extends State<ProfileAvatar>
     if (widget.bounceKey != null && widget.bounceKey != _lastBounceKey) {
       _lastBounceKey = widget.bounceKey;
       _bounce.forward(from: 0);
-    }
-    if (oldWidget.user?.avatarPath != widget.user?.avatarPath) {
-      _resolveAvatarFile();
     }
   }
 
@@ -83,8 +66,9 @@ class _ProfileAvatarState extends State<ProfileAvatar>
 
   @override
   Widget build(BuildContext context) {
-    final path = _resolvedPath;
-    final hasFile = _hasFile;
+    final raw = widget.user?.avatarPath?.trim();
+    final networkUrl = _networkAvatarUrl(raw);
+    final localPath = _localAvatarPath(raw);
 
     return AnimatedBuilder(
       animation: _bounce,
@@ -106,17 +90,10 @@ class _ProfileAvatarState extends State<ProfileAvatar>
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
-              child: hasFile && path != null
-                  ? Image.file(File(path), fit: BoxFit.cover)
-                  : Center(
-                      child: Text(
-                        widget.user?.initials ?? 'B',
-                        style: AppTextStyles.display(
-                          fontSize: widget.size * 0.32,
-                          color: AppColors.violet,
-                        ),
-                      ),
-                    ),
+              child: _buildFace(
+                networkUrl: networkUrl,
+                localPath: localPath,
+              ),
             ),
             if (widget.isUploading)
               Positioned.fill(
@@ -154,6 +131,76 @@ class _ProfileAvatarState extends State<ProfileAvatar>
         ),
       ),
     );
+  }
+
+  Widget _buildFace({required String? networkUrl, required String? localPath}) {
+    final initials = Center(
+      child: Text(
+        widget.user?.initials ?? 'B',
+        style: AppTextStyles.display(
+          fontSize: widget.size * 0.32,
+          color: AppColors.violet,
+        ),
+      ),
+    );
+
+    if (networkUrl != null) {
+      final cache = (widget.size * MediaQuery.devicePixelRatioOf(context))
+          .round()
+          .clamp(48, 512);
+      return RemoteNetworkImage(
+        imageUrl: networkUrl,
+        fit: BoxFit.cover,
+        width: widget.size,
+        height: widget.size,
+        memCacheWidth: cache,
+        memCacheHeight: cache,
+        placeholder: initials,
+        errorWidget: initials,
+      );
+    }
+
+    if (localPath != null) {
+      return Image.file(
+        File(localPath),
+        fit: BoxFit.cover,
+        width: widget.size,
+        height: widget.size,
+        errorBuilder: (_, __, ___) => initials,
+      );
+    }
+
+    return initials;
+  }
+
+  /// Remote `avatar_url` from API (absolute or site-relative).
+  static String? _networkAvatarUrl(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final lower = raw.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return raw;
+    }
+    // Site-relative upload path, e.g. `/public/uploads/avatars/...`
+    if (raw.startsWith('/')) {
+      final api = Uri.parse(AppConfig.apiBaseUrl);
+      return Uri(
+        scheme: api.scheme,
+        host: api.host,
+        port: api.hasPort ? api.port : null,
+        path: raw,
+      ).toString();
+    }
+    return null;
+  }
+
+  /// Local cropped file still on disk (pre-upload / offline preview).
+  static String? _localAvatarPath(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    if (_networkAvatarUrl(raw) != null) return null;
+    try {
+      if (File(raw).existsSync()) return raw;
+    } catch (_) {}
+    return null;
   }
 }
 

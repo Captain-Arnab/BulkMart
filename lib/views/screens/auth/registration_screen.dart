@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,6 +15,7 @@ import '../../../viewmodels/address_view_model.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../../widgets/auth_widgets.dart';
 import '../../widgets/document_source_sheet.dart';
+import '../terms_conditions_screen.dart';
 import 'otp_screen.dart';
 import 'verification_status_screen.dart';
 
@@ -1190,27 +1192,82 @@ class _ReviewStep extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        InkWell(
-          onTap: () => onTerms(!auth.acceptedTerms),
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                value: auth.acceptedTerms,
-                activeColor: AppColors.violet,
-                onChanged: (v) => onTerms(v ?? false),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    'I agree to the Terms of Service and Privacy Policy for COD ordering on VeggiiCart.',
-                    style: AppTextStyles.body(fontSize: 13, height: 1.4),
+        _TermsAgreementRow(
+          accepted: auth.acceptedTerms,
+          onChanged: onTerms,
+        ),
+      ],
+    );
+  }
+}
+
+class _TermsAgreementRow extends StatefulWidget {
+  const _TermsAgreementRow({
+    required this.accepted,
+    required this.onChanged,
+  });
+
+  final bool accepted;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  State<_TermsAgreementRow> createState() => _TermsAgreementRowState();
+}
+
+class _TermsAgreementRowState extends State<_TermsAgreementRow> {
+  late final TapGestureRecognizer _termsTap;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsTap = TapGestureRecognizer()
+      ..onTap = () {
+        AppPageRoute.push(context, const TermsConditionsScreen());
+      };
+  }
+
+  @override
+  void dispose() {
+    _termsTap.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = AppTextStyles.body(fontSize: 13, height: 1.4);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Checkbox(
+          value: widget.accepted,
+          activeColor: AppColors.violet,
+          onChanged: (v) => widget.onChanged(v ?? false),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text.rich(
+              TextSpan(
+                style: base,
+                children: [
+                  const TextSpan(text: 'I agree to the '),
+                  TextSpan(
+                    text: 'Terms & Conditions',
+                    style: base.copyWith(
+                      color: AppColors.green,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.green,
+                    ),
+                    recognizer: _termsTap,
                   ),
-                ),
+                  const TextSpan(
+                    text:
+                        ' and Privacy Policy for COD ordering on VeggiiCart.',
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ],

@@ -5,6 +5,7 @@ import '../models/kyc_status.dart';
 import '../models/registration_document.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
+import '../services/api/result.dart';
 
 class AuthViewModel extends ChangeNotifier {
   AuthViewModel({required AuthRepository authRepository})
@@ -221,6 +222,21 @@ class AuthViewModel extends ChangeNotifier {
       businessName: businessName,
     );
 
+    return _finishOtpRequest(result);
+  }
+
+  Future<bool> resendOtp() async {
+    isLoading = true;
+    error = null;
+    fieldErrors = null;
+    notifyListeners();
+
+    final result = await _authRepository.resendOtp(mobile: mobile);
+
+    return _finishOtpRequest(result);
+  }
+
+  bool _finishOtpRequest(Result<SendOtpResult> result) {
     return result.when(
       success: (_) {
         isLoading = false;

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -42,6 +43,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNodes.first.requestFocus();
+      if (!kDebugMode) return;
       final hint = context.read<AuthViewModel>().lastDevOtp;
       if (hint != null && hint.length == _length) {
         for (var i = 0; i < _length; i++) {
@@ -134,20 +136,22 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _resend() async {
     final auth = context.read<AuthViewModel>();
-    await auth.sendOtp();
+    await auth.resendOtp();
     if (!mounted) return;
     _startTimer();
     final hint = auth.lastDevOtp;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          hint != null ? 'OTP resent (dev: $hint)' : 'OTP resent',
+          hint != null && kDebugMode
+              ? 'OTP sent to your mobile (dev: $hint)'
+              : 'OTP sent to your mobile',
         ),
         backgroundColor: AppColors.violet,
         behavior: SnackBarBehavior.floating,
       ),
     );
-    if (hint != null && hint.length == _length) {
+    if (kDebugMode && hint != null && hint.length == _length) {
       for (var i = 0; i < _length; i++) {
         _controllers[i].text = hint[i];
       }
@@ -180,15 +184,29 @@ class _OtpScreenState extends State<OtpScreen> {
               ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.1, end: 0),
               const SizedBox(height: 8),
               Text(
-                () {
-                  final hint = auth.lastDevOtp;
-                  if (hint != null) {
-                    return 'Sent to +91 $masked  ·  Dev OTP: $hint';
-                  }
-                  return 'Sent to +91 $masked';
-                }(),
+                'OTP sent to +91 $masked',
                 style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
               ).animate().fadeIn(delay: 60.ms, duration: 200.ms),
+              if (kDebugMode && auth.lastDevOtp != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.mustard.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    border: Border.all(color: AppColors.mustard.withValues(alpha: 0.45)),
+                  ),
+                  child: Text(
+                    'Dev OTP (SMS fallback): ${auth.lastDevOtp}',
+                    style: AppTextStyles.mono(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A5C13),
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 80.ms, duration: 200.ms),
+              ],
               const SizedBox(height: 36),
               AnimatedSwitcher(
                 duration: AppMotion.normal,

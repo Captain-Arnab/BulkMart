@@ -35,6 +35,25 @@ class AuthRepository {
     required String mobile,
     String businessName = '',
   }) async {
+    return _requestOtp(
+      endpoint: ApiEndpoints.sendOtp,
+      mobile: mobile,
+      businessName: businessName,
+    );
+  }
+
+  Future<Result<SendOtpResult>> resendOtp({required String mobile}) async {
+    return _requestOtp(
+      endpoint: ApiEndpoints.resendOtp,
+      mobile: mobile,
+    );
+  }
+
+  Future<Result<SendOtpResult>> _requestOtp({
+    required String endpoint,
+    required String mobile,
+    String businessName = '',
+  }) async {
     try {
       if (mobile.trim().length < 10) {
         return const Failure(
@@ -47,18 +66,21 @@ class AuthRepository {
         await _storage.saveBusinessName(businessName.trim());
       }
       final response = await _apiClient.dio.post(
-        ApiEndpoints.sendOtp,
+        endpoint,
         data: {'mobile': mobile.trim()},
       );
-      return ApiEnvelope.parse(response, (data) {
-        final map = data is Map ? Map<String, dynamic>.from(data) : null;
-        final otp = map?['dev_otp']?.toString();
-        lastDevOtp = otp;
-        return SendOtpResult(devOtp: otp);
-      });
+      return ApiEnvelope.parse(response, _parseSendOtpData);
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }
+  }
+
+  SendOtpResult _parseSendOtpData(dynamic data) {
+    final map = data is Map ? Map<String, dynamic>.from(data) : null;
+    // Only present when SMS is disabled or failed server-side — do not assume.
+    final otp = map?['dev_otp']?.toString();
+    lastDevOtp = otp;
+    return SendOtpResult(devOtp: otp);
   }
 
   Future<Result<User>> verifyOtp({
@@ -343,7 +365,21 @@ class AuthRepository {
         options: Options(contentType: 'multipart/form-data'),
       );
       return ApiEnvelope.parse(response, (data) {
-        final user = User.fromJson(Map<String, dynamic>.from(data as Map));
+        final map = Map<String, dynamic>.from(data as Map);
+        // Some responses nest under `customer`.
+        final profile = map['customer'] is Map
+            ? Map<String, dynamic>.from(map['customer'] as Map)
+            : map;
+        var user = User.fromJson(profile);
+        // Prefer remote URL; fall back to local path so UI updates immediately.
+        final remote = user.avatarPath;
+        final hasRemote = remote != null &&
+            (remote.startsWith('http://') ||
+                remote.startsWith('https://') ||
+                remote.startsWith('/'));
+        if (!hasRemote) {
+          user = user.copyWith(avatarPath: localPath);
+        }
         _storage.saveUserJson(jsonEncode(user.toJson()));
         return user;
       });
