@@ -254,27 +254,16 @@ class AuthRepository {
         }
       }
 
-      await _apiClient.dio.post(
-        ApiEndpoints.addresses,
-        data: {
-          'label': 'Shop',
-          'line1': shopAddress.trim(),
-          'city': city.trim(),
-          'state': state.trim(),
-          'pincode': pincode.trim(),
-          if (landmark != null && landmark.trim().isNotEmpty)
-            'landmark': landmark.trim(),
-          if (geoLat != null) 'geo_lat': geoLat,
-          if (geoLng != null) 'geo_lng': geoLng,
-          'is_default': deliveryAddress.trim() == shopAddress.trim(),
-        },
-      );
-      if (deliveryAddress.trim() != shopAddress.trim()) {
+      // The account already exists (Pending) once /business/register succeeds
+      // above. Address sync and the profile refetch below are best-effort
+      // enrichment — a failure here must not surface as a registration
+      // failure, since the application has already been submitted.
+      try {
         await _apiClient.dio.post(
           ApiEndpoints.addresses,
           data: {
-            'label': 'Delivery',
-            'line1': deliveryAddress.trim(),
+            'label': 'Shop',
+            'line1': shopAddress.trim(),
             'city': city.trim(),
             'state': state.trim(),
             'pincode': pincode.trim(),
@@ -282,34 +271,72 @@ class AuthRepository {
               'landmark': landmark.trim(),
             if (geoLat != null) 'geo_lat': geoLat,
             if (geoLng != null) 'geo_lng': geoLng,
-            'is_default': true,
+            'is_default': deliveryAddress.trim() == shopAddress.trim(),
           },
         );
+        if (deliveryAddress.trim() != shopAddress.trim()) {
+          await _apiClient.dio.post(
+            ApiEndpoints.addresses,
+            data: {
+              'label': 'Delivery',
+              'line1': deliveryAddress.trim(),
+              'city': city.trim(),
+              'state': state.trim(),
+              'pincode': pincode.trim(),
+              if (landmark != null && landmark.trim().isNotEmpty)
+                'landmark': landmark.trim(),
+              if (geoLat != null) 'geo_lat': geoLat,
+              if (geoLng != null) 'geo_lng': geoLng,
+              'is_default': true,
+            },
+          );
+        }
+      } catch (_) {
+        // Non-fatal: registration already succeeded. The user can re-add
+        // addresses later from the Address book if this sync failed.
       }
 
+      final localFallback = regResult is Success<User>
+          ? regResult.data
+          : User(id: '', mobile: mobile, businessName: businessName.trim());
+      final composed =
+          '${deliveryAddress.trim()}, ${city.trim()}, ${state.trim()} ${pincode.trim()}';
+      final enriched = localFallback.copyWith(
+        address: composed,
+        shopAddress: shopAddress.trim(),
+        deliveryAddress: deliveryAddress.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        landmark: landmark,
+        pincode: pincode.trim(),
+        geoLat: geoLat,
+        geoLng: geoLng,
+        businessTypeId: businessTypeId,
+        businessType: businessTypeLabel,
+        documents: remoteDocs.isNotEmpty ? remoteDocs : documents,
+      );
+
       final profile = await fetchProfile();
-      if (profile is Success<User>) {
-        final composed =
-            '${deliveryAddress.trim()}, ${city.trim()}, ${state.trim()} ${pincode.trim()}';
-        final enriched = profile.data.copyWith(
-          address: composed,
-          shopAddress: shopAddress.trim(),
-          deliveryAddress: deliveryAddress.trim(),
-          city: city.trim(),
-          state: state.trim(),
-          landmark: landmark,
-          pincode: pincode.trim(),
-          geoLat: geoLat,
-          geoLng: geoLng,
-          businessTypeId: businessTypeId,
-          businessType: businessTypeLabel,
-          documents: remoteDocs.isNotEmpty ? remoteDocs : documents,
-        );
-        await _storage.saveUserJson(jsonEncode(enriched.toJson()));
-        await _storage.saveBusinessName(enriched.businessName);
-        return Success(enriched);
-      }
-      return profile;
+      final result = profile is Success<User>
+          ? profile.data.copyWith(
+              address: composed,
+              shopAddress: shopAddress.trim(),
+              deliveryAddress: deliveryAddress.trim(),
+              city: city.trim(),
+              state: state.trim(),
+              landmark: landmark,
+              pincode: pincode.trim(),
+              geoLat: geoLat,
+              geoLng: geoLng,
+              businessTypeId: businessTypeId,
+              businessType: businessTypeLabel,
+              documents: remoteDocs.isNotEmpty ? remoteDocs : documents,
+            )
+          : enriched;
+
+      await _storage.saveUserJson(jsonEncode(result.toJson()));
+      await _storage.saveBusinessName(result.businessName);
+      return Success(result);
     } catch (e) {
       return ApiEnvelope.fromDio(e);
     }
@@ -526,7 +553,7 @@ class AuthRepository {
         : const User(
             id: '',
             mobile: '',
-            businessName: 'My Business',
+            businessName: '',
             kycStatus: KycStatus.pending,
           );
 

@@ -85,7 +85,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final auth = context.read<AuthViewModel>();
       auth.startRegisterFlow();
       if (auth.mobile.isNotEmpty) _mobileController.text = auth.mobile;
-      if (auth.businessName.isNotEmpty && auth.businessName != 'My Business') {
+      if (auth.businessName.isNotEmpty) {
         _businessController.text = auth.businessName;
       }
       if (auth.ownerName.isNotEmpty) _ownerController.text = auth.ownerName;
@@ -355,7 +355,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         0 => 'We’ll send a one-time code to confirm it’s you.',
         1 => 'This helps us show the right VeggiiCart catalogue.',
         2 => 'Used for COD deliveries to your business.',
-        3 => 'Aadhaar and Shop Front Photo are required to continue.',
+        3 => 'Upload any documents you have — you can add the rest later from your profile.',
         _ => 'Confirm details before we send your application for review.',
       };
 
@@ -1033,7 +1033,7 @@ class _DocumentsStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$uploaded of $total uploaded (2 required)',
+          '$uploaded of $total uploaded',
           style: AppTextStyles.body(fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 14),

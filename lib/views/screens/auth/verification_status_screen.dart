@@ -28,6 +28,7 @@ class VerificationStatusScreen extends StatefulWidget {
 
 class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
   Timer? _poll;
+  bool _autoAdvanced = false;
 
   @override
   void initState() {
@@ -50,11 +51,32 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
     super.dispose();
   }
 
+  /// Auto-approved registrations (manual review off) should skip the Pending
+  /// screen entirely and drop the customer straight into the app.
+  void _maybeAutoAdvance(KycStatus status) {
+    if (_autoAdvanced || widget.fromProfile || status != KycStatus.approved) {
+      return;
+    }
+    _autoAdvanced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You're all set! Welcome to VeggiiCart.")),
+      );
+      AppPageRoute.pushAndRemoveUntil(context, const MainShell());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthViewModel>();
     final status = auth.user?.kycStatus ?? KycStatus.pending;
     final reason = auth.user?.kycRejectionReason;
+
+    if (status == KycStatus.approved && !widget.fromProfile) {
+      _maybeAutoAdvance(status);
+      return const _AutoApprovedTransition();
+    }
 
     late final IconData icon;
     late final Color color;
@@ -167,6 +189,48 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Brief transitional frame shown while an auto-approved registration
+/// hands off to [MainShell] — never a static "review" screen.
+class _AutoApprovedTransition extends StatelessWidget {
+  const _AutoApprovedTransition();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.section,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_rounded,
+                size: 44,
+                color: AppColors.success,
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 220.ms)
+                .scale(begin: const Offset(0.86, 0.86), curve: AppMotion.pop),
+            const SizedBox(height: 24),
+            Text(
+              "You're all set!",
+              textAlign: TextAlign.center,
+              style: AppTextStyles.display(fontSize: 26),
+            ),
+          ],
         ),
       ),
     );

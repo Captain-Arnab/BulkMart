@@ -34,9 +34,10 @@ enum RegistrationDocumentType {
     }
   }
 
-  bool get isRequired =>
-      this == RegistrationDocumentType.aadhaarCard ||
-      this == RegistrationDocumentType.shopFrontPhoto;
+  // All document types are optional for now — nothing gates the Continue
+  // button on Step 4. Re-introduce a real required-set here (ideally driven
+  // by a remote/app setting rather than hardcoded) before production launch.
+  bool get isRequired => false;
 
   /// GST cert only relevant when GSTIN was provided.
   bool visibleWhen({required bool hasGstin}) {
