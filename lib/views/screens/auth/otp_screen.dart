@@ -13,6 +13,7 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/auth_view_model.dart';
 import '../../widgets/auth_widgets.dart';
 import '../home/main_shell.dart';
+import 'login_screen.dart';
 import 'registration_screen.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -112,6 +113,17 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (!ok) {
       setState(() => _submitting = false);
+      if (auth.isAlreadyRegisteredError) {
+        auth.startLoginFlow();
+        await AppPageRoute.pushAndRemoveUntil(
+          context,
+          LoginScreen(
+            initialMobile: auth.mobile,
+            alreadyRegisteredHint: true,
+          ),
+        );
+        return;
+      }
       for (final c in _controllers) {
         c.clear();
       }
@@ -136,8 +148,19 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _resend() async {
     final auth = context.read<AuthViewModel>();
-    await auth.resendOtp();
+    final ok = await auth.resendOtp();
     if (!mounted) return;
+    if (!ok && auth.isAlreadyRegisteredError) {
+      auth.startLoginFlow();
+      await AppPageRoute.pushAndRemoveUntil(
+        context,
+        LoginScreen(
+          initialMobile: auth.mobile,
+          alreadyRegisteredHint: true,
+        ),
+      );
+      return;
+    }
     _startTimer();
     final hint = auth.lastDevOtp;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -145,13 +168,15 @@ class _OtpScreenState extends State<OtpScreen> {
         content: Text(
           hint != null && kDebugMode
               ? 'OTP sent to your mobile (dev: $hint)'
-              : 'OTP sent to your mobile',
+              : !ok && auth.error != null
+                  ? auth.error!
+                  : 'OTP sent to your mobile',
         ),
-        backgroundColor: AppColors.violet,
+        backgroundColor: !ok ? AppColors.alert : AppColors.violet,
         behavior: SnackBarBehavior.floating,
       ),
     );
-    if (kDebugMode && hint != null && hint.length == _length) {
+    if (ok && kDebugMode && hint != null && hint.length == _length) {
       for (var i = 0; i < _length; i++) {
         _controllers[i].text = hint[i];
       }

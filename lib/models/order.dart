@@ -13,6 +13,8 @@ class Order {
     this.estimatedDeliveryDate,
     this.deliveryAddress,
     this.paymentMethod = 'COD',
+    this.itemCount,
+    this.orderNumber,
   });
 
   final String id;
@@ -25,6 +27,50 @@ class Order {
   final DateTime? estimatedDeliveryDate;
   final String? deliveryAddress;
   final String paymentMethod;
+
+  /// From list API (`item_count`) when full `items` are not included.
+  final int? itemCount;
+  final String? orderNumber;
+
+  /// Prefer full items length; fall back to API `item_count` for list rows.
+  int get displayItemCount =>
+      items.isNotEmpty ? items.length : (itemCount ?? 0);
+
+  String get displayId =>
+      (orderNumber != null && orderNumber!.trim().isNotEmpty)
+          ? orderNumber!.trim()
+          : id;
+
+  Order copyWith({
+    String? id,
+    List<CartItem>? items,
+    OrderStatus? status,
+    double? subtotal,
+    double? deliveryFee,
+    double? total,
+    DateTime? placedAt,
+    DateTime? estimatedDeliveryDate,
+    String? deliveryAddress,
+    String? paymentMethod,
+    int? itemCount,
+    String? orderNumber,
+  }) {
+    return Order(
+      id: id ?? this.id,
+      items: items ?? this.items,
+      status: status ?? this.status,
+      subtotal: subtotal ?? this.subtotal,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      total: total ?? this.total,
+      placedAt: placedAt ?? this.placedAt,
+      estimatedDeliveryDate:
+          estimatedDeliveryDate ?? this.estimatedDeliveryDate,
+      deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      itemCount: itemCount ?? this.itemCount,
+      orderNumber: orderNumber ?? this.orderNumber,
+    );
+  }
 
   factory Order.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
@@ -41,14 +87,19 @@ class Order {
       ].where((e) => e != null && e.toString().trim().isNotEmpty);
       addressText = parts.join(', ');
     }
+    final parsedItemCount = (json['item_count'] as num?)?.toInt() ??
+        (json['itemCount'] as num?)?.toInt();
     return Order(
       id: json['id']?.toString() ??
           json['order_id']?.toString() ??
           json['order_number']?.toString() ??
           '',
+      orderNumber: json['order_number']?.toString() ??
+          json['orderNumber']?.toString(),
       items: rawItems
           .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      itemCount: parsedItemCount,
       status: OrderStatus.fromApi(json['status']?.toString()),
       subtotal: ((json['subtotal'] ?? 0) as num).toDouble(),
       deliveryFee:
@@ -75,7 +126,9 @@ class Order {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        if (orderNumber != null) 'order_number': orderNumber,
         'items': items.map((e) => e.toJson()).toList(),
+        if (itemCount != null) 'item_count': itemCount,
         'status': status.toApi(),
         'subtotal': subtotal,
         'delivery_fee': deliveryFee,

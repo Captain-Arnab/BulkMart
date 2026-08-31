@@ -18,7 +18,17 @@ import 'registration_screen.dart';
 enum _LoginTab { mobile, email }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    super.key,
+    this.initialMobile,
+    this.alreadyRegisteredHint = false,
+  });
+
+  /// Prefill Mobile Number tab (e.g. from registration "already registered").
+  final String? initialMobile;
+
+  /// Soft banner when redirected from a duplicate-registration attempt.
+  final bool alreadyRegisteredHint;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -38,6 +48,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
+  @override
+  void initState() {
+    super.initState();
+    final digits = (widget.initialMobile ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isNotEmpty) {
+      _mobileController.text =
+          digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+      _tab = _LoginTab.mobile;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AuthViewModel>().startLoginFlow();
+    });
+  }
   @override
   void dispose() {
     _mobileController.dispose();
@@ -102,7 +126,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (ok) {
       await AppPageRoute.pushAndRemoveUntil(context, const MainShell());
     } else if (auth.error != null) {
-      setState(() => _passwordError = auth.error);
+      // Surface API field errors when present; otherwise show the message
+      // on the password field (covers INVALID_CREDENTIALS, PASSWORD_NOT_SET, etc.).
+      final fields = auth.fieldErrors;
+      setState(() {
+        _emailError = fields?['email'];
+        _passwordError = fields?['password'] ?? auth.error;
+      });
     }
   }
 
@@ -174,6 +204,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   _passwordError = null;
                 }),
               ).animate().fadeIn(delay: 140.ms, duration: 200.ms),
+              if (widget.alreadyRegisteredHint) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.greenSoft,
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  child: Text(
+                    'This number is already registered. Continue with Mobile OTP below.',
+                    style: AppTextStyles.body(
+                      fontSize: 13,
+                      color: AppColors.forest,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 28),
               if (_tab == _LoginTab.mobile) ...[
                 const AuthFieldLabel('Mobile number')

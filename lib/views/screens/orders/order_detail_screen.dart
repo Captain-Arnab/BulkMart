@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/cart_item.dart';
 import '../../../models/order.dart';
 import '../../../models/order_status.dart';
 import '../../../models/payment_method.dart';
 import '../../../repositories/order_repository.dart';
+import '../../../repositories/product_repository.dart';
+import '../../../services/api/result.dart';
 import '../../../theme/colors.dart';
 import '../../../theme/text_styles.dart';
 import '../../widgets/product_network_image.dart';
@@ -44,31 +47,62 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _loading = true;
       _error = null;
     });
-    final result = await context.read<OrderRepository>().fetchOrderDetail(widget.orderId);
+    final result =
+        await context.read<OrderRepository>().fetchOrderDetail(widget.orderId);
     if (!mounted) return;
-    result.when(
-      success: (order) {
-        setState(() {
-          _order = order;
-          _loading = false;
-        });
-      },
-      failure: (message, {statusCode, code, fields}) {
-        setState(() {
-          _error = message;
-          _loading = false;
-        });
-      },
+    if (result is Success<Order>) {
+      final enriched = await _enrichMissingImages(result.data);
+      if (!mounted) return;
+      setState(() {
+        _order = enriched;
+        _loading = false;
+      });
+      return;
+    }
+    final failure = result as Failure<Order>;
+    setState(() {
+      _error = failure.message;
+      _loading = false;
+    });
+  }
+
+  /// List/detail payloads may omit image_url — fill from catalog when needed.
+  Future<Order> _enrichMissingImages(Order order) async {
+    final needsLookup = order.items.any(
+      (i) => !i.product.hasImage && i.product.id.trim().isNotEmpty,
     );
+    if (!needsLookup) return order;
+
+    final products = context.read<ProductRepository>();
+    final next = <CartItem>[];
+    for (final item in order.items) {
+      if (item.product.hasImage || item.product.id.trim().isEmpty) {
+        next.add(item);
+        continue;
+      }
+      final lookedUp = await products.getProductById(item.product.id);
+      final catalog = lookedUp.dataOrNull;
+      if (catalog != null && catalog.hasImage) {
+        next.add(
+          item.copyWith(
+            product: item.product.copyWith(imageUrl: catalog.imageUrl),
+          ),
+        );
+      } else {
+        next.add(item);
+      }
+    }
+    return order.copyWith(items: next);
   }
 
   @override
   Widget build(BuildContext context) {
+    final titleId = _order?.displayId ?? widget.orderId;
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
         title: Text(
-          'Order ${widget.orderId}',
+          'Order $titleId',
           style: AppTextStyles.display(fontSize: 17, color: AppColors.white),
         ),
       ),
@@ -102,7 +136,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  order.id,
+                  order.displayId,
                   style: AppTextStyles.mono(fontSize: 11, color: AppColors.slate),
                 ),
                 const SizedBox(height: 4),
@@ -236,18 +270,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  bool _canCancel(Order order) =>
-      order.status == OrderStatus.placed || order.status == OrderStatus.confirmed;
+  bool _canCancel(Order order) {
+    return order.status == OrderStatus.placed ||
+        order.status == OrderStatus.confirmed ||
+        order.status == OrderStatus.deliveryDateSet;
+  }
 
   Future<void> _confirmCancel(Order order) async {
-    final confirmed = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Cancel order?', style: AppTextStyles.display(fontSize: 18)),
-        content: Text(
-          'Cancel ${order.id}? This cannot be undone.',
-          style: AppTextStyles.body(fontSize: 14, color: AppColors.muted),
-        ),
+        title: const Text('Cancel order?'),
+        content: Text('Cancel order ${order.displayId}? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -255,27 +289,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Cancel order',
-              style: AppTextStyles.body(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.rust,
-              ),
-            ),
+            child: const Text('Cancel order'),
           ),
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
-
+    if (ok != true || !mounted) return;
     setState(() => _cancelling = true);
     final result = await context.read<OrderRepository>().cancelOrder(order.id);
     if (!mounted) return;
     result.when(
       success: (updated) {
         setState(() {
-          _order = updated;
+          _order = updated.copyWith(
+            items: _order?.items ?? updated.items,
+            orderNumber: updated.orderNumber ?? _order?.orderNumber,
+          );
           _cancelling = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -285,7 +314,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       failure: (message, {statusCode, code, fields}) {
         setState(() => _cancelling = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.rust),
+          SnackBar(content: Text(message)),
         );
       },
     );

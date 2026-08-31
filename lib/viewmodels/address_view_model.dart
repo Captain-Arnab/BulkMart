@@ -60,17 +60,16 @@ class AddressViewModel extends ChangeNotifier {
         _addresses = List.from(list);
         isLoading = false;
         notifyListeners();
-        _detectAndMatchLocation();
       },
       failure: (message, {statusCode, code, fields}) {
         error = message;
         isLoading = false;
         notifyListeners();
-        _detectAndMatchLocation();
       },
     );
   }
 
+  /// Manual GPS detect — only when the user taps "Use current location".
   Future<void> detectCurrentLocation() => _detectAndMatchLocation();
 
   Future<void> _detectAndMatchLocation() {

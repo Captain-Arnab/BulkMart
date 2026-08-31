@@ -18,13 +18,6 @@ Future<void> showLocationPickerSheet(BuildContext context) {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (sheetContext) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!sheetContext.mounted) return;
-        final vm = sheetContext.read<AddressViewModel>();
-        if (!vm.isDetectingLocation) {
-          vm.detectCurrentLocation();
-        }
-      });
       return _LocationPickerSheet(hostContext: hostContext);
     },
   );
@@ -39,6 +32,7 @@ class _LocationPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final addresses = context.watch<AddressViewModel>();
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final hasSaved = addresses.addresses.isNotEmpty;
 
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
@@ -65,10 +59,26 @@ class _LocationPickerSheet extends StatelessWidget {
           Text('Delivering to', style: AppTextStyles.display(fontSize: 20)),
           const SizedBox(height: 4),
           Text(
-            'Choose a saved address or use your current location',
+            hasSaved
+                ? 'Choose a saved address or detect your current location'
+                : 'Add a delivery address to continue, or detect your current location',
             style: AppTextStyles.body(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 16),
+          if (!hasSaved &&
+              !addresses.isDetectingLocation &&
+              addresses.detectedLocation == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No saved addresses yet',
+                style: AppTextStyles.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.muted,
+                ),
+              ),
+            ),
           if (addresses.isDetectingLocation)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -95,25 +105,35 @@ class _LocationPickerSheet extends StatelessWidget {
                 selected: addresses.defaultAddress == null,
                 onTap: () => Navigator.pop(context),
               ),
+            )
+          else if (!addresses.isDetectingLocation)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _DetectLocationButton(
+                onTap: () => context.read<AddressViewModel>().detectCurrentLocation(),
+              ),
             ),
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: addresses.addresses.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final a = addresses.addresses[index];
-                return _AddressTile(
-                  address: a,
-                  selected: a.isDefault,
-                  onTap: () {
-                    context.read<AddressViewModel>().setDefault(a.id);
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
-          ),
+          if (hasSaved)
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: addresses.addresses.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final a = addresses.addresses[index];
+                  return _AddressTile(
+                    address: a,
+                    selected: a.isDefault,
+                    onTap: () {
+                      context.read<AddressViewModel>().setDefault(a.id);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            )
+          else
+            const SizedBox(height: 4),
           const SizedBox(height: 12),
           PressableScale(
             onTap: () {
@@ -141,6 +161,51 @@ class _LocationPickerSheet extends StatelessWidget {
         ],
       ),
     ).animate().slideY(begin: 0.12, end: 0, duration: 320.ms, curve: Curves.easeOutBack);
+  }
+}
+
+class _DetectLocationButton extends StatelessWidget {
+  const _DetectLocationButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.section,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.my_location_rounded, color: AppColors.violet),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Detect current location',
+                    style: AppTextStyles.body(fontSize: 14, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Uses GPS only when you tap this',
+                    style: AppTextStyles.body(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+          ],
+        ),
+      ),
+    );
   }
 }
 

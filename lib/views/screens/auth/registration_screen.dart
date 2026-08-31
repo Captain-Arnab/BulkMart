@@ -17,6 +17,7 @@ import '../../widgets/auth_widgets.dart';
 import '../../widgets/document_source_sheet.dart';
 import '../terms_conditions_screen.dart';
 import 'otp_screen.dart';
+import 'login_screen.dart';
 import 'verification_status_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -38,6 +39,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _fssaiController = TextEditingController();
   final _panController = TextEditingController();
   final _otherTypeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _passwordConfirmController = TextEditingController();
   final _shopController = TextEditingController();
   final _deliveryController = TextEditingController();
   final _cityController = TextEditingController();
@@ -48,6 +51,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _businessError;
   String? _ownerError;
   String? _emailError;
+  String? _passwordError;
+  String? _passwordConfirmError;
   String? _otherTypeError;
   String? _shopError;
   String? _deliveryError;
@@ -56,6 +61,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _pincodeError;
   bool _stepValid = false;
   bool _capturingLocation = false;
+  bool _obscurePassword = true;
+  bool _obscurePasswordConfirm = true;
+  bool _alreadyRegistered = false;
 
   static const _labels = ['Mobile', 'Business', 'Address', 'Documents', 'Review'];
 
@@ -72,6 +80,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _fssaiController,
       _panController,
       _otherTypeController,
+      _passwordController,
+      _passwordConfirmController,
       _shopController,
       _deliveryController,
       _cityController,
@@ -115,6 +125,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _fssaiController,
       _panController,
       _otherTypeController,
+      _passwordController,
+      _passwordConfirmController,
       _shopController,
       _deliveryController,
       _cityController,
@@ -131,12 +143,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
   }
 
+  /// Optional password: empty is OK; if either field is filled, enforce rules.
+  String? _validateOptionalPassword() {
+    final pass = _passwordController.text;
+    final confirm = _passwordConfirmController.text;
+    if (pass.isEmpty && confirm.isEmpty) return null;
+    if (pass.length < 6) return 'Password must be at least 6 characters';
+    if (pass != confirm) return 'Passwords do not match';
+    return null;
+  }
+
   void _syncAuthDraft() {
     final auth = context.read<AuthViewModel>();
     auth.setMobile(_mobileController.text.trim());
     auth.setBusinessName(_businessController.text.trim());
     auth.setOwnerName(_ownerController.text.trim());
     auth.setEmail(_emailController.text.trim());
+    auth.setPassword(_passwordController.text);
+    auth.setPasswordConfirmation(_passwordConfirmController.text);
     auth.setGstNumber(_gstController.text.trim());
     auth.setFssaiNumber(_fssaiController.text.trim());
     auth.setPanNumber(_panController.text.trim());
@@ -186,6 +210,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  Future<void> _goToLoginWithMobile() async {
+    final auth = context.read<AuthViewModel>();
+    final mobile = _mobileController.text.trim().isNotEmpty
+        ? _mobileController.text.trim()
+        : auth.mobile;
+    auth.startLoginFlow();
+    if (!mounted) return;
+    await AppPageRoute.pushAndRemoveUntil(
+      context,
+      LoginScreen(
+        initialMobile: mobile,
+        alreadyRegisteredHint: true,
+      ),
+    );
+  }
+
   Future<void> _continue() async {
     final auth = context.read<AuthViewModel>();
     _syncAuthDraft();
@@ -195,11 +235,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         setState(() => _mobileError = 'Enter a valid 10-digit mobile number');
         return;
       }
-      setState(() => _mobileError = null);
+      setState(() {
+        _mobileError = null;
+        _alreadyRegistered = false;
+      });
       final ok = await auth.sendOtp();
       if (!mounted) return;
       if (ok) {
-        await AppPageRoute.push(context, const OtpScreen(resumeRegistration: true));
+        await AppPageRoute.push(
+          context,
+          const OtpScreen(resumeRegistration: true),
+        );
+      } else if (auth.isAlreadyRegisteredError) {
+        setState(() {
+          _alreadyRegistered = true;
+          _mobileError = auth.error ?? AuthViewModel.alreadyRegisteredMessage;
+        });
+      } else if (auth.error != null) {
+        setState(() => _mobileError = auth.error);
       }
       return;
     }
@@ -223,6 +276,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ok = false;
       } else {
         _emailError = null;
+      }
+      final passErr = _validateOptionalPassword();
+      if (passErr != null) {
+        final pass = _passwordController.text;
+        final confirm = _passwordConfirmController.text;
+        if (pass.isNotEmpty && pass.length < 6) {
+          _passwordError = 'Password must be at least 6 characters';
+          _passwordConfirmError = null;
+        } else if (pass != confirm) {
+          _passwordError = null;
+          _passwordConfirmError = 'Passwords do not match';
+        } else {
+          _passwordError = passErr;
+          _passwordConfirmError = null;
+        }
+        ok = false;
+      } else {
+        _passwordError = null;
+        _passwordConfirmError = null;
       }
       if (BusinessTypes.isOther(auth.businessTypeId) &&
           _otherTypeController.text.trim().isEmpty) {
@@ -300,6 +372,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         context,
         const VerificationStatusScreen(),
       );
+    } else if (auth.isAlreadyRegisteredError) {
+      setState(() {
+        _step = 0;
+        _alreadyRegistered = true;
+        _mobileError = auth.error ?? AuthViewModel.alreadyRegisteredMessage;
+      });
+      _recomputeValid();
     }
   }
 
@@ -396,9 +475,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           0 => _MobileStep(
                               controller: _mobileController,
                               error: _mobileError,
+                              alreadyRegistered: _alreadyRegistered,
+                              onLogInInstead: _goToLoginWithMobile,
                               onChanged: (_) {
-                                if (_mobileError != null) {
-                                  setState(() => _mobileError = null);
+                                if (_mobileError != null || _alreadyRegistered) {
+                                  setState(() {
+                                    _mobileError = null;
+                                    _alreadyRegistered = false;
+                                  });
                                 }
                               },
                             ),
@@ -406,6 +490,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               businessController: _businessController,
                               ownerController: _ownerController,
                               emailController: _emailController,
+                              passwordController: _passwordController,
+                              passwordConfirmController:
+                                  _passwordConfirmController,
                               gstController: _gstController,
                               fssaiController: _fssaiController,
                               panController: _panController,
@@ -413,7 +500,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               businessError: _businessError,
                               ownerError: _ownerError,
                               emailError: _emailError,
+                              passwordError: _passwordError,
+                              passwordConfirmError: _passwordConfirmError,
                               otherTypeError: _otherTypeError,
+                              obscurePassword: _obscurePassword,
+                              obscurePasswordConfirm: _obscurePasswordConfirm,
+                              onToggleObscurePassword: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                              onToggleObscurePasswordConfirm: () => setState(
+                                () => _obscurePasswordConfirm =
+                                    !_obscurePasswordConfirm,
+                              ),
                               selectedTypeId: auth.businessTypeId,
                               onType: (id) {
                                 auth.setBusinessTypeId(id);
@@ -427,6 +525,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   _businessError = null;
                                   _ownerError = null;
                                   _emailError = null;
+                                  _passwordError = null;
+                                  _passwordConfirmError = null;
                                   _otherTypeError = null;
                                 });
                                 _recomputeValid();
@@ -497,12 +597,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         },
                       ),
                     ),
-                    if (auth.error != null) ...[
+                    if (auth.error != null &&
+                        !(_step == 0 && _alreadyRegistered)) ...[
                       const SizedBox(height: 12),
                       Text(
                         auth.error!,
                         style: AppTextStyles.body(fontSize: 13, color: AppColors.alert),
                       ),
+                      if (auth.isAlreadyRegisteredError) ...[
+                        const SizedBox(height: 10),
+                        PressableScale(
+                          onTap: _goToLoginWithMobile,
+                          child: Text(
+                            'Log in instead →',
+                            style: AppTextStyles.body(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.green,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -592,11 +707,15 @@ class _MobileStep extends StatelessWidget {
   const _MobileStep({
     required this.controller,
     required this.error,
+    required this.alreadyRegistered,
+    required this.onLogInInstead,
     required this.onChanged,
   });
 
   final TextEditingController controller;
   final String? error;
+  final bool alreadyRegistered;
+  final VoidCallback onLogInInstead;
   final ValueChanged<String> onChanged;
 
   @override
@@ -611,13 +730,60 @@ class _MobileStep extends StatelessWidget {
           hint: '9xxxxxxxxx',
           keyboardType: TextInputType.phone,
           prefix: const CountryCodeChip(),
-          errorText: error,
+          errorText: alreadyRegistered ? null : error,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(10),
           ],
           onChanged: onChanged,
         ),
+        if (alreadyRegistered) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.alert.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: AppColors.alert.withValues(alpha: 0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  error ?? AuthViewModel.alreadyRegisteredMessage,
+                  style: AppTextStyles.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.alert,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                PressableScale(
+                  onTap: onLogInInstead,
+                  child: Container(
+                    width: double.infinity,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.violet,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                    child: Text(
+                      'Log in instead',
+                      style: AppTextStyles.body(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -628,6 +794,8 @@ class _BusinessStep extends StatelessWidget {
     required this.businessController,
     required this.ownerController,
     required this.emailController,
+    required this.passwordController,
+    required this.passwordConfirmController,
     required this.gstController,
     required this.fssaiController,
     required this.panController,
@@ -635,7 +803,13 @@ class _BusinessStep extends StatelessWidget {
     required this.businessError,
     required this.ownerError,
     required this.emailError,
+    required this.passwordError,
+    required this.passwordConfirmError,
     required this.otherTypeError,
+    required this.obscurePassword,
+    required this.obscurePasswordConfirm,
+    required this.onToggleObscurePassword,
+    required this.onToggleObscurePasswordConfirm,
     required this.selectedTypeId,
     required this.onType,
     required this.onChanged,
@@ -644,6 +818,8 @@ class _BusinessStep extends StatelessWidget {
   final TextEditingController businessController;
   final TextEditingController ownerController;
   final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController passwordConfirmController;
   final TextEditingController gstController;
   final TextEditingController fssaiController;
   final TextEditingController panController;
@@ -651,7 +827,13 @@ class _BusinessStep extends StatelessWidget {
   final String? businessError;
   final String? ownerError;
   final String? emailError;
+  final String? passwordError;
+  final String? passwordConfirmError;
   final String? otherTypeError;
+  final bool obscurePassword;
+  final bool obscurePasswordConfirm;
+  final VoidCallback onToggleObscurePassword;
+  final VoidCallback onToggleObscurePasswordConfirm;
   final String selectedTypeId;
   final ValueChanged<String> onType;
   final VoidCallback onChanged;
@@ -690,6 +872,53 @@ class _BusinessStep extends StatelessWidget {
           hint: 'orders@yourshop.com',
           keyboardType: TextInputType.emailAddress,
           errorText: emailError,
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: 16),
+        const AuthFieldLabel('Password', optional: true),
+        const SizedBox(height: 6),
+        Text(
+          'Optional — set a password to also log in with Email & Password',
+          style: AppTextStyles.body(fontSize: 12, color: AppColors.muted, height: 1.35),
+        ),
+        const SizedBox(height: 8),
+        PillTextField(
+          controller: passwordController,
+          hint: 'Min. 6 characters',
+          obscureText: obscurePassword,
+          autofillHints: const [AutofillHints.newPassword],
+          errorText: passwordError,
+          suffix: IconButton(
+            onPressed: onToggleObscurePassword,
+            icon: Icon(
+              obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              color: AppColors.muted,
+              size: 22,
+            ),
+          ),
+          onChanged: (_) => onChanged(),
+        ),
+        const SizedBox(height: 16),
+        const AuthFieldLabel('Confirm Password', optional: true),
+        const SizedBox(height: 8),
+        PillTextField(
+          controller: passwordConfirmController,
+          hint: 'Re-enter password',
+          obscureText: obscurePasswordConfirm,
+          autofillHints: const [AutofillHints.newPassword],
+          errorText: passwordConfirmError,
+          suffix: IconButton(
+            onPressed: onToggleObscurePasswordConfirm,
+            icon: Icon(
+              obscurePasswordConfirm
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              color: AppColors.muted,
+              size: 22,
+            ),
+          ),
           onChanged: (_) => onChanged(),
         ),
         const SizedBox(height: 20),
@@ -1159,6 +1388,12 @@ class _ReviewStep extends StatelessWidget {
             ('Owner', auth.ownerName),
             ('Type', auth.businessType),
             if (auth.email.isNotEmpty) ('Email', auth.email),
+            (
+              'Password',
+              auth.hasRegistrationPassword
+                  ? 'Set (for Email & Password login)'
+                  : 'Not set (optional)',
+            ),
             if (auth.gstNumber.isNotEmpty) ('GSTIN', auth.gstNumber),
             if (auth.fssaiNumber.isNotEmpty) ('FSSAI', auth.fssaiNumber),
             if (auth.panNumber.isNotEmpty) ('PAN', auth.panNumber),

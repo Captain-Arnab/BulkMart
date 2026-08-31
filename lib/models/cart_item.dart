@@ -43,12 +43,22 @@ class CartItem {
               ? (json['price'] as num).toDouble()
               : null,
       stock: json['stock'] != null ? (json['stock'] as num).toInt() : null,
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: json['image_url']?.toString() ??
+          json['imageUrl']?.toString() ??
+          json['product_image_url']?.toString(),
       inStock: json['in_stock'] as bool? ?? true,
     );
+    final qtyRaw = json['quantity'] ?? json['qty'] ?? 1;
+    final qty = qtyRaw is num ? qtyRaw.round() : int.tryParse('$qtyRaw') ?? 1;
+    // Prefer server line_total when present (order snapshots).
+    final lineTotal = (json['line_total'] as num?)?.toDouble();
+    final unitPrice = product.price;
+    final resolvedProduct = (lineTotal != null && qty > 0 && unitPrice == null)
+        ? product.copyWith(price: lineTotal / qty)
+        : product;
     return CartItem(
-      product: product,
-      quantity: ((json['quantity'] ?? json['qty'] ?? 1) as num).toInt(),
+      product: resolvedProduct,
+      quantity: qty,
     );
   }
 

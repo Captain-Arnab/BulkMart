@@ -34,18 +34,24 @@ class AuthRepository {
   Future<Result<SendOtpResult>> sendOtp({
     required String mobile,
     String businessName = '',
+    String purpose = 'login',
   }) async {
     return _requestOtp(
       endpoint: ApiEndpoints.sendOtp,
       mobile: mobile,
       businessName: businessName,
+      purpose: purpose,
     );
   }
 
-  Future<Result<SendOtpResult>> resendOtp({required String mobile}) async {
+  Future<Result<SendOtpResult>> resendOtp({
+    required String mobile,
+    String purpose = 'login',
+  }) async {
     return _requestOtp(
       endpoint: ApiEndpoints.resendOtp,
       mobile: mobile,
+      purpose: purpose,
     );
   }
 
@@ -53,6 +59,7 @@ class AuthRepository {
     required String endpoint,
     required String mobile,
     String businessName = '',
+    String purpose = 'login',
   }) async {
     try {
       if (mobile.trim().length < 10) {
@@ -67,7 +74,10 @@ class AuthRepository {
       }
       final response = await _apiClient.dio.post(
         endpoint,
-        data: {'mobile': mobile.trim()},
+        data: {
+          'mobile': mobile.trim(),
+          'purpose': purpose,
+        },
       );
       return ApiEnvelope.parse(response, _parseSendOtpData);
     } catch (e) {
@@ -88,11 +98,16 @@ class AuthRepository {
     required String otp,
     String businessName = '',
     bool persistSession = true,
+    String purpose = 'login',
   }) async {
     try {
       final response = await _apiClient.dio.post(
         ApiEndpoints.verifyOtp,
-        data: {'mobile': mobile.trim(), 'otp': otp.trim()},
+        data: {
+          'mobile': mobile.trim(),
+          'otp': otp.trim(),
+          'purpose': purpose,
+        },
       );
       final parsed = ApiEnvelope.parse(response, (data) {
         return Map<String, dynamic>.from(data as Map);
@@ -187,6 +202,8 @@ class AuthRepository {
     required String businessTypeLabel,
     required String ownerName,
     String? email,
+    String? password,
+    String? passwordConfirmation,
     String? gstNumber,
     String? fssaiNumber,
     String? panNumber,
@@ -202,6 +219,8 @@ class AuthRepository {
   }) async {
     try {
       final apiType = _toApiBusinessType(businessTypeId, businessTypeLabel);
+      final pass = password?.trim() ?? '';
+      final passConfirm = passwordConfirmation?.trim() ?? '';
       final regResponse = await _apiClient.dio.post(
         ApiEndpoints.businessRegister,
         data: {
@@ -209,6 +228,11 @@ class AuthRepository {
           'owner_name': ownerName.trim(),
           'business_type': apiType,
           if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+          if (pass.isNotEmpty) ...{
+            'password': pass,
+            'password_confirmation':
+                passConfirm.isNotEmpty ? passConfirm : pass,
+          },
           if (gstNumber != null && gstNumber.trim().isNotEmpty)
             'gst_number': gstNumber.trim(),
           if (fssaiNumber != null && fssaiNumber.trim().isNotEmpty)
@@ -301,6 +325,7 @@ class AuthRepository {
           : User(id: '', mobile: mobile, businessName: businessName.trim());
       final composed =
           '${deliveryAddress.trim()}, ${city.trim()}, ${state.trim()} ${pincode.trim()}';
+      final passwordWasSet = pass.isNotEmpty;
       final enriched = localFallback.copyWith(
         address: composed,
         shopAddress: shopAddress.trim(),
@@ -314,6 +339,7 @@ class AuthRepository {
         businessTypeId: businessTypeId,
         businessType: businessTypeLabel,
         documents: remoteDocs.isNotEmpty ? remoteDocs : documents,
+        hasPassword: passwordWasSet ? true : null,
       );
 
       final profile = await fetchProfile();
@@ -331,6 +357,7 @@ class AuthRepository {
               businessTypeId: businessTypeId,
               businessType: businessTypeLabel,
               documents: remoteDocs.isNotEmpty ? remoteDocs : documents,
+              hasPassword: passwordWasSet ? true : null,
             )
           : enriched;
 

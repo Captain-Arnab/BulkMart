@@ -26,6 +26,9 @@ class AuthViewModel extends ChangeNotifier {
   String email = '';
   String fssaiNumber = '';
   String panNumber = '';
+  /// Optional — only sent on registration when non-empty.
+  String password = '';
+  String passwordConfirmation = '';
 
   String shopAddress = '';
   String deliveryAddress = '';
@@ -86,6 +89,11 @@ class AuthViewModel extends ChangeNotifier {
   void setEmail(String value) => email = value;
   void setFssaiNumber(String value) => fssaiNumber = value;
   void setPanNumber(String value) => panNumber = value;
+
+  void setPassword(String value) => password = value;
+  void setPasswordConfirmation(String value) => passwordConfirmation = value;
+
+  bool get hasRegistrationPassword => password.trim().isNotEmpty;
 
   void setShopAddress(String value) {
     shopAddress = value;
@@ -210,16 +218,37 @@ class AuthViewModel extends ChangeNotifier {
   String? get lastDevOtp => _authRepository.lastDevOtp;
 
   Map<String, String>? fieldErrors;
+  /// Last API error code (e.g. `PASSWORD_NOT_SET`, `MOBILE_ALREADY_REGISTERED`).
+  String? errorCode;
+
+  /// True when the last error means this mobile already has a completed business.
+  bool get isAlreadyRegisteredError =>
+      errorCode == 'MOBILE_ALREADY_REGISTERED' ||
+      errorCode == 'ALREADY_REGISTERED';
+
+  static const alreadyRegisteredMessage =
+      'This number is already registered. Please log in instead.';
+
+  String _purposeForFlow() => authFlow == 'register' ? 'register' : 'login';
+
+  String _normalizeAuthError(String message, {String? code}) {
+    if (code == 'MOBILE_ALREADY_REGISTERED' || code == 'ALREADY_REGISTERED') {
+      return alreadyRegisteredMessage;
+    }
+    return message;
+  }
 
   Future<bool> sendOtp() async {
     isLoading = true;
     error = null;
+    errorCode = null;
     fieldErrors = null;
     notifyListeners();
 
     final result = await _authRepository.sendOtp(
       mobile: mobile,
       businessName: businessName,
+      purpose: _purposeForFlow(),
     );
 
     return _finishOtpRequest(result);
@@ -228,10 +257,14 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> resendOtp() async {
     isLoading = true;
     error = null;
+    errorCode = null;
     fieldErrors = null;
     notifyListeners();
 
-    final result = await _authRepository.resendOtp(mobile: mobile);
+    final result = await _authRepository.resendOtp(
+      mobile: mobile,
+      purpose: _purposeForFlow(),
+    );
 
     return _finishOtpRequest(result);
   }
@@ -244,7 +277,8 @@ class AuthViewModel extends ChangeNotifier {
         return true;
       },
       failure: (message, {statusCode, code, fields}) {
-        error = message;
+        error = _normalizeAuthError(message, code: code);
+        errorCode = code;
         fieldErrors = fields;
         isLoading = false;
         notifyListeners();
@@ -256,6 +290,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> verifyOtp(String otp, {bool persistSession = true}) async {
     isLoading = true;
     error = null;
+    errorCode = null;
     fieldErrors = null;
     notifyListeners();
 
@@ -265,6 +300,7 @@ class AuthViewModel extends ChangeNotifier {
       otp: otp,
       businessName: businessName,
       persistSession: true,
+      purpose: _purposeForFlow(),
     );
 
     return result.when(
@@ -277,7 +313,8 @@ class AuthViewModel extends ChangeNotifier {
         return true;
       },
       failure: (message, {statusCode, code, fields}) {
-        error = message;
+        error = _normalizeAuthError(message, code: code);
+        errorCode = code;
         fieldErrors = fields;
         isLoading = false;
         notifyListeners();
@@ -313,6 +350,8 @@ class AuthViewModel extends ChangeNotifier {
   }) async {
     isLoading = true;
     error = null;
+    errorCode = null;
+    fieldErrors = null;
     notifyListeners();
 
     final result = await _authRepository.loginWithEmail(
@@ -332,7 +371,12 @@ class AuthViewModel extends ChangeNotifier {
         return true;
       },
       failure: (message, {statusCode, code, fields}) {
-        error = message;
+        // Prefer API messages; normalize PASSWORD_NOT_SET for clear guidance.
+        error = code == 'PASSWORD_NOT_SET'
+            ? 'No password set for this account — log in with Mobile Number instead, or set one from your Profile'
+            : message;
+        errorCode = code;
+        fieldErrors = fields;
         isLoading = false;
         notifyListeners();
         return false;
@@ -373,6 +417,8 @@ class AuthViewModel extends ChangeNotifier {
   Future<bool> completeRegistration() async {
     isLoading = true;
     error = null;
+    errorCode = null;
+    fieldErrors = null;
     notifyListeners();
 
     final effectiveDelivery =
@@ -385,6 +431,9 @@ class AuthViewModel extends ChangeNotifier {
       businessTypeLabel: businessType,
       ownerName: ownerName,
       email: email,
+      password: password.trim().isEmpty ? null : password,
+      passwordConfirmation:
+          passwordConfirmation.trim().isEmpty ? null : passwordConfirmation,
       gstNumber: gstNumber,
       fssaiNumber: fssaiNumber,
       panNumber: panNumber,
@@ -404,12 +453,17 @@ class AuthViewModel extends ChangeNotifier {
         user = u;
         businessName = u.businessName;
         _hydrateFromUser(u);
+        // Drop plaintext draft passwords from memory after submit.
+        password = '';
+        passwordConfirmation = '';
         isLoading = false;
         notifyListeners();
         return true;
       },
       failure: (message, {statusCode, code, fields}) {
-        error = message;
+        error = _normalizeAuthError(message, code: code);
+        errorCode = code;
+        fieldErrors = fields;
         isLoading = false;
         notifyListeners();
         return false;
@@ -589,6 +643,8 @@ class AuthViewModel extends ChangeNotifier {
     email = '';
     fssaiNumber = '';
     panNumber = '';
+    password = '';
+    passwordConfirmation = '';
     shopAddress = '';
     deliveryAddress = '';
     sameAsShopAddress = true;

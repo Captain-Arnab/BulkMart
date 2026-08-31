@@ -24,7 +24,7 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  static const _pageSize = 2;
+  static const _pageSize = 20;
   static const _filters = [
     ('all', 'All'),
     ('pending', 'Pending'),
@@ -70,7 +70,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   void _onShell() {
     final i = _shell?.tabIndex;
-    if (i == 2 && _lastTab != 2) _load(reset: true);
+    if (i == ShellController.ordersTab && _lastTab != ShellController.ordersTab) {
+      _load(reset: true);
+    }
     _lastTab = i;
   }
 
@@ -79,6 +81,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 200) {
       _loadMore();
     }
+  }
+
+  /// If the first page does not fill the viewport, keep loading until it does
+  /// (or there are no more pages) — otherwise older orders never appear.
+  void _maybeLoadMoreIfShortList() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hasMore || _loadingMore || _loading) return;
+      if (!_scroll.hasClients) return;
+      if (_scroll.position.maxScrollExtent <= 0) {
+        _loadMore();
+      }
+    });
   }
 
   @override
@@ -110,6 +124,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _page = 1;
           _loading = false;
         });
+        _maybeLoadMoreIfShortList();
       },
       failure: (message, {statusCode, code, fields}) {
         setState(() {
@@ -121,6 +136,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
     final next = _page + 1;
     final result = await context.read<OrderRepository>().fetchOrders(
@@ -137,6 +153,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _page = next;
           _loadingMore = false;
         });
+        _maybeLoadMoreIfShortList();
       },
       failure: (_, {statusCode, code, fields}) {
         setState(() => _loadingMore = false);
@@ -155,7 +172,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   String _itemPreview(Order order) {
     final names = order.items.map((e) => e.product.name).toList();
-    if (names.isEmpty) return 'No items';
+    if (names.isEmpty) {
+      return order.displayItemCount > 0 ? 'Tap for details' : 'No items';
+    }
     if (names.length == 1) return names.first;
     if (names.length == 2) return '${names[0]}, ${names[1]}';
     return '${names[0]}, ${names[1]} +${names.length - 2} more';
@@ -307,7 +326,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                order.id,
+                                order.displayId,
                                 style: AppTextStyles.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -325,7 +344,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${order.items.length} item${order.items.length == 1 ? '' : 's'} · ${_itemPreview(order)}',
+                          '${order.displayItemCount} item${order.displayItemCount == 1 ? '' : 's'} · ${_itemPreview(order)}',
                           style: AppTextStyles.body(fontSize: 13, color: AppColors.ink),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
