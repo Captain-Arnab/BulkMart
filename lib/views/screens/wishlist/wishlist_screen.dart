@@ -82,10 +82,25 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         Expanded(
                           child: ProductCard(
                             product: product,
-                            onTap: () => AppPageRoute.push(
-                              context,
-                              ProductDetailScreen(productId: product.id),
+                            heroTag: ProductCard.heroTagFor(
+                              'wishlist',
+                              product.id,
+                              index,
                             ),
+                            onTap: () {
+                              final heroTag = ProductCard.heroTagFor(
+                                'wishlist',
+                                product.id,
+                                index,
+                              );
+                              AppPageRoute.push(
+                                context,
+                                ProductDetailScreen(
+                                  productId: product.id,
+                                  heroTag: heroTag,
+                                ),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 8),

@@ -13,15 +13,20 @@ import '../../../theme/text_styles.dart';
 import '../../../viewmodels/cart_view_model.dart';
 import '../../../viewmodels/wishlist_view_model.dart';
 import '../../widgets/moq_badge.dart';
-import '../../widgets/product_card.dart';
 import '../../widgets/product_network_image.dart';
 import '../../widgets/stepper_qty.dart';
 import '../../widgets/ui_states.dart';
 
 class ProductDetailScreen extends StatefulWidget {
-  const ProductDetailScreen({super.key, required this.productId});
+  const ProductDetailScreen({
+    super.key,
+    required this.productId,
+    /// Must match the source [ProductCard.heroTag] for a shared-element flight.
+    this.heroTag,
+  });
 
   final String productId;
+  final String? heroTag;
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -141,13 +146,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             boxShadow: AppShadows.card,
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: Hero(
-                            tag: ProductCard.heroTag(product.id),
-                            child: Material(
-                              type: MaterialType.transparency,
-                              child: ProductNetworkImage(product: product, iconSize: 64),
-                            ),
-                          ),
+                          child: widget.heroTag == null
+                              ? ProductNetworkImage(product: product, iconSize: 64)
+                              : Hero(
+                                  tag: widget.heroTag!,
+                                  child: Material(
+                                    type: MaterialType.transparency,
+                                    child: ProductNetworkImage(
+                                      product: product,
+                                      iconSize: 64,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                       Positioned(

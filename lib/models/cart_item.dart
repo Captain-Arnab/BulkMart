@@ -46,7 +46,10 @@ class CartItem {
       imageUrl: json['image_url']?.toString() ??
           json['imageUrl']?.toString() ??
           json['product_image_url']?.toString(),
-      inStock: json['in_stock'] as bool? ?? true,
+      inStock: json['in_stock'] == true ||
+          json['in_stock'] == 1 ||
+          json['in_stock'] == '1' ||
+          (json['in_stock'] == null),
     );
     final qtyRaw = json['quantity'] ?? json['qty'] ?? 1;
     final qty = qtyRaw is num ? qtyRaw.round() : int.tryParse('$qtyRaw') ?? 1;

@@ -97,7 +97,8 @@ class Order {
       orderNumber: json['order_number']?.toString() ??
           json['orderNumber']?.toString(),
       items: rawItems
-          .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
+          .whereType<Map>()
+          .map((e) => CartItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       itemCount: parsedItemCount,
       status: OrderStatus.fromApi(json['status']?.toString()),

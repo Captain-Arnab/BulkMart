@@ -366,10 +366,12 @@ class _ProductPane extends StatelessWidget {
           final product = vm.products[index];
           return ProductCard(
             product: product,
+            heroTag: ProductCard.heroTagFor('browse', product.id, index),
             onTap: () {
+              final heroTag = ProductCard.heroTagFor('browse', product.id, index);
               AppPageRoute.push(
                 context,
-                ProductDetailScreen(productId: product.id),
+                ProductDetailScreen(productId: product.id, heroTag: heroTag),
               );
             },
           );

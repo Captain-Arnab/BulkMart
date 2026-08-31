@@ -382,12 +382,13 @@ class _HomeScreenState extends State<HomeScreen> {
       widgets.add(
         _CategoryProductSection(
           title: title,
+          sectionScope: 'home-$categoryId',
           products: items,
           onSeeAll: () => _openBrowse(categoryId: categoryId),
-          onProductTap: (product) {
+          onProductTap: (product, heroTag) {
             AppPageRoute.push(
               context,
-              ProductDetailScreen(productId: product.id),
+              ProductDetailScreen(productId: product.id, heroTag: heroTag),
             );
           },
         )
@@ -405,15 +406,17 @@ class _HomeScreenState extends State<HomeScreen> {
 class _CategoryProductSection extends StatelessWidget {
   const _CategoryProductSection({
     required this.title,
+    required this.sectionScope,
     required this.products,
     required this.onSeeAll,
     required this.onProductTap,
   });
 
   final String title;
+  final String sectionScope;
   final List<Product> products;
   final VoidCallback onSeeAll;
-  final ValueChanged<Product> onProductTap;
+  final void Function(Product product, String heroTag) onProductTap;
 
   @override
   Widget build(BuildContext context) {
@@ -460,11 +463,17 @@ class _CategoryProductSection extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final product = products[index];
+                  final heroTag = ProductCard.heroTagFor(
+                    sectionScope,
+                    product.id,
+                    index,
+                  );
                   return SizedBox(
                     width: cardW,
                     child: ProductCard(
                       product: product,
-                      onTap: () => onProductTap(product),
+                      heroTag: heroTag,
+                      onTap: () => onProductTap(product, heroTag),
                     ),
                   );
                 },

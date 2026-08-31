@@ -42,6 +42,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   final _scroll = ScrollController();
   ShellController? _shell;
   int? _lastTab;
+  /// Guard against off-stage / short-list auto-fetch storms.
+  int _autoFillPasses = 0;
 
   static final _priceFormat = NumberFormat.currency(
     locale: 'en_IN',
@@ -68,28 +70,38 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  bool get _isOrdersTabVisible =>
+      _shell?.tabIndex == ShellController.ordersTab;
+
   void _onShell() {
     final i = _shell?.tabIndex;
     if (i == ShellController.ordersTab && _lastTab != ShellController.ordersTab) {
       _load(reset: true);
+    } else if (i == ShellController.ordersTab) {
+      // Became visible again (or stayed) — fill only if the list is still short.
+      _maybeLoadMoreIfShortList();
     }
     _lastTab = i;
   }
 
   void _onScroll() {
     if (!_hasMore || _loadingMore || _loading) return;
+    if (!_scroll.hasClients) return;
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 200) {
       _loadMore();
     }
   }
 
-  /// If the first page does not fill the viewport, keep loading until it does
-  /// (or there are no more pages) — otherwise older orders never appear.
+  /// Only when Orders is the active tab. Off-stage ListViews report
+  /// maxScrollExtent == 0 and would otherwise infinite-fetch.
   void _maybeLoadMoreIfShortList() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_hasMore || _loadingMore || _loading) return;
+      if (!_isOrdersTabVisible) return;
       if (!_scroll.hasClients) return;
+      if (_autoFillPasses >= 5) return;
       if (_scroll.position.maxScrollExtent <= 0) {
+        _autoFillPasses += 1;
         _loadMore();
       }
     });
@@ -108,6 +120,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         _loading = true;
         _error = null;
         _page = 1;
+        _autoFillPasses = 0;
       });
     }
     final result = await context.read<OrderRepository>().fetchOrders(
@@ -120,7 +133,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       success: (page) {
         setState(() {
           _orders = page.items;
-          _hasMore = page.hasMore;
+          _hasMore = page.hasMore && page.items.isNotEmpty;
           _page = 1;
           _loading = false;
         });
@@ -148,15 +161,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
     result.when(
       success: (page) {
         setState(() {
-          _orders = [..._orders, ...page.items];
-          _hasMore = page.hasMore;
-          _page = next;
+          if (page.items.isEmpty) {
+            _hasMore = false;
+          } else {
+            _orders = [..._orders, ...page.items];
+            _hasMore = page.hasMore;
+            _page = next;
+          }
           _loadingMore = false;
         });
         _maybeLoadMoreIfShortList();
       },
       failure: (_, {statusCode, code, fields}) {
-        setState(() => _loadingMore = false);
+        setState(() {
+          _loadingMore = false;
+          _hasMore = false;
+        });
       },
     );
   }

@@ -18,13 +18,26 @@ class ProductCard extends StatefulWidget {
     required this.product,
     required this.onTap,
     this.onQuickAdd,
+    /// Must be unique within the current route (IndexedStack tabs share one route).
+    /// Pass the same value into [ProductDetailScreen.heroTag] when opening detail.
+    this.heroTag,
   });
 
   final Product product;
   final VoidCallback onTap;
   final VoidCallback? onQuickAdd;
+  final String? heroTag;
 
-  static String heroTag(String productId) => 'product-image-$productId';
+  /// Scoped hero tag so the same product can appear on Home + Wishlist + Browse
+  /// without colliding under [IndexedStack].
+  static String heroTagFor(
+    String scope,
+    String productId, [
+    Object? disambiguator,
+  ]) {
+    final suffix = disambiguator == null ? '' : '-$disambiguator';
+    return 'product-image-$scope-$productId$suffix';
+  }
 
   @override
   State<ProductCard> createState() => _ProductCardState();
@@ -32,12 +45,26 @@ class ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<ProductCard> {
   bool _lifted = false;
+  late final String _heroTag;
 
   static final _priceFormat = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '₹',
     decimalDigits: 0,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    // Unique per State instance when caller omits [heroTag] — avoids IndexedStack
+    // collisions; detail flight only runs when caller passes a shared tag.
+    _heroTag = widget.heroTag ??
+        ProductCard.heroTagFor(
+          'card',
+          widget.product.id,
+          identityHashCode(this),
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +103,7 @@ class _ProductCardState extends State<ProductCard> {
                     children: [
                       RepaintBoundary(
                         child: Hero(
-                          tag: ProductCard.heroTag(widget.product.id),
+                          tag: _heroTag,
                           child: Material(
                             type: MaterialType.transparency,
                             child: ProductNetworkImage(product: widget.product),
