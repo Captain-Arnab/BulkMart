@@ -32,12 +32,15 @@ class ProductDetailScreen extends StatefulWidget {
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
+enum _InfoTab { description, benefits, storageTips }
+
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _loading = true;
   String? _error;
   Product? _product;
   int _qty = 1;
   bool _ctaPulse = false;
+  _InfoTab _infoTab = _InfoTab.description;
   final _ctaKey = GlobalKey();
 
   static final _priceFormat = NumberFormat.currency(
@@ -329,35 +332,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                           ],
                         ),
-                        if (product.description != null &&
-                            product.description!.trim().isNotEmpty) ...[
-                          const SizedBox(height: 20),
-                          Text(
-                            'Product Description',
-                            style: AppTextStyles.body(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(AppRadii.lg),
-                              border: Border.all(color: AppColors.line),
-                            ),
-                            child: Text(
-                              product.description!,
-                              style: AppTextStyles.body(
-                                fontSize: 13,
-                                color: AppColors.muted,
-                                height: 1.45,
-                              ),
-                            ),
-                          ),
-                        ],
+                        const SizedBox(height: 20),
+                        _ProductInfoSection(
+                          product: product,
+                          selected: _infoTab,
+                          onChanged: (tab) => setState(() => _infoTab = tab),
+                        ),
                       ],
                     ),
                   ),
@@ -406,6 +386,158 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Description / Benefits / Storage Tips — segmented tabs matching login method chips.
+class _ProductInfoSection extends StatelessWidget {
+  const _ProductInfoSection({
+    required this.product,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final Product product;
+  final _InfoTab selected;
+  final ValueChanged<_InfoTab> onChanged;
+
+  static const _emptyPlaceholder = 'Details coming soon';
+
+  String? _rawFor(_InfoTab tab) {
+    switch (tab) {
+      case _InfoTab.description:
+        return product.description;
+      case _InfoTab.benefits:
+        return product.benefits;
+      case _InfoTab.storageTips:
+        return product.storageTips;
+    }
+  }
+
+  String _bodyFor(_InfoTab tab) {
+    final raw = _rawFor(tab)?.trim();
+    if (raw == null || raw.isEmpty) return _emptyPlaceholder;
+    return raw;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final body = _bodyFor(selected);
+    final isEmpty = body == _emptyPlaceholder;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Product Info',
+          style: AppTextStyles.body(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _InfoTabChip(
+                  label: 'Description',
+                  selected: selected == _InfoTab.description,
+                  onTap: () => onChanged(_InfoTab.description),
+                ),
+              ),
+              Expanded(
+                child: _InfoTabChip(
+                  label: 'Benefits',
+                  selected: selected == _InfoTab.benefits,
+                  onTap: () => onChanged(_InfoTab.benefits),
+                ),
+              ),
+              Expanded(
+                child: _InfoTabChip(
+                  label: 'Storage Tips',
+                  selected: selected == _InfoTab.storageTips,
+                  onTap: () => onChanged(_InfoTab.storageTips),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        AnimatedSwitcher(
+          duration: AppMotion.fast,
+          switchInCurve: AppMotion.ease,
+          switchOutCurve: AppMotion.ease,
+          child: Container(
+            key: ValueKey(selected),
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Text(
+              body,
+              style: AppTextStyles.body(
+                fontSize: 13,
+                fontWeight: isEmpty ? FontWeight.w500 : FontWeight.w400,
+                color: isEmpty ? AppColors.muted.withValues(alpha: 0.85) : AppColors.muted,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoTabChip extends StatelessWidget {
+  const _InfoTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.green : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          boxShadow: selected
+              ? AppShadows.soft(color: AppColors.green, opacity: 0.22)
+              : null,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.body(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: selected ? AppColors.white : AppColors.muted,
+          ),
+        ),
       ),
     );
   }

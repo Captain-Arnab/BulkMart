@@ -12,6 +12,8 @@ class Product {
     this.batchNo,
     this.itemCode,
     this.description,
+    this.benefits,
+    this.storageTips,
     this.inStock = true,
   });
 
@@ -44,6 +46,13 @@ class Product {
   final String? itemCode;
 
   final String? description;
+
+  /// Product benefits copy from GET /products/{id} (`benefits`).
+  final String? benefits;
+
+  /// Storage guidance from GET /products/{id} (`storage_tips`).
+  final String? storageTips;
+
   final bool inStock;
 
   /// Short noun for badges ("kg", "bunch") derived from [unit].
@@ -72,6 +81,8 @@ class Product {
     String? batchNo,
     String? itemCode,
     String? description,
+    String? benefits,
+    String? storageTips,
     bool? inStock,
   }) {
     return Product(
@@ -87,6 +98,8 @@ class Product {
       batchNo: batchNo ?? this.batchNo,
       itemCode: itemCode ?? this.itemCode,
       description: description ?? this.description,
+      benefits: benefits ?? this.benefits,
+      storageTips: storageTips ?? this.storageTips,
       inStock: inStock ?? this.inStock,
     );
   }
@@ -127,6 +140,9 @@ class Product {
       batchNo: json['batch_no']?.toString() ?? json['batchNo']?.toString(),
       itemCode: json['item_code']?.toString() ?? json['itemCode']?.toString(),
       description: json['description']?.toString(),
+      benefits: json['benefits']?.toString(),
+      storageTips:
+          json['storage_tips']?.toString() ?? json['storageTips']?.toString(),
       inStock: json['in_stock'] as bool? ?? json['inStock'] as bool? ?? true,
     );
   }
@@ -144,6 +160,8 @@ class Product {
         if (batchNo != null) 'batch_no': batchNo,
         if (itemCode != null) 'item_code': itemCode,
         if (description != null) 'description': description,
+        if (benefits != null) 'benefits': benefits,
+        if (storageTips != null) 'storage_tips': storageTips,
         'in_stock': inStock,
       };
 }

@@ -24,10 +24,19 @@ class MockProducts {
 
   // ---------------------------------------------------------------------------
   // Prices below (₹20–₹120) are DUMMY placeholders pending backend pricing.
-  // Descriptions are representative copy for the Product Detail info section.
+  // Description / benefits / storage tips mirror the website PDP tab content.
+  // Only a few SKUs carry benefits & storage tips so empty-state fallback can
+  // still be exercised in demo mode.
   // ---------------------------------------------------------------------------
   static final List<Product> products = List.unmodifiable(
-    _rawProducts.map((p) => p.copyWith(description: _descriptionFor(p))),
+    _rawProducts.map((p) {
+      final extras = _infoExtras[p.id];
+      return p.copyWith(
+        description: extras?.description ?? _descriptionFor(p),
+        benefits: extras?.benefits,
+        storageTips: extras?.storageTips,
+      );
+    }),
   );
 
   static String _descriptionFor(Product p) {
@@ -35,6 +44,65 @@ class MockProducts {
         'bulk kitchens. Sold ${p.unit}. Minimum order quantity: ${p.moq} ${p.unitNoun}. '
         'Fresh produce packed for B2B COD delivery.';
   }
+
+  static const Map<String, ({String description, String benefits, String storageTips})>
+      _infoExtras = {
+    'gv-01': (
+      description:
+          'Beans are an everyday kitchen vegetable known for their crisp bite and '
+          'mild flavour. They work well in curries, stir-fries, salads, and bulk '
+          'kitchen prep. VEGGIICART supplies fresh Beans suitable for household '
+          'as well as commercial requirements.',
+      benefits:
+          'Beans naturally provide dietary fibre and plant-based nutrients. '
+          'Including fresh beans as part of a balanced diet can support everyday '
+          'meal variety for homes and food businesses.',
+      storageTips:
+          'Store unwashed Beans in a cool, dry place or refrigerate in a breathable '
+          'bag. Avoid excess moisture before storage. Wash just before cooking.',
+    ),
+    'rv-04': (
+      description:
+          'Potatoes are a versatile staple with a mild flavour and reliable texture '
+          'for boiling, frying, curries, and bulk kitchen use. VEGGIICART supplies '
+          'fresh Potatoes suitable for household as well as commercial requirements.',
+      benefits:
+          'Potatoes are a natural source of carbohydrates and provide energy for '
+          'everyday meals. They pair well with a wide range of Indian and commercial '
+          'kitchen preparations.',
+      storageTips:
+          'Store Potatoes in a cool, dark, well-ventilated place away from direct '
+          'sunlight. Do not refrigerate for everyday storage. Keep dry and separate '
+          'from onions when possible.',
+    ),
+    'sf-01': (
+      description:
+          'Apples are popular fruits known for their crisp texture, naturally '
+          'sweet-tart flavour, and convenient everyday use. They can be eaten fresh '
+          'or incorporated into fruit salads, juices, desserts, breakfast '
+          'preparations, bakery products, and catering menus.',
+      benefits:
+          'Apples naturally contain dietary fibre, vitamin C, and various plant '
+          'compounds. Eating whole apples with the edible skin, after thorough '
+          'washing, can provide more fibre than consuming only strained juice.',
+      storageTips:
+          'Store Apples in a cool place for short-term use or refrigerate for longer '
+          'freshness. Keep away from damaged fruit, as one spoiled apple can affect '
+          'surrounding produce. Wash immediately before eating or preparation.',
+    ),
+    'hl-01': (
+      description:
+          'Coriander Leaves are a fragrant leafy herb used widely for garnishing, '
+          'chutneys, and seasoning. VEGGIICART supplies fresh bunches suitable for '
+          'household as well as commercial kitchen use.',
+      benefits:
+          'Fresh coriander adds aroma and flavour to everyday meals. It is commonly '
+          'used across Indian cuisine for finishing dishes and preparing green chutneys.',
+      storageTips:
+          'Wrap Coriander Leaves loosely in a damp paper towel and refrigerate in a '
+          'container or bag. Use promptly for best aroma. Wash before use.',
+    ),
+  };
 
   static const List<Product> _rawProducts = [
     // —— Green Vegetables (17) ——
